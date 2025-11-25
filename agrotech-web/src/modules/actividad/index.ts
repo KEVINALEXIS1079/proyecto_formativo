@@ -1,0 +1,1 @@
+export * as actividadApi from './api'; export * as actividadModel from './model/types';

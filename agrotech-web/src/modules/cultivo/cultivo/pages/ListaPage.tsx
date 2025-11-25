@@ -1,0 +1,1 @@
+export default function ListaPage(){return <div className='p-6'>cultivo Lista</div>}

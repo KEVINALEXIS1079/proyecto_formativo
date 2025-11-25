@@ -1,0 +1,440 @@
+---
+config:
+  layout: elk
+  look: classic
+---
+classDiagram
+
+%% =========== USUARIOS / ROLES / PERMISOS ===========
+class Usuario {
+  +id: number
+  +nombre: string
+  +apellido: string
+  +identificacion: string
+  +idFicha: string
+  +telefono: string
+  +correo: string
+  +passwordHash: string
+  +emailVerifiedAt: Date
+  +estado: string
+  +createdAt: Date
+  +updatedAt: Date
+  +lastLoginAt: Date
+  +rolId: number
+}
+
+class EmailCode {
+  +id: number
+  +userId: number
+  +tipo: string
+  +code: string
+  +expiresAt: Date
+  +usedAt: Date
+  +createdAt: Date
+}
+
+class Rol {
+  +id: number
+  +nombre: string
+}
+
+class Permiso {
+  +id: number
+  +modulo: string
+  +accion: string
+  +clave: string
+}
+
+class RolPermiso {
+  +rolId: number
+  +permisoId: number
+}
+
+class UsuarioPermiso {
+  +usuarioId: number
+  +permisoId: number
+}
+
+Usuario "1" --> "0..1" Rol : tiene
+Usuario "1" -- "0..*" EmailCode : codigos
+Rol "1" -- "0..*" RolPermiso : asigna
+Permiso "1" -- "0..*" RolPermiso : permitido
+Usuario "1" -- "0..*" UsuarioPermiso : permisosDirectos
+Permiso "1" -- "0..*" UsuarioPermiso : otorgado
+
+%% =========== GEO: LOTES / SUBLOTES / CULTIVOS ===========
+class Lote {
+  +id: number
+  +nombre: string
+  +area_lote: number              // m2 o ha, como definas
+  +coordenadas_lote: number[][]   // [[lat,lng], [lat,lng], ...]
+  +descripcion: string
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+class SubLote {
+  +id: number
+  +loteId: number
+  +nombre: string
+  +area_sublote: number
+  +coordenadas_sublote: number[][]
+  +descripcion: string
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+Lote "1" -- "0..*" SubLote : contiene >
+
+class Cultivo {
+  +id: number
+  +tipoCultivo: string
+  +nombreCultivo: string
+  +descripcion: string
+  +loteId: number         // XOR con subLoteId
+  +subLoteId: number
+  +fechaCreacion: Date
+  +fechaSiembra: Date
+  +fechaFinalizacion: Date
+  +estado: string         // activo|finalizado|...
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+Lote "1" -- "0..*" Cultivo : ubica >
+SubLote "1" -- "0..*" Cultivo : ubica >
+
+%% =========== ACTIVIDADES ===========
+class Actividad {
+  +id: number
+  +nombre: string
+  +tipo: string            // GENERAL|CREACION|MANTENIMIENTO|FINALIZACION
+  +subtipo: string         // SIEMBRA|COSECHA|RIEGO|...
+  +loteId: number          // XOR con subLoteId
+  +subLoteId: number
+  +cultivoId: number
+  +fecha: Date
+  +horasActividad: number
+  +precioHoraActividad: number
+  +costoManoObra: number   // derivado
+  +descripcion: string
+  +creadoPorUsuarioId: number
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+class ActividadResponsable {
+  +id: number
+  +actividadId: number
+  +usuarioId: number
+  +horas: number
+  +precioHora: number
+  +costo: number
+}
+
+class ActividadServicio {
+  +id: number
+  +actividadId: number
+  +nombreServicio: string
+  +horas: number
+  +precioHora: number
+  +costo: number
+}
+
+class ActividadEvidencia {
+  +id: number
+  +actividadId: number
+  +descripcion: string
+  +imagenes: string[]
+}
+
+class ActividadInsumoUso {
+  +id: number
+  +actividadId: number
+  +insumoId: number
+  +cantidadUso: number       // g o cm3
+  +costoUnitarioUso: number
+  +costoTotal: number
+  +movimientoInsumoId: number
+}
+
+Cultivo "1" -- "0..*" Actividad : tiene >
+Actividad "1" -- "0..*" ActividadResponsable : responsables >
+Actividad "1" -- "0..*" ActividadServicio : servicios >
+Actividad "1" -- "0..*" ActividadEvidencia : evidencias >
+Actividad "1" -- "0..*" ActividadInsumoUso : insumos >
+Usuario "1" -- "0..*" Actividad : crea >
+
+%% =========== INVENTARIO INSUMOS ===========
+class Insumo {
+  +id: number
+  +nombre: string
+  +descripcion: string
+  +fotoUrl: string
+  +presentacionTipo: string
+  +presentacionCantidad: number
+  +presentacionUnidad: string
+  +tipoMateria: string        // solido|liquido
+  +factorConversionUso: number
+  +stockPresentacion: number
+  +stockUso: number
+  +precioUnitarioPresentacion: number
+  +precioUnitarioUso: number
+  +valorInventario: number
+  +almacenId: number
+  +proveedorId: number
+  +categoriaId: number
+  +fechaRegistro: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+class MovimientoInsumo {
+  +id: number
+  +insumoId: number
+  +tipoMovimiento: string   // REGISTRO|AJUSTE|CONSUMO|TRASLADO|ELIMINACION|RESTAURACION
+  +deltaPresentacion: number
+  +deltaUso: number
+  +precioUnitarioPresentacion: number
+  +precioUnitarioUso: number
+  +valorInventarioResultante: number
+  +descripcion: string
+  +actividadId: number
+  +usuarioId: number
+  +almacenOrigenId: number
+  +almacenDestinoId: number
+  +createdAt: Date
+}
+
+class Almacen {
+  +id: number
+  +nombre: string
+  +descripcion: string
+  +ubicacion: string
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+class Proveedor {
+  +id: number
+  +nombre: string
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+class Categoria {
+  +id: number
+  +nombre: string
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+Insumo "1" -- "0..*" MovimientoInsumo : movimientos >
+Insumo "1" --> "1" Almacen : almacen >
+Insumo "1" --> "0..1" Proveedor : proveedor >
+Insumo "1" --> "1" Categoria : categoria >
+ActividadInsumoUso "1" --> "1" MovimientoInsumo : genera >
+Usuario "1" -- "0..*" MovimientoInsumo : ejecuta >
+
+%% =========== WIKI FITOSANITARIA (EPA) ===========
+class EPA {
+  +id: number
+  +nombre: string
+  +tipoEpa: string          // ENFERMEDAD|PLAGA|ARVENCE
+  +descripcion: string
+  +sintomas: string
+  +manejoYControl: string
+  +mesesProbables: int[]
+  +temporadas: string[]
+  +notasEstacionalidad: string
+  +fotosSintomas: string[]
+  +fotosGenerales: string[]
+  +tags: string[]
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+  +creadoPorUsuarioId: number
+}
+
+class TipoCultivoWiki {
+  +id: number
+  +nombre: string
+  +descripcion: string
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+class EPA_TipoCultivoWiki {
+  +epaId: number
+  +tipoCultivoWikiId: number
+}
+
+EPA "1" -- "0..*" EPA_TipoCultivoWiki : asocia >
+TipoCultivoWiki "1" -- "0..*" EPA_TipoCultivoWiki : asocia >
+Usuario "1" -- "0..*" EPA : crea >
+
+%% =========== PRODUCCIÓN & POS ===========
+class ProductoAgro {
+  +id: number
+  +nombre: string
+  +unidadBase: string    // "kg"
+  +descripcion: string
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+class LoteProduccion {
+  +id: number
+  +productoAgroId: number
+  +cultivoId: number
+  +loteId: number
+  +subLoteId: number
+  +actividadCosechaId: number
+  +cantidadKg: number
+  +costoUnitarioKg: number
+  +costoTotal: number
+  +precioSugeridoKg: number
+  +createdAt: Date
+  +updatedAt: Date
+  +deletedAt: Date
+}
+
+class MovimientoProduccion {
+  +id: number
+  +loteProduccionId: number
+  +tipo: string          // INGRESO_COSECHA|VENTA|AJUSTE_+|AJUSTE_-|TRASLADO
+  +cantidadKg: number
+  +costoUnitarioKg: number
+  +costoTotal: number
+  +ventaId: number
+  +descripcion: string
+  +createdAt: Date
+  +usuarioId: number
+}
+
+class Cliente {
+  +id: number
+  +nombre: string
+  +identificacion: string
+  +telefono: string
+  +email: string
+  +direccion: string
+  +notas: string
+}
+
+class Venta {
+  +id: number
+  +fecha: Date
+  +clienteId: number
+  +subtotal: number
+  +impuestos: number
+  +descuento: number
+  +total: number
+  +estado: string        // registrada|anulada|pagada
+  +createdAt: Date
+  +updatedAt: Date
+  +usuarioId: number
+}
+
+class VentaDetalle {
+  +id: number
+  +ventaId: number
+  +productoAgroId: number
+  +loteProduccionId: number
+  +cultivoId: number
+  +cantidadKg: number
+  +precioUnitarioKg: number
+  +precioTotal: number
+  +costoUnitarioKg: number
+  +costoTotal: number
+}
+
+class Pago {
+  +id: number
+  +ventaId: number
+  +metodo: string
+  +monto: number
+  +moneda: string
+  +referencia: string
+  +createdAt: Date
+}
+
+class Factura {
+  +id: number
+  +ventaId: number
+  +numero: string
+  +prefijo: string
+  +fechaEmision: Date
+  +vencimiento: Date
+  +qrUrl: string
+  +pdfUrl: string
+}
+
+ProductoAgro "1" -- "0..*" LoteProduccion : produce >
+LoteProduccion "1" -- "0..*" MovimientoProduccion : movimientos >
+Cliente "1" -- "0..*" Venta : compra >
+Venta "1" -- "0..*" VentaDetalle : detalles >
+Venta "1" -- "0..*" Pago : pagos >
+Venta "1" -- "1" Factura : factura >
+VentaDetalle "1" --> "0..1" LoteProduccion : descuenta >
+Usuario "1" -- "0..*" MovimientoProduccion : ejecuta >
+Usuario "1" -- "0..*" Venta : registra >
+
+%% =========== IoT (SENSORES POR CULTIVO) ===========
+class TipoSensor {
+  +id: number
+  +nombre_tipo_sensor: string
+  +unidades_tipo_sensor: string
+  +decimales_tipo_sensor: number
+  +imagen_tipo_sensor: string
+  +created_at: Date
+  +updated_at: Date
+  +deleted_at: Date
+}
+
+class Sensor {
+  +id: number
+  +nombre_sensor: string
+  +tipo_sensor_id: number
+  +protocolo: string        // HTTP|HTTPS|WS|MQTT
+  +endpoint_url: string
+  +mqtt_broker: string
+  +mqtt_port: number
+  +mqtt_topic: string
+  +mqtt_username: string
+  +mqtt_password: string
+  +mqtt_qos: number
+  +valor_minimo_sensor: number
+  +valor_maximo_sensor: number
+  +activo: boolean
+  +estado_conexion: string   // CONECTADO|DESCONECTADO
+  +ultimo_valor: number
+  +ultima_medicion: Date
+  +last_seen_at: Date
+  +cultivoId: number
+  +created_at: Date
+  +updated_at: Date
+  +deleted_at: Date
+}
+
+class SensorLectura {
+  +id: number
+  +sensor_id: number
+  +valor_sensor_lectura: number
+  +fecha_sensor_lectura: Date
+  +raw_payload: string
+  +ingested_by: string
+}
+
+TipoSensor "1" -- "0..*" Sensor : tipifica >
+Sensor "1" -- "0..*" SensorLectura : lecturas >
+Cultivo "1" -- "0..*" Sensor : monitorea >
