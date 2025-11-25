@@ -5,7 +5,8 @@ import { Actividad } from '../../activities/entities/actividad.entity';
 import { ActividadResponsable } from '../../activities/entities/actividad-responsable.entity';
 import { ActividadInsumoUso } from '../../activities/entities/actividad-insumo-uso.entity';
 import { MovimientoInsumo } from '../../inventory/entities/movimiento-insumo.entity';
-import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { Insumo } from '../../inventory/entities/insumo.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 
 @Injectable()
 export class CropReportsService {
@@ -14,6 +15,7 @@ export class CropReportsService {
     @InjectRepository(ActividadResponsable) private responsableRepo: Repository<ActividadResponsable>,
     @InjectRepository(ActividadInsumoUso) private insumoUsoRepo: Repository<ActividadInsumoUso>,
     @InjectRepository(MovimientoInsumo) private movimientoRepo: Repository<MovimientoInsumo>,
+    @InjectRepository(Insumo) private insumoRepo: Repository<Insumo>,
     @InjectRepository(Cultivo) private cultivoRepo: Repository<Cultivo>,
   ) {}
 
@@ -110,6 +112,163 @@ export class CropReportsService {
       .getRawMany();
   }
 
+  // RF54: Horas invertidas por periodo
+  async getLaborByPeriod(cultivoId: number, granularity: 'day' | 'week' | 'month' = 'day') {
+    let dateFormat: string;
+    switch (granularity) {
+      case 'week':
+        dateFormat = "DATE_TRUNC('week', actividad.fecha)";
+        break;
+      case 'month':
+        dateFormat = "DATE_TRUNC('month', actividad.fecha)";
+        break;
+      default:
+        dateFormat = "DATE(actividad.fecha)";
+    }
+
+    return this.actividadRepo.createQueryBuilder('actividad')
+      .select(`${dateFormat}`, 'periodo')
+      .addSelect('SUM(actividad.horasActividad)', 'totalHoras')
+      .where('actividad.cultivoId = :cultivoId', { cultivoId })
+      .groupBy(dateFormat)
+      .orderBy('periodo', 'ASC')
+      .getRawMany();
+  }
+
+  // RF57: Consumo de insumos por periodo
+  async getInputConsumptionByPeriod(cultivoId: number, granularity: 'day' | 'week' | 'month' = 'day') {
+    let dateFormat: string;
+    switch (granularity) {
+      case 'week':
+        dateFormat = "DATE_TRUNC('week', actividad.fecha)";
+        break;
+      case 'month':
+        dateFormat = "DATE_TRUNC('month', actividad.fecha)";
+        break;
+      default:
+        dateFormat = "DATE(actividad.fecha)";
+    }
+
+    return this.insumoUsoRepo.createQueryBuilder('uso')
+      .leftJoin('uso.actividad', 'actividad')
+      .leftJoin('uso.insumo', 'insumo')
+      .select(`${dateFormat}`, 'periodo')
+      .addSelect('insumo.nombre', 'nombreInsumo')
+      .addSelect('SUM(uso.cantidadUso)', 'cantidadTotal')
+      .addSelect('SUM(uso.costoTotal)', 'costoTotal')
+      .where('actividad.cultivoId = :cultivoId', { cultivoId })
+      .groupBy(dateFormat)
+      .addGroupBy('insumo.nombre')
+      .orderBy('periodo', 'ASC')
+      .getRawMany();
+  }
+
+  // RF58: Detalle de actividades con costos
+  async getDetailedActivities(cultivoId: number, filters?: { from?: Date; to?: Date }) {
+    const query = this.actividadRepo.createQueryBuilder('actividad')
+      .leftJoinAndSelect('actividad.responsables', 'responsables')
+      .leftJoinAndSelect('actividad.servicios', 'servicios')
+      .leftJoinAndSelect('actividad.insumosUso', 'insumosUso')
+      .where('actividad.cultivoId = :cultivoId', { cultivoId });
+
+    if (filters?.from) {
+      query.andWhere('actividad.fecha >= :from', { from: filters.from });
+    }
+    if (filters?.to) {
+      query.andWhere('actividad.fecha <= :to', { to: filters.to });
+    }
+
+    const actividades = await query.orderBy('actividad.fecha', 'DESC').getMany();
+
+    // Obtener información de insumos por separado para evitar dependencia circular
+    const insumoIds = actividades.flatMap(a => a.insumosUso?.map(i => i.insumoId) || []);
+    const insumosMap = new Map();
+
+    if (insumoIds.length > 0) {
+      const insumos = await this.insumoRepo.findByIds(insumoIds);
+      insumos.forEach(i => insumosMap.set(i.id, i));
+    }
+
+    return actividades.map(actividad => ({
+      id: actividad.id,
+      fecha: actividad.fecha,
+      tipo: actividad.tipo,
+      subtipo: actividad.subtipo,
+      descripcion: actividad.descripcion,
+      horas: actividad.horasActividad,
+      costoManoObra: actividad.costoManoObra,
+      costoServicios: actividad.servicios?.reduce((sum, s) => sum + s.costo, 0) || 0,
+      costoInsumos: actividad.insumosUso?.reduce((sum, i) => sum + i.costoTotal, 0) || 0,
+      costoTotal: actividad.costoManoObra +
+                 (actividad.servicios?.reduce((sum, s) => sum + s.costo, 0) || 0) +
+                 (actividad.insumosUso?.reduce((sum, i) => sum + i.costoTotal, 0) || 0),
+      responsables: actividad.responsables?.map(r => ({
+        nombre: `${r.usuario?.nombre} ${r.usuario?.apellido}`,
+        horas: r.horas,
+        costo: r.costo
+      })),
+      insumos: actividad.insumosUso?.map(i => {
+        const insumo = insumosMap.get(i.insumoId);
+        return {
+          nombre: insumo?.nombre || `Insumo ${i.insumoId}`,
+          cantidad: i.cantidadUso,
+          unidad: insumo?.unidadUso || 'unidades',
+          costo: i.costoTotal
+        };
+      })
+    }));
+  }
+
+  // RF59: Top insumos por costo/cantidad
+  async getTopInputs(cultivoId: number, limit: number = 10, sortBy: 'costo' | 'cantidad' = 'costo') {
+    const query = this.insumoUsoRepo.createQueryBuilder('uso')
+      .leftJoin('uso.actividad', 'actividad')
+      .leftJoin('uso.insumo', 'insumo')
+      .where('actividad.cultivoId = :cultivoId', { cultivoId })
+      .select([
+        'insumo.nombre as nombreInsumo',
+        'insumo.unidadUso as unidad',
+        'SUM(uso.cantidadUso) as cantidadTotal',
+        'SUM(uso.costoTotal) as costoTotal',
+        'COUNT(DISTINCT actividad.id) as numActividades'
+      ])
+      .groupBy('insumo.id')
+      .addGroupBy('insumo.nombre')
+      .addGroupBy('insumo.unidadUso');
+
+    if (sortBy === 'costo') {
+      query.orderBy('SUM(uso.costoTotal)', 'DESC');
+    } else {
+      query.orderBy('SUM(uso.cantidadUso)', 'DESC');
+    }
+
+    query.limit(limit);
+
+    return query.getRawMany();
+  }
+
+  // Obtener cultivos filtrados
+  async getCultivosFiltered(filters: { id?: number; fechaInicio?: Date; fechaFin?: Date }) {
+    const query = this.cultivoRepo.createQueryBuilder('cultivo');
+
+    if (filters.id) {
+      query.andWhere('cultivo.id = :id', { id: filters.id });
+    }
+
+    // Si hay fechas, filtrar cultivos que tengan actividades en ese rango
+    if (filters.fechaInicio || filters.fechaFin) {
+      query.leftJoin('cultivo.actividades', 'actividad');
+      if (filters.fechaInicio) {
+        query.andWhere('actividad.fecha >= :fechaInicio', { fechaInicio: filters.fechaInicio });
+      }
+      if (filters.fechaFin) {
+        query.andWhere('actividad.fecha <= :fechaFin', { fechaFin: filters.fechaFin });
+      }
+    }
+
+    return query.getMany();
+  }
+
   // RF61: Validación de Coherencia
   async validateConsistency(cultivoId: number) {
     // 1. Obtener suma de consumos reportados en actividades
@@ -133,19 +292,19 @@ export class CropReportsService {
 
     // Comparar
     const diferencias = [];
-    
+
     // Crear mapa de movimientos
     const movMap = new Map();
-    movimientosConsumo.forEach(m => movMap.set(m.insumoId, { 
-      total: parseFloat(m.totalMovimientos), 
-      nombre: m.nombreInsumo 
+    movimientosConsumo.forEach(m => movMap.set(m.insumoId, {
+      total: parseFloat(m.totalMovimientos),
+      nombre: m.nombreInsumo
     }));
 
     for (const uso of consumosActividad) {
       const insumoId = uso.insumoId;
       const totalAct = parseFloat(uso.totalActividad);
       const movData = movMap.get(insumoId);
-      
+
       if (!movData) {
         diferencias.push({
           insumoId,

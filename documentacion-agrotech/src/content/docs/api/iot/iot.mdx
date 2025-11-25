@@ -1,0 +1,439 @@
+---
+title: Sistema IoT - Sensores y Monitoreo
+description: Endpoints para gestión de sensores, lecturas ambientales y monitoreo en tiempo real
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /iot/sensores
+
+Registra un nuevo sensor en el sistema IoT.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateSensorDto {
+  nombre: string;              // Nombre identificativo del sensor
+  descripcion?: string;        // Descripción opcional
+  tipoSensorId: number;        // ID del tipo de sensor
+  loteId?: number;             // ID del lote donde está ubicado
+  subLoteId?: number;          // ID del sub-lote donde está ubicado
+  ubicacion?: string;          // Ubicación específica (GPS o descripción)
+  frecuenciaLectura?: number;  // Frecuencia en minutos
+  umbralMinimo?: number;       // Valor mínimo aceptable
+  umbralMaximo?: number;       // Valor máximo aceptable
+  activo: boolean;             // Si el sensor está activo (default: true)
+}
+```
+
+### Validaciones
+
+- El tipo de sensor debe existir
+- Solo se puede asignar a lote O sub-lote, no ambos
+- Los umbrales deben ser coherentes (mínimo < máximo)
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/iot/sensores \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "nombre": "Sensor Temperatura Lote 1",
+        "descripcion": "Sensor DHT22 para monitoreo de temperatura",
+        "tipoSensorId": 1,
+        "loteId": 1,
+        "ubicacion": "Centro del lote principal",
+        "frecuenciaLectura": 30,
+        "umbralMinimo": 10,
+        "umbralMaximo": 35,
+        "activo": true
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const sensorData = {
+      nombre: "Sensor Humedad Sublote A",
+      descripcion: "Sensor capacitivo de humedad del suelo",
+      tipoSensorId: 2,
+      subLoteId: 1,
+      ubicacion: "GPS: 4.7123,-74.0697",
+      frecuenciaLectura: 15,
+      umbralMinimo: 20,
+      umbralMaximo: 80,
+      activo: true
+    };
+
+    const response = await fetch('/iot/sensores', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(sensorData)
+    });
+
+    const nuevoSensor = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface Sensor {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  tipoSensorId: number;
+  tipoSensor?: {
+    id: number;
+    nombre: string;
+    unidadMedida: string;
+    descripcion?: string;
+  };
+  loteId?: number;
+  lote?: {
+    id: number;
+    nombre: string;
+  };
+  subLoteId?: number;
+  subLote?: {
+    id: number;
+    nombre: string;
+  };
+  ubicacion?: string;
+  frecuenciaLectura?: number;
+  umbralMinimo?: number;
+  umbralMaximo?: number;
+  estadoConexion: 'conectado' | 'desconectado' | 'error';
+  ultimaLectura?: Date;
+  activo: boolean;
+  usuarioId: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## GET /iot/sensores
+
+Obtiene la lista paginada de sensores con filtros opcionales.
+
+### Parámetros de Query
+
+```typescript
+interface SensoresQueryParams {
+  page?: number;           // Página (default: 1)
+  limit?: number;          // Elementos por página (default: 10)
+  tipoSensorId?: number;   // Filtrar por tipo de sensor
+  loteId?: number;         // Filtrar por lote
+  estadoConexion?: string; // Filtrar por estado de conexión
+}
+```
+
+### Ejemplos de Filtros
+
+```bash
+# Todos los sensores
+GET /iot/sensores
+
+# Sensores de temperatura
+GET /iot/sensores?tipoSensorId=1
+
+# Sensores desconectados
+GET /iot/sensores?estadoConexion=desconectado
+
+# Sensores de un lote específico
+GET /iot/sensores?loteId=2
+```
+
+## POST /iot/lecturas
+
+Registra una nueva lectura de sensor (método interno).
+
+### POST /iot/sensores/:sensorId/readings/http
+
+Endpoint público para que los sensores envíen lecturas vía HTTP.
+
+### Parámetros de Entrada
+
+```typescript
+interface HttpSensorReadingDto {
+  value: number;           // Valor de la lectura
+  timestamp?: string;      // Timestamp opcional (ISO 8601)
+}
+```
+
+### Ejemplo de Lectura Automática
+
+```bash
+curl -X POST http://localhost:4000/iot/sensores/1/readings/http \
+  -H "Content-Type: application/json" \
+  -d '{
+    "value": 25.7,
+    "timestamp": "2025-01-15T10:30:00Z"
+  }'
+```
+
+### Respuesta de Lectura
+
+```typescript
+interface SensorLectura {
+  id: number;
+  sensorId: number;
+  valor: number;
+  fechaLectura: Date;
+  fueraDeRango: boolean;   // Si está fuera de umbrales
+  createdAt: Date;
+}
+```
+
+## GET /iot/lecturas
+
+Obtiene lecturas de sensores con filtros.
+
+### Parámetros de Query
+
+```typescript
+interface LecturasQueryParams {
+  sensorId?: number;       // Filtrar por sensor específico
+  fechaInicio?: string;    // Fecha inicio (YYYY-MM-DD)
+  fechaFin?: string;       // Fecha fin (YYYY-MM-DD)
+  fueraDeRango?: boolean;  // Solo lecturas fuera de rango
+}
+```
+
+### Ejemplos
+
+```bash
+# Últimas lecturas de un sensor
+GET /iot/lecturas?sensorId=1
+
+# Lecturas fuera de rango hoy
+GET /iot/lecturas?fueraDeRango=true&fechaInicio=2025-01-15
+
+# Lecturas de un período
+GET /iot/lecturas?sensorId=1&fechaInicio=2025-01-01&fechaFin=2025-01-31
+```
+
+## Gestión de Tipos de Sensor
+
+### POST /iot/tipos-sensor
+
+Crea un nuevo tipo de sensor.
+
+```typescript
+interface CreateTipoSensorDto {
+  nombre: string;          // Nombre del tipo (ej: "Temperatura")
+  descripcion?: string;    // Descripción detallada
+  unidadMedida: string;    // Unidad (ej: "°C", "%", "lux")
+  categoria: string;       // Categoría (ej: "Ambiental", "Suelo")
+  rangoMinimo?: number;    // Valor mínimo posible
+  rangoMaximo?: number;    // Valor máximo posible
+}
+```
+
+### GET /iot/tipos-sensor
+
+Obtiene tipos de sensor disponibles.
+
+## Estados de Conexión
+
+### Estados del Sensor
+- **conectado**: Envió lecturas en las últimas 2 horas
+- **desconectado**: No envía lecturas hace más de 2 horas
+- **error**: Problemas de comunicación
+
+### Monitoreo Automático
+
+```typescript
+// Estado calculado automáticamente
+estadoConexion = ultimaLectura > (now - 2 horas) ? 'conectado' : 'desconectado'
+```
+
+## Alertas y Umbrales
+
+### Validación de Rangos
+
+```typescript
+fueraDeRango = valor < umbralMinimo || valor > umbralMaximo
+```
+
+### Tipos de Alertas
+- **Umbral Mínimo**: Valor por debajo del límite inferior
+- **Umbral Máximo**: Valor por encima del límite superior
+- **Desconexión**: Sensor sin comunicación
+- **Error de Lectura**: Valores inválidos o fuera de rango físico
+
+## Comunicación MQTT
+
+### Topics del Sistema
+
+```
+agrotech/sensors/{sensorId}/data       # Lecturas en tiempo real
+agrotech/sensors/{sensorId}/status     # Estado del sensor
+agrotech/sensors/{sensorId}/config     # Configuración remota
+agrotech/alerts/{tipo}                 # Alertas del sistema
+```
+
+### Ejemplo de Payload MQTT
+
+```json
+{
+  "sensorId": 1,
+  "value": 28.5,
+  "timestamp": "2025-01-15T14:30:00Z",
+  "metadata": {
+    "battery": 85,
+    "signal": -45
+  }
+}
+```
+
+## WebSocket Events
+
+Los cambios en IoT generan eventos WebSocket:
+
+```typescript
+// Nueva lectura registrada
+socket.on('sensorReading', (data) => {
+  // data: { sensorId, valor, fechaLectura, fueraDeRango }
+});
+
+// Estado de sensor cambió
+socket.on('sensorStatusChanged', (data) => {
+  // data: { sensorId, estadoConexion, ultimaLectura }
+});
+
+// Alerta generada
+socket.on('sensorAlert', (data) => {
+  // data: { sensorId, tipoAlerta, valor, umbral }
+});
+```
+
+## Dashboard y Reportes
+
+### GET /reports/iot/dashboard
+
+Dashboard general con métricas IoT.
+
+```typescript
+interface IotDashboard {
+  resumen: {
+    totalSensores: number;
+    sensoresActivos: number;
+    sensoresConectados: number;
+    alertasActivas: number;
+  };
+  lecturasRecientes: SensorLectura[];
+  alertasRecientes: Alerta[];
+}
+```
+
+### GET /reports/iot/aggregations
+
+Agregaciones de datos por período.
+
+### GET /reports/iot/sensors/:id/out-of-range
+
+Lecturas fuera de rango de un sensor.
+
+### GET /reports/iot/sensors/:id/uptime
+
+Disponibilidad histórica de un sensor.
+
+### GET /reports/iot/sensors/:id/sparkline
+
+Datos para gráficos de tendencias.
+
+## Configuración de Sensores
+
+### Frecuencia de Lectura
+
+- **Alta frecuencia**: 1-5 minutos (temperatura, humedad)
+- **Media frecuencia**: 15-30 minutos (suelo, luz)
+- **Baja frecuencia**: 1-2 horas (meteorológicos)
+
+### Umbrales por Tipo
+
+```typescript
+// Temperatura (°C)
+umbralMinimo: 5
+umbralMaximo: 40
+
+// Humedad relativa (%)
+umbralMinimo: 30
+umbralMaximo: 90
+
+// Humedad del suelo (%)
+umbralMinimo: 15
+umbralMaximo: 85
+```
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o sensor inactivo |
+| `401` | Token JWT faltante o sensor no autorizado |
+| `403` | Sin permisos requeridos |
+| `404` | Sensor no encontrado |
+| `409` | Conflicto de ubicación (lote/sub-lote) |
+
+## Ejemplos de Configuración
+
+### Sensor de Temperatura
+
+```json
+{
+  "nombre": "Temp-Principal-Lote1",
+  "tipoSensorId": 1,
+  "loteId": 1,
+  "frecuenciaLectura": 30,
+  "umbralMinimo": 8,
+  "umbralMaximo": 35,
+  "ubicacion": "Centro del lote, 1.5m de altura"
+}
+```
+
+### Sensor de Humedad del Suelo
+
+```json
+{
+  "nombre": "Humedad-Sublote-A1",
+  "tipoSensorId": 2,
+  "subLoteId": 1,
+  "frecuenciaLectura": 15,
+  "umbralMinimo": 25,
+  "umbralMaximo": 75,
+  "ubicacion": "20cm de profundidad, zona central"
+}
+```
+
+### Estación Meteorológica
+
+```json
+{
+  "nombre": "Weather-Station-Main",
+  "tipoSensorId": 3,
+  "loteId": 1,
+  "frecuenciaLectura": 60,
+  "ubicacion": "Torre meteorológica, 10m altura"
+}
+```
+
+:::note[Comunicación Segura]
+Los sensores deben autenticarse para enviar lecturas. Se recomienda implementar API keys específicas por sensor.
+:::
+
+:::tip[Umbrales Inteligentes]
+Los umbrales deben ajustarse según la temporada, cultivo y condiciones locales para alertas efectivas.
+:::
+
+:::warning[Conectividad]
+Monitorea regularmente el estado de conexión de los sensores para asegurar cobertura completa del monitoreo.
+:::

@@ -1,0 +1,458 @@
+---
+title: Reportes Avanzados IoT
+description: Dashboard y análisis detallado de datos de sensores
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## GET /reports/iot/dashboard
+
+Dashboard general con métricas IoT del sistema completo.
+
+### Respuesta
+
+```typescript
+interface IotDashboard {
+  resumen: {
+    totalSensores: number;
+    sensoresActivos: number;
+    sensoresConectados: number;
+    sensoresDesconectados: number;
+    sensoresError: number;
+    lecturasHoy: number;
+    lecturasFueraRango: number;
+    alertasActivas: number;
+  };
+  sensoresCriticos: Array<{
+    id: number;
+    nombre: string;
+    tipoSensor: string;
+    estadoConexion: string;
+    ultimaLectura: Date;
+    tiempoSinLectura: number; // minutos
+  }>;
+  lecturasRecientes: Array<{
+    sensorId: number;
+    sensorNombre: string;
+    valor: number;
+    fechaLectura: Date;
+    fueraDeRango: boolean;
+    umbralMinimo?: number;
+    umbralMaximo?: number;
+  }>;
+  alertasRecientes: Array<{
+    id: number;
+    tipo: 'UMBRAL_MINIMO' | 'UMBRAL_MAXIMO' | 'DESCONEXION' | 'ERROR_LECTURA';
+    sensorId: number;
+    sensorNombre: string;
+    valor?: number;
+    umbral?: number;
+    fecha: Date;
+    severidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA';
+  }>;
+}
+```
+
+## GET /reports/iot/aggregations
+
+Agregaciones de datos de sensores por períodos temporales.
+
+### Parámetros de Query
+
+```typescript
+interface SensorAggregationsQuery {
+  sensorId?: number;      // Sensor específico
+  cultivoId?: number;     // Filtrar por cultivo
+  from?: string;          // Fecha inicio (YYYY-MM-DD)
+  to?: string;            // Fecha fin (YYYY-MM-DD)
+  interval?: 'hour' | 'day' | 'week'; // Agrupación temporal
+}
+```
+
+### Respuesta
+
+```typescript
+interface SensorAggregations {
+  sensorId: number;
+  sensorNombre: string;
+  tipoSensor: string;
+  unidadMedida: string;
+  datos: Array<{
+    periodo: string;      // YYYY-MM-DD HH:mm, YYYY-MM-DD, YYYY-WW
+    promedio: number;
+    minimo: number;
+    maximo: number;
+    mediana: number;
+    desviacionEstandar: number;
+    lecturasTotales: number;
+    lecturasFueraRango: number;
+    porcentajeFueraRango: number;
+  }>;
+}
+```
+
+## GET /reports/iot/sensors/:id/out-of-range
+
+Análisis detallado de lecturas fuera de rango para un sensor.
+
+### Respuesta
+
+```typescript
+interface OutOfRangeStats {
+  sensor: {
+    id: number;
+    nombre: string;
+    tipoSensor: string;
+    umbralMinimo?: number;
+    umbralMaximo?: number;
+  };
+  estadisticas: {
+    totalLecturas: number;
+    lecturasFueraRango: number;
+    porcentajeFueraRango: number;
+    tiempoTotalFueraRango: number; // minutos
+  };
+  periodosCriticos: Array<{
+    fechaInicio: Date;
+    fechaFin: Date;
+    duracionMinutos: number;
+    valorMinimo: number;
+    valorMaximo: number;
+    promedio: number;
+  }>;
+  tendencias: {
+    aumentando: boolean;
+    severidadPromedio: 'BAJA' | 'MEDIA' | 'ALTA';
+    frecuenciaIncidentes: number; // incidentes por día
+  };
+}
+```
+
+## GET /reports/iot/sensors/:id/uptime
+
+Disponibilidad y uptime de un sensor específico.
+
+### Respuesta
+
+```typescript
+interface UptimeStats {
+  sensor: {
+    id: number;
+    nombre: string;
+    tipoSensor: string;
+  };
+  periodoAnalisis: {
+    inicio: Date;
+    fin: Date;
+    diasTotales: number;
+  };
+  uptime: {
+    porcentaje: number;           // 0-100
+    tiempoTotal: number;          // minutos
+    tiempoConectado: number;      // minutos
+    tiempoDesconectado: number;   // minutos
+  };
+  disponibilidadDiaria: Array<{
+    fecha: string;               // YYYY-MM-DD
+    porcentajeUptime: number;
+    tiempoConectado: number;     // minutos
+    incidentes: number;
+  }>;
+  incidentes: Array<{
+    fechaInicio: Date;
+    fechaFin: Date;
+    duracionMinutos: number;
+    tipo: 'DESCONEXION' | 'ERROR';
+  }>;
+}
+```
+
+## GET /reports/iot/sensors/:id/sparkline
+
+Datos optimizados para gráficos de tendencias (sparklines).
+
+### Parámetros de Query
+
+- `limit`: Número de puntos de datos (default: 20)
+
+### Respuesta
+
+```typescript
+interface SparklineData {
+  sensorId: number;
+  sensorNombre: string;
+  unidadMedida: string;
+  datos: Array<{
+    timestamp: Date;
+    valor: number;
+    fueraDeRango: boolean;
+  }>;
+  estadisticas: {
+    promedio: number;
+    minimo: number;
+    maximo: number;
+    tendencia: 'ASCENDENTE' | 'DESCENDENTE' | 'ESTABLE';
+    variabilidad: 'BAJA' | 'MEDIA' | 'ALTA';
+  };
+}
+```
+
+## GET /reports/iot/sensors/compare
+
+Comparativa de rendimiento entre sensores.
+
+### Parámetros de Query
+
+```typescript
+interface CompareSensorsQuery {
+  tipoSensorId?: number;     // Tipo de sensor específico
+  cultivoId?: number;        // Filtrar por cultivo
+  from?: string;             // Fecha inicio
+  to?: string;               // Fecha fin
+  metric?: 'avg' | 'max' | 'min'; // Métrica de comparación
+  limit?: number;            // Número de resultados (default: 10)
+}
+```
+
+### Respuesta
+
+```typescript
+interface SensorComparison {
+  ranking: Array<{
+    posicion: number;
+    sensor: {
+      id: number;
+      nombre: string;
+      tipoSensor: string;
+      ubicacion?: string;
+    };
+    metrica: {
+      valor: number;
+      tipo: 'avg' | 'max' | 'min';
+      periodo: {
+        inicio: Date;
+        fin: Date;
+      };
+    };
+    estadisticas: {
+      lecturasTotales: number;
+      lecturasFueraRango: number;
+      uptime: number;
+      confiabilidad: number; // 0-100
+    };
+  }>;
+  criteriosComparacion: {
+    metrica: string;
+    periodo: string;
+    filtrosAplicados: Record<string, any>;
+  };
+}
+```
+
+## GET /reports/iot/export
+
+Exporta datos IoT agregados a Excel/CSV.
+
+### Parámetros de Query
+
+- `sensorId`: ID del sensor
+- `cultivoId`: ID del cultivo
+- `from`: Fecha inicio
+- `to`: Fecha fin
+- `interval`: `hour` | `day` | `week`
+- `format`: `csv` | `xlsx` (default: `xlsx`)
+
+### Estructura del Archivo Exportado
+
+**Excel con múltiples hojas:**
+- **Resumen**: Estadísticas generales
+- **Datos Agregados**: Datos por período
+- **Sensores**: Lista de sensores incluidos
+- **Alertas**: Registro de alertas
+
+**CSV único:**
+- Columnas: sensor_id, sensor_nombre, periodo, promedio, minimo, maximo, lecturas_totales
+
+## Ejemplos de Uso
+
+### Monitoreo de Dashboard
+
+```javascript
+// Obtener estado general del sistema IoT
+const dashboard = await fetch('/reports/iot/dashboard')
+  .then(r => r.json());
+
+// Verificar sensores críticos
+const sensoresCriticos = dashboard.sensoresCriticos.filter(
+  sensor => sensor.tiempoSinLectura > 60 // más de 1 hora
+);
+
+if (sensoresCriticos.length > 0) {
+  console.warn(`${sensoresCriticos.length} sensores requieren atención`);
+}
+```
+
+### Análisis de Tendencias
+
+```javascript
+// Obtener datos para gráfico de tendencias
+const sparkline = await fetch('/reports/iot/sensors/1/sparkline?limit=50')
+  .then(r => r.json());
+
+// Calcular tendencia
+const valores = sparkline.datos.map(d => d.valor);
+const tendencia = valores[valores.length - 1] - valores[0];
+const direccion = tendencia > 0 ? 'ASCENDENTE' :
+                 tendencia < 0 ? 'DESCENDENTE' : 'ESTABLE';
+```
+
+### Comparativa de Sensores
+
+```javascript
+// Comparar sensores de temperatura
+const comparacion = await fetch('/reports/iot/sensors/compare?tipoSensorId=1&metric=avg&limit=5')
+  .then(r => r.json());
+
+// Encontrar sensor más confiable
+const masConfiable = comparacion.ranking.reduce((prev, current) =>
+  prev.estadisticas.confiabilidad > current.estadisticas.confiabilidad ? prev : current
+);
+```
+
+### Análisis de Disponibilidad
+
+```javascript
+// Verificar uptime de sensor crítico
+const uptime = await fetch('/reports/iot/sensors/1/uptime')
+  .then(r => r.json());
+
+const uptimePromedio = uptime.uptime.porcentaje;
+if (uptimePromedio < 95) {
+  console.error(`Sensor con uptime bajo: ${uptimePromedio}%`);
+}
+```
+
+## Métricas Avanzadas
+
+### Confiabilidad del Sensor
+```
+Confiabilidad = (Lecturas Válidas / Lecturas Totales) × 100
+```
+
+### Severidad de Alertas
+- **BAJA**: Lectura ligeramente fuera de rango
+- **MEDIA**: Varias lecturas consecutivas fuera de rango
+- **ALTA**: Sensor desconectado por tiempo prolongado
+- **CRÍTICA**: Valores extremos que pueden dañar cultivos
+
+### Eficiencia de Monitoreo
+```
+Eficiencia = (Sensores Activos × Uptime Promedio) / Total Sensores
+```
+
+## Alertas Inteligentes
+
+### Tipos de Alertas Automáticas
+
+1. **Umbral Mínimo/Máximo**
+   - Activado cuando valor < umbralMinimo o valor > umbralMaximo
+   - Severidad basada en desviación del umbral
+
+2. **Desconexión**
+   - Activado cuando sensor no envía datos por > 2 horas
+   - Escalada automática por tiempo sin conexión
+
+3. **Tendencia Anómala**
+   - Detecta cambios bruscos en lecturas
+   - Basado en análisis estadístico de series temporales
+
+4. **Error de Calibración**
+   - Valores constantes o patrones irregulares
+   - Indicador de posible falla del sensor
+
+## Optimización de Rendimiento
+
+### Compresión de Datos
+- Agregación automática de datos históricos
+- Reducción de resolución temporal para períodos antiguos
+- Archivos de exportación optimizados
+
+### Caché Inteligente
+- Resultados de dashboard cacheados por 5 minutos
+- Datos de tendencias cacheados por 1 hora
+- Invalidación automática por nuevas lecturas
+
+### Procesamiento Asíncrono
+- Cálculos de agregaciones en background
+- Exportaciones grandes procesadas en cola
+- Notificaciones automáticas de reportes listos
+
+## Integración con Otros Módulos
+
+### Con Cultivos
+- Alertas contextualizadas por tipo de cultivo
+- Umbrales dinámicos basados en etapa del cultivo
+- Correlación sensor-cosecha
+
+### Con Actividades
+- Alertas antes/durante/despues de actividades
+- Monitoreo de efectividad de tratamientos
+- Detección automática de impactos
+
+### Con Producción
+- Control de calidad post-cosecha
+- Monitoreo de condiciones de almacenamiento
+- Alertas de caducidad
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Parámetros inválidos o sensor no encontrado |
+| `403` | Sin permisos para reportes IoT |
+| `404` | Sensor o datos no disponibles |
+| `422` | Datos insuficientes para análisis |
+| `500` | Error en procesamiento de datos |
+
+## Configuración Avanzada
+
+### Umbrales Personalizados
+```typescript
+interface CustomThresholds {
+  sensorId: number;
+  umbrales: {
+    critico: { min: number; max: number };
+    warning: { min: number; max: number };
+    optimal: { min: number; max: number };
+  };
+  condiciones: {
+    temporada: string;
+    tipoCultivo: string;
+    etapaCrecimiento: string;
+  };
+}
+```
+
+### Reglas de Alerta
+```typescript
+interface AlertRule {
+  id: string;
+  nombre: string;
+  condicion: string; // expresión lógica
+  severidad: AlertSeverity;
+  acciones: AlertAction[];
+  activo: boolean;
+}
+```
+
+:::note[Monitoreo Continuo]
+Los reportes IoT se actualizan en tiempo real con cada nueva lectura de sensor.
+:::
+
+:::tip[Análisis Predictivo]
+Usa tendencias históricas para predecir condiciones futuras y optimizar cultivos.
+:::
+
+:::warning[Mantenimiento Preventivo]
+Monitorea el uptime y confiabilidad de sensores para programar mantenimiento.
+:::

@@ -1,0 +1,538 @@
+---
+title: Ejemplos de Datos
+description: Datos de prueba reales para testing y desarrollo
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## Usuarios de Prueba
+
+### Administrador del Sistema
+
+```json
+{
+  "id": 1,
+  "nombre": "Admin",
+  "apellido": "AgroTech",
+  "identificacion": "123456789",
+  "correo": "admin@agrotech.com",
+  "password": "Admin123!",
+  "rolId": 1,
+  "estado": "activo"
+}
+```
+
+### Usuario Estándar
+
+```json
+{
+  "id": 2,
+  "nombre": "Juan",
+  "apellido": "Pérez",
+  "identificacion": "987654321",
+  "correo": "juan.perez@agrotech.com",
+  "password": "Juan123!",
+  "rolId": 2,
+  "estado": "activo"
+}
+```
+
+### Operario Agrícola
+
+```json
+{
+  "id": 3,
+  "nombre": "María",
+  "apellido": "González",
+  "identificacion": "456789123",
+  "correo": "maria.gonzalez@agrotech.com",
+  "password": "Maria123!",
+  "rolId": 3,
+  "estado": "activo"
+}
+```
+
+## Datos Geográficos
+
+### Lote Principal
+
+```json
+{
+  "id": 1,
+  "nombre": "Lote Norte",
+  "descripcion": "Lote principal de 5 hectáreas en zona norte",
+  "area": 50000,
+  "geometria": {
+    "type": "Polygon",
+    "coordinates": [[
+      [-74.123456, 4.678901],
+      [-74.123456, 4.679000],
+      [-74.124000, 4.679000],
+      [-74.124000, 4.678901],
+      [-74.123456, 4.678901]
+    ]]
+  },
+  "tipoSueloId": 1,
+  "ubicacion": "Zona norte de la finca"
+}
+```
+
+### Sub-lote de Tomates
+
+```json
+{
+  "id": 1,
+  "nombre": "Sub-lote Tomates A",
+  "descripcion": "Área dedicada al cultivo de tomates variedad Roma",
+  "area": 2000,
+  "geometria": {
+    "type": "Polygon",
+    "coordinates": [[
+      [-74.123500, 4.678950],
+      [-74.123500, 4.678970],
+      [-74.123700, 4.678970],
+      [-74.123700, 4.678950],
+      [-74.123500, 4.678950]
+    ]]
+  },
+  "loteId": 1
+}
+```
+
+## Cultivos
+
+### Cultivo de Tomates
+
+```json
+{
+  "id": 1,
+  "nombre": "Tomates Roma 2025",
+  "descripcion": "Cultivo de tomates variedad Roma VF",
+  "fechaSiembra": "2025-01-15T00:00:00.000Z",
+  "fechaCosechaEstimada": "2025-04-15T00:00:00.000Z",
+  "loteId": 1,
+  "tipoCultivoId": 1,
+  "variedad": "Roma VF",
+  "cantidadSemillas": 5000,
+  "costoSemillas": 250000,
+  "estado": "activo"
+}
+```
+
+### Cultivo de Maíz
+
+```json
+{
+  "id": 2,
+  "nombre": "Maíz Amarillo 2025",
+  "descripcion": "Cultivo de maíz amarillo para consumo humano",
+  "fechaSiembra": "2025-02-01T00:00:00.000Z",
+  "fechaCosechaEstimada": "2025-06-01T00:00:00.000Z",
+  "loteId": 1,
+  "tipoCultivoId": 2,
+  "variedad": "Amarillo dulce",
+  "cantidadSemillas": 10000,
+  "costoSemillas": 180000,
+  "estado": "activo"
+}
+```
+
+## Actividades Agrícolas
+
+### Siembra de Tomates
+
+```json
+{
+  "id": 1,
+  "titulo": "Siembra de tomates Roma",
+  "descripcion": "Siembra de semillas de tomate en suelo preparado",
+  "tipoActividadId": 1,
+  "cultivoId": 1,
+  "fechaProgramada": "2025-01-15T08:00:00.000Z",
+  "fechaEjecucion": "2025-01-15T08:30:00.000Z",
+  "duracionEstimada": 4,
+  "duracionReal": 3.5,
+  "costoEstimado": 150000,
+  "costoReal": 135000,
+  "prioridad": "alta",
+  "estado": "completada",
+  "notas": "Condiciones climáticas favorables, germinación esperada en 7-10 días",
+  "evidencias": [
+    "https://storage.agrotech.com/actividades/1/siembra_001.jpg",
+    "https://storage.agrotech.com/actividades/1/siembra_002.jpg"
+  ]
+}
+```
+
+### Fertilización
+
+```json
+{
+  "id": 2,
+  "titulo": "Aplicación de fertilizante orgánico",
+  "descripcion": "Aplicación de compost y fertilizante NPK",
+  "tipoActividadId": 3,
+  "cultivoId": 1,
+  "fechaProgramada": "2025-01-20T07:00:00.000Z",
+  "duracionEstimada": 2,
+  "costoEstimado": 80000,
+  "prioridad": "media",
+  "estado": "pendiente",
+  "notas": "Esperar 15 días después de siembra"
+}
+```
+
+## Inventario
+
+### Semillas de Tomate
+
+```json
+{
+  "id": 1,
+  "nombre": "Semillas Tomate Roma VF",
+  "descripcion": "Semillas híbridas de tomate variedad Roma VF",
+  "categoriaId": 1,
+  "unidadMedida": "gramos",
+  "precioUnitario": 50,
+  "stockMinimo": 1000,
+  "stockActual": 5000,
+  "proveedorId": 1,
+  "ubicacionAlmacen": "Estante A-3",
+  "fechaCaducidad": "2026-12-31T00:00:00.000Z",
+  "lote": "LOT-TOM-2024-001"
+}
+```
+
+### Fertilizante NPK
+
+```json
+{
+  "id": 2,
+  "nombre": "Fertilizante NPK 20-10-10",
+  "descripcion": "Fertilizante balanceado para crecimiento vegetativo",
+  "categoriaId": 2,
+  "unidadMedida": "kilogramos",
+  "precioUnitario": 12000,
+  "stockMinimo": 50,
+  "stockActual": 200,
+  "proveedorId": 2,
+  "ubicacionAlmacen": "Estante B-1",
+  "lote": "NPK-2025-001"
+}
+```
+
+### Movimiento de Inventario
+
+```json
+{
+  "id": 1,
+  "insumoId": 1,
+  "tipo": "salida",
+  "cantidad": 500,
+  "motivo": "Siembra de tomates",
+  "loteProduccionId": 1,
+  "actividadId": 1,
+  "costoUnitario": 50,
+  "fechaMovimiento": "2025-01-15T08:30:00.000Z",
+  "notas": "Utilizado en sub-lote Tomates A"
+}
+```
+
+## Producción
+
+### Lote de Producción de Tomates
+
+```json
+{
+  "id": 1,
+  "nombre": "Producción Tomates Roma Enero 2025",
+  "descripcion": "Primera cosecha de tomates Roma del año",
+  "cultivoId": 1,
+  "fechaInicio": "2025-01-15T00:00:00.000Z",
+  "fechaFinEstimada": "2025-04-15T00:00:00.000Z",
+  "cantidadEstimada": 5000,
+  "unidadMedida": "kilogramos",
+  "costoEstimado": 750000,
+  "estado": "en_produccion"
+}
+```
+
+### Cliente
+
+```json
+{
+  "id": 1,
+  "nombre": "Supermercados La Economía S.A.",
+  "tipo": "empresa",
+  "identificacion": "901234567",
+  "telefono": "+57 1 2345678",
+  "email": "compras@laeconomia.com",
+  "direccion": "Calle 100 # 20-30",
+  "ciudad": "Bogotá",
+  "notas": "Cliente mayorista, pagos a 30 días"
+}
+```
+
+### Venta
+
+```json
+{
+  "id": 1,
+  "loteProduccionId": 1,
+  "clienteId": 1,
+  "cantidad": 1000,
+  "precioUnitario": 3500,
+  "fechaVenta": "2025-03-15T10:00:00.000Z",
+  "metodoPago": "transferencia",
+  "total": 3500000,
+  "estado": "completada",
+  "notas": "Venta primera cosecha, calidad premium"
+}
+```
+
+## IoT - Sensores
+
+### Sensor de Temperatura
+
+```json
+{
+  "id": 1,
+  "nombre": "Sensor Temp Lote Norte",
+  "descripcion": "Sensor de temperatura ambiente en lote norte",
+  "tipoSensorId": 1,
+  "loteId": 1,
+  "ubicacion": {
+    "type": "Point",
+    "coordinates": [-74.123600, 4.678950]
+  },
+  "configuracion": {
+    "intervaloLectura": 300,
+    "precision": 0.1,
+    "calibracionOffset": 0.5
+  },
+  "umbralMinimo": 10,
+  "umbralMaximo": 35,
+  "activo": true
+}
+```
+
+### Sensor de Humedad
+
+```json
+{
+  "id": 2,
+  "nombre": "Sensor Humedad Suelo",
+  "descripcion": "Sensor de humedad del suelo en sub-lote tomates",
+  "tipoSensorId": 2,
+  "subLoteId": 1,
+  "ubicacion": {
+    "type": "Point",
+    "coordinates": [-74.123550, 4.678960]
+  },
+  "configuracion": {
+    "profundidad": 20,
+    "tipoSuelo": "arcilloso"
+  },
+  "umbralMinimo": 20,
+  "umbralMaximo": 80,
+  "activo": true
+}
+```
+
+### Lectura de Sensor
+
+```json
+{
+  "id": 1,
+  "sensorId": 1,
+  "valor": 28.5,
+  "unidad": "°C",
+  "timestamp": "2025-01-15T12:00:00.000Z",
+  "metadata": {
+    "bateria": 85,
+    "senal": -45,
+    "calidad": "buena"
+  }
+}
+```
+
+## Wiki - Base de Conocimiento
+
+### EPA de Tomates
+
+```json
+{
+  "id": 1,
+  "titulo": "Cultivo de Tomate (Solanum lycopersicum)",
+  "descripcion": "Guía completa para el cultivo comercial de tomates",
+  "contenido": "El tomate es una hortaliza de la familia de las solanáceas...",
+  "categoria": "hortalizas",
+  "etiquetas": ["tomate", "hortaliza", "solana", "cultivo"],
+  "referencias": [
+    "Ministerio de Agricultura - Guía de Cultivos",
+    "FAO - Producción de Hortalizas"
+  ],
+  "autorId": 1,
+  "fechaCreacion": "2025-01-01T00:00:00.000Z"
+}
+```
+
+### Tipo de Cultivo - Tomate
+
+```json
+{
+  "id": 1,
+  "nombre": "Tomate",
+  "nombreCientifico": "Solanum lycopersicum",
+  "descripcion": "Planta herbácea anual de la familia Solanaceae",
+  "caracteristicas": {
+    "ciclo": "anual",
+    "altura": "30-200 cm",
+    "temperaturaOptima": "20-25°C",
+    "humedadOptima": "60-70%"
+  },
+  "cicloVida": "80-120 días",
+  "rendimientoEsperado": "40-60 t/ha",
+  "plagasComunes": ["Áfidos", "Minador de hojas", "Trips"],
+  "enfermedadesComunes": ["Mildiu", "Fusarium", "Verticillium"],
+  "cuidadosEspeciales": "Requiere tutorado y poda regular"
+}
+```
+
+## Reportes
+
+### Reporte de Ventas
+
+**Request:**
+```json
+{
+  "fechaInicio": "2025-01-01T00:00:00.000Z",
+  "fechaFin": "2025-12-31T23:59:59.000Z",
+  "formato": "json"
+}
+```
+
+**Response:**
+```json
+{
+  "ventas": [
+    {
+      "id": 1,
+      "fecha": "2025-03-15T10:00:00.000Z",
+      "cliente": "Supermercados La Economía",
+      "producto": "Tomates Roma",
+      "cantidad": 1000,
+      "precioUnitario": 3500,
+      "total": 3500000,
+      "estado": "completada"
+    }
+  ],
+  "totales": {
+    "cantidadTotal": 1000,
+    "valorTotal": 3500000,
+    "numeroVentas": 1
+  }
+}
+```
+
+### Reporte de Rentabilidad
+
+**Request:**
+```json
+{
+  "cultivoId": 1,
+  "fechaInicio": "2025-01-01T00:00:00.000Z",
+  "fechaFin": "2025-12-31T23:59:59.000Z",
+  "incluirCostosIndirectos": true,
+  "formato": "json"
+}
+```
+
+**Response:**
+```json
+{
+  "cultivo": "Tomates Roma 2025",
+  "periodo": {
+    "inicio": "2025-01-01T00:00:00.000Z",
+    "fin": "2025-12-31T23:59:59.000Z"
+  },
+  "ingresos": {
+    "ventas": 3500000,
+    "otros": 0,
+    "total": 3500000
+  },
+  "costos": {
+    "directos": {
+      "semillas": 250000,
+      "fertilizantes": 150000,
+      "manoObra": 300000,
+      "otros": 50000
+    },
+    "indirectos": {
+      "depreciacion": 100000,
+      "administrativos": 50000
+    },
+    "total": 900000
+  },
+  "rentabilidad": {
+    "utilidadBruta": 2600000,
+    "margenBruto": 74.3,
+    "utilidadNeta": 2500000,
+    "margenNeto": 71.4
+  }
+}
+```
+
+## Scripts de Testing
+
+### Crear Usuario de Prueba
+
+```bash
+# Crear usuario administrador
+curl -X POST http://localhost:4000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Test",
+    "apellido": "User",
+    "identificacion": "111111111",
+    "correo": "test@agrotech.com",
+    "password": "Test123!"
+  }'
+```
+
+### Crear Lote de Prueba
+
+```bash
+# Login primero
+TOKEN=$(curl -X POST http://localhost:4000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"correo":"admin@agrotech.com","password":"Admin123!"}' \
+  | jq -r '.token')
+
+# Crear lote
+curl -X POST http://localhost:4000/geo/lotes \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Lote de Prueba",
+    "area": 10000,
+    "geometria": {
+      "type": "Polygon",
+      "coordinates": [[
+        [-74.1, 4.6],
+        [-74.1, 4.7],
+        [-74.2, 4.7],
+        [-74.2, 4.6],
+        [-74.1, 4.6]
+      ]]
+    }
+  }'
+```
+
+:::note[Uso de Datos de Prueba]
+Estos datos están diseñados para testing y desarrollo. En producción, asegúrate de usar datos reales y validar todas las entradas.
+:::
+
+:::tip[Seeds del Sistema]
+El sistema incluye seeds automáticos que crean algunos de estos datos de prueba al inicializar la base de datos.
+:::

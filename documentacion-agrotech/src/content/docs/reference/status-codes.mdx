@@ -1,0 +1,475 @@
+---
+title: Códigos de Estado HTTP
+description: Referencia completa de códigos de estado HTTP y sus significados en la API
+---
+
+## Respuestas Exitosas (2xx)
+
+### 200 OK
+**Descripción:** La solicitud se procesó correctamente.
+
+**Cuándo se usa:**
+- Operaciones GET exitosas
+- Operaciones PUT/PATCH exitosas
+- Operaciones DELETE exitosas
+- Login exitoso
+
+**Ejemplo:**
+```json
+{
+  "data": { /* datos solicitados */ },
+  "message": "Operación exitosa"
+}
+```
+
+### 201 Created
+**Descripción:** El recurso se creó correctamente.
+
+**Cuándo se usa:**
+- POST exitoso para crear recursos
+- Registro de usuario exitoso
+
+**Ejemplo:**
+```json
+{
+  "id": 123,
+  "message": "Recurso creado exitosamente",
+  "data": { /* datos del recurso creado */ }
+}
+```
+
+### 204 No Content
+**Descripción:** La solicitud se procesó correctamente pero no hay contenido que devolver.
+
+**Cuándo se usa:**
+- Operaciones DELETE exitosas
+- Operaciones PUT/PATCH que no devuelven datos
+
+## Errores del Cliente (4xx)
+
+### 400 Bad Request
+**Descripción:** La solicitud contiene datos inválidos o malformados.
+
+**Causas comunes:**
+- Campos requeridos faltantes
+- Formatos inválidos (email, teléfono, etc.)
+- Validaciones de negocio fallidas
+- JSON malformado
+
+**Ejemplo:**
+```json
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "error": "Bad Request",
+  "details": [
+    {
+      "field": "correo",
+      "constraints": {
+        "isEmail": "correo must be a valid email"
+      }
+    }
+  ]
+}
+```
+
+### 401 Unauthorized
+**Descripción:** El usuario no está autenticado o el token es inválido.
+
+**Causas comunes:**
+- Token JWT faltante
+- Token expirado
+- Token inválido
+- Credenciales incorrectas
+- Usuario inactivo
+- Email no verificado
+
+**Ejemplo:**
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "No autorizado"
+}
+```
+
+### 403 Forbidden
+**Descripción:** El usuario está autenticado pero no tiene permisos para la operación.
+
+**Causas comunes:**
+- Permisos insuficientes
+- Rol sin acceso al recurso
+- Usuario sin permisos directos
+
+**Ejemplo:**
+```json
+{
+  "statusCode": 403,
+  "message": "Forbidden resource",
+  "error": "No tienes permisos para acceder a este recurso"
+}
+```
+
+### 404 Not Found
+**Descripción:** El recurso solicitado no existe.
+
+**Causas comunes:**
+- ID de recurso inválido
+- Recurso eliminado
+- Endpoint incorrecto
+
+**Ejemplo:**
+```json
+{
+  "statusCode": 404,
+  "message": "Usuario no encontrado",
+  "error": "Not Found"
+}
+```
+
+### 409 Conflict
+**Descripción:** Conflicto con el estado actual del recurso.
+
+**Causas comunes:**
+- Datos únicos duplicados (email, identificación)
+- Estados incompatibles
+- Operaciones simultáneas conflictivas
+
+**Ejemplo:**
+```json
+{
+  "statusCode": 409,
+  "message": "El correo ya está registrado",
+  "error": "Conflict"
+}
+```
+
+### 422 Unprocessable Entity
+**Descripción:** La solicitud está bien formada pero contiene errores semánticos.
+
+**Causas comunes:**
+- Validaciones de DTO fallidas
+- Reglas de negocio violadas
+- Tipos de datos incorrectos
+
+**Ejemplo:**
+```json
+{
+  "statusCode": 422,
+  "message": "Validation failed",
+  "error": "Unprocessable Entity",
+  "details": [
+    {
+      "field": "password",
+      "constraints": {
+        "matches": "La contraseña debe contener al menos una mayúscula, una minúscula y un número"
+      }
+    }
+  ]
+}
+```
+
+### 429 Too Many Requests
+**Descripción:** El usuario ha excedido el límite de solicitudes.
+
+**Causas comunes:**
+- Rate limiting activado
+- Múltiples intentos de login fallidos
+- Solicitudes excesivas en poco tiempo
+
+## Errores del Servidor (5xx)
+
+### 500 Internal Server Error
+**Descripción:** Error interno del servidor.
+
+**Causas comunes:**
+- Excepciones no manejadas
+- Errores de base de datos
+- Problemas de configuración
+- Errores de servicios externos
+
+**Ejemplo:**
+```json
+{
+  "statusCode": 500,
+  "message": "Internal server error",
+  "error": "Internal Server Error"
+}
+```
+
+### 502 Bad Gateway
+**Descripción:** Error de comunicación con servicios externos.
+
+**Causas comunes:**
+- Base de datos no disponible
+- Servicios de cache (Redis) caídos
+- Servicios de email fallando
+
+### 503 Service Unavailable
+**Descripción:** El servicio no está disponible temporalmente.
+
+**Causas comunes:**
+- Mantenimiento programado
+- Sobrecarga del servidor
+- Servicios dependientes caídos
+
+## Códigos por Módulo
+
+### Autenticación (/auth)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/register` | POST | 201 | 400, 409, 422 |
+| `/login` | POST | 200 | 400, 401 |
+| `/verify-email` | POST | 200 | 400, 404 |
+| `/resend-verification` | POST | 200 | 400, 404 |
+| `/request-reset` | POST | 200 | 400 |
+| `/reset-password` | POST | 200 | 400, 404 |
+| `/logout` | POST | 200 | 401 |
+
+### Usuarios (/users)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/` | GET | 200 | 401, 403 |
+| `/:id` | GET | 200 | 401, 403, 404 |
+| `/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/:id` | DELETE | 204 | 401, 403, 404 |
+| `/me` | GET | 200 | 401 |
+| `/me` | PATCH | 200 | 400, 401, 422 |
+| `/me/password` | PATCH | 200 | 400, 401, 422 |
+| `/me/avatar` | POST | 201 | 400, 401, 422 |
+
+### Permisos (/permissions)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/permisos` | GET | 200 | 401, 403 |
+| `/permisos` | POST | 201 | 400, 401, 403, 409, 422 |
+| `/permisos/:id` | GET | 200 | 401, 403, 404 |
+| `/permisos/:id` | DELETE | 204 | 401, 403, 404 |
+| `/roles` | GET | 200 | 401, 403 |
+| `/roles` | POST | 201 | 400, 401, 403, 409, 422 |
+| `/roles/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/roles/:id` | DELETE | 204 | 401, 403, 404 |
+| `/roles/:rolId/permisos` | GET | 200 | 401, 403, 404 |
+| `/roles/:rolId/permisos/:permisoId` | POST | 201 | 401, 403, 404, 409 |
+| `/roles/:rolId/permisos/:permisoId` | DELETE | 204 | 400, 401, 403, 404 |
+| `/roles/:rolId/permisos/sync` | POST | 200 | 400, 401, 403, 404, 422 |
+
+### Geografía (/geo)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/lotes` | GET | 200 | 401, 403 |
+| `/lotes` | POST | 201 | 400, 401, 403, 422 |
+| `/lotes/:id` | GET | 200 | 401, 403, 404 |
+| `/lotes/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/lotes/:id` | DELETE | 204 | 401, 403, 404 |
+| `/sublotes` | GET | 200 | 401, 403 |
+| `/sublotes` | POST | 201 | 400, 401, 403, 422 |
+| `/sublotes/:id` | GET | 200 | 401, 403, 404 |
+| `/sublotes/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/sublotes/:id` | DELETE | 204 | 401, 403, 404 |
+
+### Cultivos (/cultivos)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/` | GET | 200 | 401, 403 |
+| `/` | POST | 201 | 400, 401, 403, 422 |
+| `/:id` | GET | 200 | 401, 403, 404 |
+| `/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/:id` | DELETE | 204 | 401, 403, 404 |
+
+### Actividades (/activities)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/` | GET | 200 | 401, 403 |
+| `/` | POST | 201 | 400, 401, 403, 422 |
+| `/:id` | GET | 200 | 401, 403, 404 |
+| `/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/:id` | DELETE | 204 | 401, 403, 404 |
+
+### Inventario (/insumos)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/` | GET | 200 | 401, 403 |
+| `/` | POST | 201 | 400, 401, 403, 422 |
+| `/:id` | GET | 200 | 401, 403, 404 |
+| `/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/:id` | DELETE | 204 | 401, 403, 404 |
+| `/:id/movimientos` | GET | 200 | 401, 403, 404 |
+| `/movimientos/traslado` | POST | 201 | 400, 401, 403, 422 |
+
+### Producción (/production)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/lotes-produccion` | GET | 200 | 401, 403 |
+| `/lotes-produccion` | POST | 201 | 400, 401, 403, 422 |
+| `/lotes-produccion/:id` | GET | 200 | 401, 403, 404 |
+| `/lotes-produccion/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/lotes-produccion/:id` | DELETE | 204 | 401, 403, 404 |
+| `/ventas` | GET | 200 | 401, 403 |
+| `/ventas` | POST | 201 | 400, 401, 403, 422 |
+| `/ventas/:id` | GET | 200 | 401, 403, 404 |
+| `/ventas/:id/anular` | POST | 200 | 400, 401, 403, 404 |
+| `/clientes` | GET | 200 | 401, 403 |
+| `/clientes` | POST | 201 | 400, 401, 403, 422 |
+| `/clientes/:id` | GET | 200 | 401, 403, 404 |
+| `/clientes/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/clientes/:id` | DELETE | 204 | 401, 403, 404 |
+
+### Reportes (/reports)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/financial/sales` | GET | 200 | 400, 401, 403, 422 |
+| `/financial/prices` | GET | 200 | 400, 401, 403, 422 |
+| `/financial/rentability/*` | GET | 200 | 400, 401, 403, 404, 422 |
+| `/crops/*` | GET | 200 | 400, 401, 403, 404, 422 |
+| `/iot/*` | GET | 200 | 400, 401, 403, 404, 422 |
+
+### Wiki (/epas)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/` | GET | 200 | 401, 403 |
+| `/` | POST | 201 | 400, 401, 403, 422 |
+| `/:id` | GET | 200 | 401, 403, 404 |
+| `/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/:id` | DELETE | 204 | 401, 403, 404 |
+| `/tipos-cultivo` | GET | 200 | 401, 403 |
+| `/tipos-cultivo` | POST | 201 | 400, 401, 403, 422 |
+| `/tipos-cultivo/:id` | GET | 200 | 401, 403, 404 |
+| `/tipos-cultivo/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/tipos-cultivo/:id` | DELETE | 204 | 401, 403, 404 |
+| `/:epaId/tipos-cultivo/:tipoId` | POST | 201 | 401, 403, 404, 409 |
+| `/:epaId/tipos-cultivo/:tipoId` | DELETE | 204 | 400, 401, 403, 404 |
+| `/:epaId/tipos-cultivo` | GET | 200 | 401, 403, 404 |
+
+### IoT (/iot)
+
+| Endpoint | Método | Éxito | Errores Comunes |
+|----------|--------|-------|-----------------|
+| `/sensores` | GET | 200 | 401, 403 |
+| `/sensores` | POST | 201 | 400, 401, 403, 422 |
+| `/sensores/:id` | DELETE | 204 | 401, 403, 404 |
+| `/lecturas` | GET | 200 | 401, 403 |
+| `/lecturas` | POST | 201 | 400, 401, 403, 422 |
+| `/sensores/:sensorId/readings/http` | POST | 201 | 400, 401, 403, 422 |
+| `/tipos-sensor` | GET | 200 | 401, 403 |
+| `/tipos-sensor` | POST | 201 | 400, 401, 403, 422 |
+| `/tipos-sensor/:id` | GET | 200 | 401, 403, 404 |
+| `/tipos-sensor/:id` | PATCH | 200 | 400, 401, 403, 404, 422 |
+| `/tipos-sensor/:id` | DELETE | 204 | 401, 403, 404 |
+
+## Manejo de Errores en el Cliente
+
+### JavaScript/TypeScript
+
+```typescript
+async function apiRequest(url: string, options: RequestInit = {}) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+
+      switch (response.status) {
+        case 400:
+          throw new ValidationError(errorData.message, errorData.details);
+        case 401:
+          // Redirigir a login o renovar token
+          throw new AuthenticationError(errorData.message);
+        case 403:
+          throw new PermissionError(errorData.message);
+        case 404:
+          throw new NotFoundError(errorData.message);
+        case 409:
+          throw new ConflictError(errorData.message);
+        case 422:
+          throw new ValidationError(errorData.message, errorData.details);
+        case 429:
+          throw new RateLimitError(errorData.message);
+        case 500:
+        case 502:
+        case 503:
+          throw new ServerError(errorData.message);
+        default:
+          throw new ApiError(errorData.message, response.status);
+      }
+    }
+
+    return await response.json();
+  } catch (error) {
+    // Manejar errores de red
+    if (error instanceof TypeError) {
+      throw new NetworkError('Error de conexión');
+    }
+    throw error;
+  }
+}
+```
+
+### Python
+
+```python
+import requests
+from requests.exceptions import RequestException
+
+def api_request(url: str, method: str = 'GET', **kwargs):
+    try:
+        headers = kwargs.get('headers', {})
+        headers.update({
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        })
+
+        response = requests.request(method, url, headers=headers, **kwargs)
+
+        if not response.ok:
+            error_data = response.json()
+
+            if response.status_code == 400:
+                raise ValidationError(error_data.get('message'), error_data.get('details'))
+            elif response.status_code == 401:
+                raise AuthenticationError(error_data.get('message'))
+            elif response.status_code == 403:
+                raise PermissionError(error_data.get('message'))
+            elif response.status_code == 404:
+                raise NotFoundError(error_data.get('message'))
+            elif response.status_code == 409:
+                raise ConflictError(error_data.get('message'))
+            elif response.status_code == 422:
+                raise ValidationError(error_data.get('message'), error_data.get('details'))
+            elif response.status_code == 429:
+                raise RateLimitError(error_data.get('message'))
+            elif response.status_code in [500, 502, 503]:
+                raise ServerError(error_data.get('message'))
+            else:
+                raise ApiError(error_data.get('message'), response.status_code)
+
+        return response.json()
+
+    except RequestException:
+        raise NetworkError('Error de conexión')
+```
+
+:::note[Consistencia]
+Todos los endpoints siguen el mismo patrón de códigos de error para facilitar el manejo en el cliente.
+:::
+
+:::tip[Logging]
+En producción, registra todos los errores 5xx para debugging y monitoreo de la salud del sistema.
+:::

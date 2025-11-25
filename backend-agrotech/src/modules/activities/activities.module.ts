@@ -11,10 +11,11 @@ import { ActividadInsumoUso } from './entities/actividad-insumo-uso.entity';
 import { ActividadInsumo } from './entities/actividad-insumo.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { GeoModule } from '../geo/geo.module';
+import { CultivosModule } from '../cultivos/cultivos.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ProductionModule } from '../production/production.module';
 import { AuthModule } from '../auth/auth.module';
+import { ImageUploadService } from '../../common/services/image-upload.service';
 
 @Module({
   imports: [
@@ -33,12 +34,12 @@ import { AuthModule } from '../auth/auth.module';
       }),
       inject: [ConfigService],
     }),
-    GeoModule,
+    CultivosModule,
     InventoryModule,
     ProductionModule,
     AuthModule,
   ],
   controllers: [ActivitiesController],
-  providers: [ActivitiesService, ActivitiesGateway, ActivitiesController],
+  providers: [ActivitiesService, ActivitiesGateway, ImageUploadService],
 })
 export class ActivitiesModule {}

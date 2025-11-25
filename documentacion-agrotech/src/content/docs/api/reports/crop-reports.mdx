@@ -1,0 +1,401 @@
+---
+title: Reportes Avanzados de Cultivos
+description: Análisis detallado y exportación de datos de cultivos
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## GET /reports/crops/:id/summary
+
+Obtiene un resumen completo del rendimiento de un cultivo específico.
+
+### Respuesta
+
+```typescript
+interface CropSummary {
+  cultivo: {
+    id: number;
+    nombreCultivo: string;
+    tipoCultivo: string;
+    lote?: {
+      nombre: string;
+    };
+  };
+  resumen: {
+    totalActividades: number;
+    costoTotal: number;
+    costoManoObra: number;
+    costoInsumos: number;
+    costoServicios: number;
+    areaCultivada: number;
+    rendimientoEsperado?: number;
+    rendimientoActual?: number;
+    fechaInicio: Date;
+    fechaFin?: Date;
+    estado: string;
+  };
+  estadisticas: {
+    actividadesPorTipo: Array<{
+      tipo: string;
+      cantidad: number;
+      costoTotal: number;
+    }>;
+    insumosMasUsados: Array<{
+      nombre: string;
+      cantidad: number;
+      costoTotal: number;
+    }>;
+  };
+}
+```
+
+## GET /reports/crops/:id/activities
+
+Estadísticas detalladas de actividades realizadas en el cultivo.
+
+### Respuesta
+
+```typescript
+interface ActivityStats {
+  tipoActividad: string;
+  descripcion: string;
+  cantidad: number;
+  costoTotal: number;
+  costoPromedio: number;
+  ultimaEjecucion: Date;
+  frecuenciaPromedio: number; // días entre ejecuciones
+}
+```
+
+## GET /reports/crops/:id/labor
+
+Análisis de mano de obra utilizada en el cultivo.
+
+### Respuesta
+
+```typescript
+interface LaborStats {
+  tipoLabor: string;
+  descripcion: string;
+  horasTotales: number;
+  costoTotal: number;
+  costoPorHora: number;
+  trabajadoresUnicos: number;
+  eficiencia: number; // horas por hectárea
+}
+```
+
+## GET /reports/crops/:id/inputs
+
+Estadísticas de consumo de insumos por cultivo.
+
+### Respuesta
+
+```typescript
+interface InputStats {
+  insumo: {
+    nombre: string;
+    categoria: string;
+    unidadMedida: string;
+  };
+  cantidadTotal: number;
+  costoTotal: number;
+  costoUnitarioPromedio: number;
+  aplicaciones: number;
+  ultimaAplicacion: Date;
+}
+```
+
+## GET /reports/crops/:id/consistency
+
+Valida la consistencia de los datos del cultivo.
+
+### Respuesta
+
+```typescript
+interface ConsistencyValidation {
+  esConsistente: boolean;
+  errores: Array<{
+    tipo: 'ERROR' | 'WARNING' | 'INFO';
+    mensaje: string;
+    campo?: string;
+    valor?: any;
+  }>;
+  recomendaciones: string[];
+}
+```
+
+## GET /reports/crops/:id/labor-by-period
+
+Análisis de mano de obra por períodos temporales.
+
+### Parámetros de Query
+
+- `granularity`: `day` | `week` | `month` (default: `week`)
+
+### Respuesta
+
+```typescript
+interface LaborByPeriod {
+  periodo: string; // YYYY-MM-DD, YYYY-WW, YYYY-MM
+  horasTotales: number;
+  costoTotal: number;
+  tiposLabor: Array<{
+    tipo: string;
+    horas: number;
+    costo: number;
+  }>;
+}
+```
+
+## GET /reports/crops/:id/inputs-by-period
+
+Consumo de insumos agrupado por períodos.
+
+### Parámetros de Query
+
+- `granularity`: `day` | `week` | `month` (default: `week`)
+
+### Respuesta
+
+```typescript
+interface InputsByPeriod {
+  periodo: string;
+  costoTotal: number;
+  insumos: Array<{
+    nombre: string;
+    cantidad: number;
+    costo: number;
+    aplicaciones: number;
+  }>;
+}
+```
+
+## GET /reports/crops/:id/detailed-activities
+
+Lista detallada de todas las actividades con costos desglosados.
+
+### Parámetros de Query
+
+- `from`: Fecha inicio (YYYY-MM-DD)
+- `to`: Fecha fin (YYYY-MM-DD)
+
+### Respuesta
+
+```typescript
+interface DetailedActivity {
+  id: number;
+  fecha: Date;
+  tipoActividad: string;
+  descripcion: string;
+  costoTotal: number;
+  costoManoObra: number;
+  costoInsumos: number;
+  costoServicios: number;
+  areaAplicada: number;
+  rendimiento?: number;
+  observaciones?: string;
+  insumosUtilizados: Array<{
+    insumo: string;
+    cantidad: number;
+    costo: number;
+  }>;
+  manoObra: Array<{
+    tipo: string;
+    horas: number;
+    costo: number;
+  }>;
+}
+```
+
+## GET /reports/crops/:id/top-inputs
+
+Ranking de insumos más utilizados/costosos.
+
+### Parámetros de Query
+
+- `limit`: Número de resultados (default: 10)
+- `sortBy`: `costo` | `cantidad` (default: `costo`)
+
+### Respuesta
+
+```typescript
+interface TopInput {
+  posicion: number;
+  insumo: {
+    nombre: string;
+    categoria: string;
+  };
+  cantidadTotal: number;
+  costoTotal: number;
+  aplicaciones: number;
+  costoPromedio: number;
+}
+```
+
+## GET /reports/crops/:id/export
+
+Exporta todos los datos del cultivo a Excel.
+
+### Respuesta
+
+Archivo Excel con múltiples hojas:
+- **Resumen**: Estadísticas generales
+- **Actividades**: Lista completa de actividades
+- **Mano de Obra**: Detalle de labor
+- **Insumos**: Consumo de insumos
+- **Detalle Actividades**: Actividades con desglose completo
+
+## GET /reports/crops/export
+
+Exporta reportes consolidados de múltiples cultivos.
+
+### Parámetros de Query
+
+- `cultivoId`: ID específico de cultivo
+- `fechaInicio`: Fecha inicio (YYYY-MM-DD)
+- `fechaFin`: Fecha fin (YYYY-MM-DD)
+- `format`: `csv` | `xlsx` (default: `xlsx`)
+
+### Filtros Disponibles
+
+```bash
+# Exportar cultivo específico
+GET /reports/crops/export?cultivoId=1
+
+# Exportar cultivos en un período
+GET /reports/crops/export?fechaInicio=2025-01-01&fechaFin=2025-12-31
+
+# Exportar en formato CSV
+GET /reports/crops/export?format=csv
+```
+
+## Ejemplos de Uso
+
+### Análisis de Eficiencia
+
+```javascript
+// Obtener resumen y actividades para análisis
+const [summary, activities] = await Promise.all([
+  fetch(`/reports/crops/1/summary`),
+  fetch(`/reports/crops/1/activities`)
+]);
+
+const eficiencia = summary.resumen.costoTotal / summary.resumen.areaCultivada;
+console.log(`Costo por hectárea: $${eficiencia.toFixed(2)}`);
+```
+
+### Seguimiento de Costos por Período
+
+```javascript
+// Análisis mensual de costos
+const laborByMonth = await fetch(`/reports/crops/1/labor-by-period?granularity=month`)
+  .then(r => r.json());
+
+const costoMensual = laborByMonth.reduce((acc, mes) => {
+  acc[mes.periodo] = mes.costoTotal;
+  return acc;
+}, {});
+```
+
+### Optimización de Insumos
+
+```javascript
+// Identificar insumos más costosos
+const topInputs = await fetch(`/reports/crops/1/top-inputs?limit=5&sortBy=costo`)
+  .then(r => r.json());
+
+const insumoMasCostoso = topInputs[0];
+console.log(`Mayor costo: ${insumoMasCostoso.insumo.nombre} - $${insumoMasCostoso.costoTotal}`);
+```
+
+## Validaciones y Consistencia
+
+### Reglas de Validación
+
+- **Fechas coherentes**: Fecha fin > fecha inicio
+- **Áreas positivas**: Todas las áreas deben ser > 0
+- **Costos válidos**: No se permiten costos negativos
+- **Unidades consistentes**: Verificación de unidades de medida
+
+### Tipos de Errores
+
+```typescript
+enum ValidationErrorType {
+  MISSING_DATA = 'MISSING_DATA',
+  INVALID_DATE = 'INVALID_DATE',
+  NEGATIVE_VALUE = 'NEGATIVE_VALUE',
+  INCONSISTENT_UNITS = 'INCONSISTENT_UNITS',
+  DUPLICATE_ENTRY = 'DUPLICATE_ENTRY'
+}
+```
+
+## Métricas Calculadas
+
+### Eficiencia de Producción
+```
+Eficiencia = Rendimiento Actual / Rendimiento Esperado
+```
+
+### Costo por Unidad
+```
+Costo Unitario = Costo Total / Área Cultivada
+```
+
+### ROI (Retorno de Inversión)
+```
+ROI = (Ingresos - Costos) / Costos * 100
+```
+
+## Exportación Avanzada
+
+### Formatos Soportados
+
+- **Excel (.xlsx)**: Múltiples hojas, formato nativo
+- **CSV (.csv)**: Datos planos, compatible con análisis
+
+### Estructura del Excel
+
+```
+📊 Cultivo {ID} - {Nombre}
+├── 📋 Resumen General
+├── 📝 Lista de Actividades
+├── 👷 Detalle de Mano de Obra
+├── 🧪 Consumo de Insumos
+└── 📈 Análisis Detallado
+```
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Parámetros inválidos o cultivo no encontrado |
+| `403` | Sin permisos para acceder a reportes |
+| `404` | Cultivo no existe |
+| `500` | Error interno en generación de reporte |
+
+## Optimizaciones de Rendimiento
+
+### Caché Inteligente
+- Resultados cacheados por 1 hora
+- Invalidación automática al actualizar datos
+
+### Paginación Automática
+- Grandes datasets divididos automáticamente
+- Navegación eficiente en reportes extensos
+
+### Compresión de Datos
+- Archivos Excel optimizados
+- Reducción de tamaño sin pérdida de información
+
+:::note[Reportes en Tiempo Real]
+Los reportes se actualizan automáticamente cuando se registran nuevas actividades o insumos.
+:::
+
+:::tip[Análisis Comparativo]
+Usa múltiples cultivos para identificar patrones y optimizar procesos agrícolas.
+:::
+
+:::warning[Validación de Datos]
+Siempre verifica la consistencia antes de tomar decisiones basadas en los reportes.
+:::

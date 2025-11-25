@@ -7,7 +7,7 @@ import {
 } from '@nestjs/websockets';
 import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { UsersController } from '../controllers/users.controller';
+import { UsersService } from '../services/users.service';
 import { UsersFindAllDoDto, UsersFindByIdDoDto, UsersRemoveDoDto } from '../dtos/users-do.dto';
 import { WsJwtGuard } from '../../../common/guards/ws-jwt.guard';
 import { WsPermissionsGuard } from '../../../common/guards/ws-permissions.guard';
@@ -19,7 +19,7 @@ export class UsersGateway {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly usersController: UsersController) {}
+  constructor(private readonly usersService: UsersService) {}
 
   private sanitizeUser(user: any) {
     const { passwordHash, ...rest } = user;
@@ -34,7 +34,7 @@ export class UsersGateway {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const users = await this.usersController.findAll(filters);
+      const users = await this.usersService.findAll(filters);
       const sanitized = users.map(user => this.sanitizeUser(user));
       client.emit('users:list', sanitized);
       return sanitized;
@@ -52,7 +52,7 @@ export class UsersGateway {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const user = await this.usersController.findById(data.id);
+      const user = await this.usersService.findById(data.id);
       const sanitized = this.sanitizeUser(user);
       client.emit('users:detail', sanitized);
       return sanitized;
@@ -70,7 +70,7 @@ export class UsersGateway {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const result = await this.usersController.removeUser(data.id);
+      const result = await this.usersService.remove(data.id);
       client.emit('users:removed', result);
       this.server.emit('users:updated'); // Notificar a todos
       return result;
@@ -78,5 +78,9 @@ export class UsersGateway {
       client.emit('error', { message: error.message });
       throw error;
     }
+  }
+
+  broadcast(event: string, data: any) {
+    this.server.emit(event, data);
   }
 }

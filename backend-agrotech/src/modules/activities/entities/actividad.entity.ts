@@ -2,7 +2,7 @@ import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Lote } from '../../geo/entities/lote.entity';
 import { SubLote } from '../../geo/entities/sublote.entity';
-import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 import { Usuario } from '../../users/entities/usuario.entity';
 import { ActividadResponsable } from './actividad-responsable.entity';
 import { ActividadServicio } from './actividad-servicio.entity';

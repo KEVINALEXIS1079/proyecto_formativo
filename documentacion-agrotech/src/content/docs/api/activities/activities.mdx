@@ -1,0 +1,490 @@
+---
+title: Gestión de Actividades Agrícolas
+description: Endpoints para crear, gestionar y controlar actividades agrícolas completas
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /activities
+
+Crea una nueva actividad agrícola con todos sus componentes (mano de obra, insumos, servicios, evidencias).
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateActivityDto {
+  nombre: string;                    // Nombre descriptivo de la actividad
+  tipo: TipoActividad;              // CREACION | MANTENIMIENTO | FINALIZACION
+  subtipo: SubtipoActividad;         // Acción específica
+  cultivoId: number;                 // ID del cultivo asociado
+  loteId?: number;                   // ID del lote (opcional)
+  subLoteId?: number;                // ID del sub-lote (opcional)
+  fecha: string;                     // Fecha de la actividad (YYYY-MM-DD)
+  descripcion?: string;              // Descripción detallada
+
+  // Mano de obra
+  horasActividad?: number;           // Horas trabajadas
+  precioHoraActividad?: number;      // Precio por hora
+  costoManoObra?: number;            // Costo total de mano de obra
+
+  // Cosecha (solo para subtipo COSECHA)
+  kgRecolectados?: number;           // Kilogramos recolectados
+
+  // Siembra (solo para subtipo SIEMBRA)
+  fechaSiembra?: string;             // Fecha específica de siembra
+
+  // Servicios externos
+  servicios?: {
+    nombreServicio: string;
+    horas: number;
+    precioHora: number;
+  }[];
+
+  // Evidencias fotográficas
+  evidencias?: {
+    descripcion: string;
+  }[];
+
+  // Insumos utilizados
+  insumos?: {
+    insumoId: number;
+    cantidadUso: number;
+    precioUnitarioUso: number;
+  }[];
+}
+
+enum TipoActividad {
+  CREACION = 'CREACION',
+  MANTENIMIENTO = 'MANTENIMIENTO',
+  FINALIZACION = 'FINALIZACION'
+}
+
+enum SubtipoActividad {
+  SIEMBRA = 'SIEMBRA',
+  RIEGO = 'RIEGO',
+  FERTILIZACION = 'FERTILIZACION',
+  CONTROL_PLAGAS = 'CONTROL_PLAGAS',
+  PODA = 'PODA',
+  COSECHA = 'COSECHA',
+  FINALIZACION = 'FINALIZACION',
+  OTRA = 'OTRA'
+}
+```
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/activities \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "nombre": "Siembra de Tomates Roma VF",
+        "tipo": "CREACION",
+        "subtipo": "SIEMBRA",
+        "cultivoId": 1,
+        "subLoteId": 1,
+        "fecha": "2025-01-15",
+        "descripcion": "Siembra inicial de semillas certificadas",
+        "fechaSiembra": "2025-01-15",
+        "horasActividad": 8,
+        "precioHoraActividad": 15000,
+        "insumos": [
+          {
+            "insumoId": 1,
+            "cantidadUso": 2.5,
+            "precioUnitarioUso": 45000
+          }
+        ],
+        "evidencias": [
+          {
+            "descripcion": "Foto del proceso de siembra"
+          }
+        ]
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const actividadData = {
+      nombre: "Fertilización de Maíz",
+      tipo: "MANTENIMIENTO",
+      subtipo: "FERTILIZACION",
+      cultivoId: 2,
+      loteId: 1,
+      fecha: "2025-02-10",
+      descripcion: "Aplicación de fertilizante NPK balanceado",
+      horasActividad: 4,
+      precioHoraActividad: 12000,
+      servicios: [
+        {
+          nombreServicio: "Aplicación aérea",
+          horas: 2,
+          precioHora: 25000
+        }
+      ],
+      insumos: [
+        {
+          insumoId: 2,
+          cantidadUso: 50,
+          precioUnitarioUso: 25000
+        }
+      ]
+    };
+
+    const response = await fetch('/activities', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(actividadData)
+    });
+
+    const nuevaActividad = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface Actividad {
+  id: number;
+  nombre: string;
+  tipo: TipoActividad;
+  subtipo: SubtipoActividad;
+  cultivoId: number;
+  loteId?: number;
+  subLoteId?: number;
+  fecha: Date;
+  descripcion?: string;
+
+  // Mano de obra
+  horasActividad?: number;
+  precioHoraActividad?: number;
+  costoManoObra?: number;
+
+  // Cosecha
+  kgRecolectados?: number;
+
+  // Siembra
+  fechaSiembra?: Date;
+
+  // Relaciones
+  cultivo?: {
+    id: number;
+    nombreCultivo: string;
+  };
+  lote?: {
+    id: number;
+    nombre: string;
+  };
+  subLote?: {
+    id: number;
+    nombre: string;
+  };
+  usuario?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+  };
+
+  // Componentes relacionados
+  servicios?: Servicio[];
+  evidencias?: Evidencia[];
+  insumosUsados?: InsumoUsado[];
+
+  // Costos calculados
+  costoTotalInsumos: number;
+  costoTotalServicios: number;
+  costoTotal: number;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## GET /activities
+
+Obtiene la lista paginada de actividades con filtros opcionales.
+
+### Parámetros de Query
+
+```typescript
+interface ActivitiesQueryParams {
+  page?: number;       // Página (default: 1)
+  limit?: number;      // Elementos por página (default: 10)
+  cultivoId?: number;  // Filtrar por cultivo
+  loteId?: number;     // Filtrar por lote
+  tipo?: string;       // Filtrar por tipo de actividad
+}
+```
+
+### Ejemplos de Filtros
+
+```bash
+# Todas las actividades
+GET /activities
+
+# Actividades de un cultivo específico
+GET /activities?cultivoId=1
+
+# Actividades de riego
+GET /activities?tipo=MANTENIMIENTO&subtipo=RIEGO
+
+# Paginación
+GET /activities?page=2&limit=20
+```
+
+### Respuesta Exitosa (200)
+
+```typescript
+interface ActivitiesResponse {
+  data: Actividad[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+```
+
+## GET /activities/:id
+
+Obtiene una actividad específica con todos sus detalles.
+
+### Respuesta Exitosa (200)
+
+Retorna el objeto `Actividad` completo con todas sus relaciones.
+
+## PATCH /activities/:id
+
+Actualiza una actividad existente.
+
+### Parámetros de Entrada
+
+```typescript
+interface UpdateActivityDto {
+  nombre?: string;
+  descripcion?: string;
+  fecha?: string;
+  horasActividad?: number;
+  precioHoraActividad?: number;
+  costoManoObra?: number;
+  kgRecolectados?: number;
+  fechaSiembra?: string;
+}
+```
+
+## DELETE /activities/:id
+
+Elimina una actividad agrícola.
+
+### Consideraciones
+
+- Solo se pueden eliminar actividades recientes (menos de 24 horas)
+- Las actividades con cosecha registrada no pueden eliminarse
+- Se recomienda marcar como cancelada en lugar de eliminar
+
+## Tipos de Actividades
+
+### CREACION - Actividades Iniciales
+- **SIEMBRA**: Inicio del cultivo con semillas
+- **OTRA**: Otras actividades de creación
+
+### MANTENIMIENTO - Actividades de Cuidado
+- **RIEGO**: Aplicación de agua
+- **FERTILIZACION**: Aplicación de nutrientes
+- **CONTROL_PLAGAS**: Manejo fitosanitario
+- **PODA**: Mantenimiento de plantas
+- **OTRA**: Otras actividades de mantenimiento
+
+### FINALIZACION - Actividades Finales
+- **COSECHA**: Recolección de productos
+- **FINALIZACION**: Cierre del cultivo
+
+## Componentes de las Actividades
+
+### 1. Mano de Obra
+```typescript
+interface ManoObra {
+  horasActividad: number;      // Horas trabajadas
+  precioHoraActividad: number; // Precio por hora
+  costoManoObra: number;       // Costo total calculado
+}
+```
+
+### 2. Servicios Externos
+```typescript
+interface Servicio {
+  nombreServicio: string;  // Nombre del servicio
+  horas: number;          // Horas del servicio
+  precioHora: number;     // Precio por hora
+  costoTotal: number;     // Costo total calculado
+}
+```
+
+### 3. Evidencias Fotográficas
+```typescript
+interface Evidencia {
+  descripcion: string;    // Descripción de la evidencia
+  url?: string;          // URL de la imagen (si se sube)
+  createdAt: Date;
+}
+```
+
+### 4. Insumos Utilizados
+```typescript
+interface InsumoUsado {
+  insumoId: number;
+  cantidadUso: number;        // Cantidad utilizada
+  precioUnitarioUso: number;  // Precio al momento del uso
+  costoTotal: number;         // Costo total calculado
+  insumo?: {
+    nombre: string;
+    unidadMedida: string;
+  };
+}
+```
+
+## Costos Calculados Automáticamente
+
+### Costo Total de Insumos
+```typescript
+costoTotalInsumos = Σ(insumosUsados.cantidadUso × insumosUsados.precioUnitarioUso)
+```
+
+### Costo Total de Servicios
+```typescript
+costoTotalServicios = Σ(servicios.horas × servicios.precioHora)
+```
+
+### Costo Total de la Actividad
+```typescript
+costoTotal = costoManoObra + costoTotalInsumos + costoTotalServicios
+```
+
+## WebSocket Events
+
+Los cambios en actividades generan eventos WebSocket:
+
+```typescript
+// Nueva actividad creada
+socket.on('createActivity.result', (data) => {
+  // data: Actividad completa
+});
+
+// Actividad actualizada
+socket.on('actividadUpdated', (data) => {
+  // data: Actividad
+});
+
+// Actividad eliminada
+socket.on('actividadDeleted', (data) => {
+  // data: Actividad
+});
+```
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o cultivo/lote inexistente |
+| `401` | Token JWT faltante o inválido |
+| `403` | Sin permisos requeridos |
+| `404` | Actividad no encontrada |
+| `409` | Conflicto (actividad con cosecha no puede eliminarse) |
+
+## Ejemplos de Uso
+
+### Actividad de Siembra
+```json
+{
+  "nombre": "Siembra Maíz HT-789",
+  "tipo": "CREACION",
+  "subtipo": "SIEMBRA",
+  "cultivoId": 3,
+  "loteId": 2,
+  "fecha": "2025-02-01",
+  "fechaSiembra": "2025-02-01",
+  "horasActividad": 12,
+  "precioHoraActividad": 10000,
+  "insumos": [
+    {
+      "insumoId": 5,
+      "cantidadUso": 25,
+      "precioUnitarioUso": 45000
+    }
+  ]
+}
+```
+
+### Actividad de Cosecha
+```json
+{
+  "nombre": "Cosecha Tomates Orgánicos",
+  "tipo": "FINALIZACION",
+  "subtipo": "COSECHA",
+  "cultivoId": 1,
+  "subLoteId": 1,
+  "fecha": "2025-04-15",
+  "horasActividad": 16,
+  "precioHoraActividad": 12000,
+  "kgRecolectados": 850,
+  "servicios": [
+    {
+      "nombreServicio": "Transporte de cosecha",
+      "horas": 4,
+      "precioHora": 30000
+    }
+  ]
+}
+```
+
+### Actividad de Fertilización
+```json
+{
+  "nombre": "Fertilización Fosforada",
+  "tipo": "MANTENIMIENTO",
+  "subtipo": "FERTILIZACION",
+  "cultivoId": 4,
+  "loteId": 3,
+  "fecha": "2025-03-10",
+  "descripcion": "Aplicación de superfosfato triple",
+  "horasActividad": 6,
+  "precioHoraActividad": 11000,
+  "insumos": [
+    {
+      "insumoId": 3,
+      "cantidadUso": 100,
+      "precioUnitarioUso": 18000
+    }
+  ],
+  "evidencias": [
+    {
+      "descripcion": "Antes de la fertilización"
+    },
+    {
+      "descripcion": "Después de la fertilización"
+    }
+  ]
+}
+```
+
+:::note[Costos Automáticos]
+Todos los costos se calculan automáticamente basado en las cantidades y precios proporcionados. No es necesario calcularlos manualmente.
+:::
+
+:::tip[Evidencias]
+Las evidencias fotográficas ayudan a documentar y verificar que las actividades se realizaron correctamente.
+:::
+
+:::warning[Validaciones]
+El sistema valida automáticamente que los insumos existan en inventario y que las cantidades sean suficientes antes de registrar la actividad.
+:::

@@ -25,7 +25,8 @@ import { AuthModule } from '../auth/auth.module';
     }),
     AuthModule,
   ],
-  providers: [InventoryService, InventoryGateway, InventoryController],
+  controllers: [InventoryController],
+  providers: [InventoryService, InventoryGateway],
   exports: [InventoryService],
 })
 export class InventoryModule {}

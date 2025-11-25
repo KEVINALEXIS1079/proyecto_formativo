@@ -69,6 +69,40 @@ export async function seedPermisos(dataSource: DataSource) {
     { modulo: 'ventas', accion: 'ver', clave: 'ventas.ver', descripcion: 'Ver ventas' },
     { modulo: 'ventas', accion: 'crear', clave: 'ventas.crear', descripcion: 'Crear ventas' },
     { modulo: 'ventas', accion: 'anular', clave: 'ventas.anular', descripcion: 'Anular ventas' },
+
+    // Reportes
+    { modulo: 'reportes', accion: 'ver', clave: 'reportes.ver', descripcion: 'Ver reportes' },
+
+    // Producción
+    { modulo: 'produccion', accion: 'ver', clave: 'produccion.ver', descripcion: 'Ver producción' },
+    { modulo: 'produccion', accion: 'crear', clave: 'produccion.crear', descripcion: 'Crear lotes de producción' },
+    { modulo: 'produccion', accion: 'editar', clave: 'produccion.editar', descripcion: 'Editar producción' },
+    { modulo: 'produccion', accion: 'eliminar', clave: 'produccion.eliminar', descripcion: 'Eliminar producción' },
+    { modulo: 'produccion', accion: 'clientes.ver', clave: 'produccion.clientes.ver', descripcion: 'Ver clientes' },
+    { modulo: 'produccion', accion: 'clientes.crear', clave: 'produccion.clientes.crear', descripcion: 'Crear clientes' },
+    { modulo: 'produccion', accion: 'clientes.editar', clave: 'produccion.clientes.editar', descripcion: 'Editar clientes' },
+    { modulo: 'produccion', accion: 'clientes.eliminar', clave: 'produccion.clientes.eliminar', descripcion: 'Eliminar clientes' },
+    { modulo: 'produccion', accion: 'ventas.ver', clave: 'produccion.ventas.ver', descripcion: 'Ver ventas' },
+    { modulo: 'produccion', accion: 'ventas.crear', clave: 'produccion.ventas.crear', descripcion: 'Crear ventas' },
+    { modulo: 'produccion', accion: 'ventas.anular', clave: 'produccion.ventas.anular', descripcion: 'Anular ventas' },
+
+    // Wiki EPA
+    { modulo: 'wiki', accion: 'ver', clave: 'wiki.ver', descripcion: 'Ver wiki EPA' },
+    { modulo: 'wiki', accion: 'crear', clave: 'wiki.crear', descripcion: 'Crear fichas EPA' },
+    { modulo: 'wiki', accion: 'editar', clave: 'wiki.editar', descripcion: 'Editar fichas EPA' },
+    { modulo: 'wiki', accion: 'eliminar', clave: 'wiki.eliminar', descripcion: 'Eliminar fichas EPA' },
+
+    // Geo (Lotes y SubLotes)
+    { modulo: 'geo', accion: 'ver', clave: 'geo.ver', descripcion: 'Ver lotes y sublotes' },
+    { modulo: 'geo', accion: 'crear', clave: 'geo.crear', descripcion: 'Crear lotes y sublotes' },
+    { modulo: 'geo', accion: 'editar', clave: 'geo.editar', descripcion: 'Editar lotes y sublotes' },
+    { modulo: 'geo', accion: 'eliminar', clave: 'geo.eliminar', descripcion: 'Eliminar lotes y sublotes' },
+
+    // Usuarios adicionales
+    { modulo: 'usuarios', accion: 'cambiar_rol', clave: 'usuarios.cambiar_rol', descripcion: 'Cambiar rol de usuarios' },
+
+    // Permisos adicionales
+    { modulo: 'permisos', accion: 'eliminar', clave: 'permisos.eliminar', descripcion: 'Eliminar permisos' },
   ];
 
   let permisosCreados = 0;

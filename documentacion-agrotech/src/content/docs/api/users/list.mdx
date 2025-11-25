@@ -1,0 +1,257 @@
+---
+title: Listar Usuarios
+description: Endpoint para obtener la lista paginada de usuarios del sistema
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## GET /users
+
+Obtiene una lista paginada de usuarios con filtros opcionales.
+
+### Parámetros de Query
+
+```typescript
+interface UsersQueryParams {
+  page?: number;      // Página (default: 1)
+  limit?: number;     // Elementos por página (default: 10, max: 100)
+  rolId?: number;     // Filtrar por ID de rol
+  estado?: string;    // Filtrar por estado ('activo', 'inactivo', 'pendiente_verificacion')
+}
+```
+
+### Permisos Requeridos
+
+- `usuarios.ver`
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X GET "http://localhost:4000/users?page=1&limit=10&estado=activo" \
+      -H "Authorization: Bearer {token}"
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const response = await fetch('/users?page=1&limit=10&estado=activo', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const users = await response.json();
+    ```
+  </TabItem>
+
+  <TabItem label="Python (requests)">
+    ```python
+    import requests
+
+    headers = {'Authorization': f'Bearer {token}'}
+    params = {'page': 1, 'limit': 10, 'estado': 'activo'}
+
+    response = requests.get('/users', headers=headers, params=params)
+    users = response.json()
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (200)
+
+```typescript
+interface PaginatedUsersResponse {
+  data: User[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+interface User {
+  id: number;
+  nombre: string;
+  apellido: string;
+  identificacion: string;
+  idFicha?: string;
+  telefono?: string;
+  correo: string;
+  emailVerifiedAt?: Date;
+  estado: 'activo' | 'inactivo' | 'pendiente_verificacion';
+  lastLoginAt?: Date;
+  avatarUrl?: string;
+  rolId?: number;
+  rol?: {
+    id: number;
+    nombre: string;
+    descripcion?: string;
+    esSistema: boolean;
+    estado: 'activo' | 'inactivo';
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+**Ejemplo de respuesta:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "nombre": "Admin",
+      "apellido": "AgroTech",
+      "identificacion": "123456789",
+      "correo": "admin@agrotech.com",
+      "estado": "activo",
+      "emailVerifiedAt": "2025-01-15T10:30:00.000Z",
+      "lastLoginAt": "2025-01-15T15:30:00.000Z",
+      "rolId": 1,
+      "rol": {
+        "id": 1,
+        "nombre": "Administrador",
+        "descripcion": "Acceso completo al sistema",
+        "esSistema": true,
+        "estado": "activo"
+      },
+      "createdAt": "2025-01-15T10:30:00.000Z",
+      "updatedAt": "2025-01-15T15:30:00.000Z"
+    },
+    {
+      "id": 2,
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "identificacion": "987654321",
+      "correo": "juan.perez@agrotech.com",
+      "estado": "activo",
+      "emailVerifiedAt": "2025-01-15T11:00:00.000Z",
+      "lastLoginAt": "2025-01-15T14:20:00.000Z",
+      "rolId": 2,
+      "rol": {
+        "id": 2,
+        "nombre": "Usuario",
+        "descripcion": "Usuario estándar del sistema",
+        "esSistema": false,
+        "estado": "activo"
+      },
+      "createdAt": "2025-01-15T10:45:00.000Z",
+      "updatedAt": "2025-01-15T14:20:00.000Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 2,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+### Filtros Disponibles
+
+#### Por Estado
+```bash
+GET /users?estado=activo
+GET /users?estado=inactivo
+GET /users?estado=pendiente_verificacion
+```
+
+#### Por Rol
+```bash
+GET /users?rolId=1  # Administradores
+GET /users?rolId=2  # Usuarios estándar
+GET /users?rolId=3  # Operarios
+```
+
+#### Combinando Filtros
+```bash
+GET /users?page=1&limit=20&estado=activo&rolId=2
+```
+
+### Paginación
+
+#### Parámetros de Paginación
+- `page`: Número de página (mínimo: 1, default: 1)
+- `limit`: Elementos por página (mínimo: 1, máximo: 100, default: 10)
+
+#### Ejemplos de Paginación
+```bash
+# Primera página, 20 elementos
+GET /users?page=1&limit=20
+
+# Tercera página, elementos por defecto (10)
+GET /users?page=3
+
+# Última página
+GET /users?page=5&limit=50
+```
+
+### Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Parámetros de paginación inválidos |
+| `401` | Token JWT faltante o inválido |
+| `403` | Sin permisos `usuarios.ver` |
+
+### Ejemplos de Errores
+
+**Sin permisos:**
+```json
+{
+  "statusCode": 403,
+  "message": "Forbidden resource",
+  "error": "No tienes permisos para acceder a este recurso"
+}
+```
+
+**Parámetros inválidos:**
+```json
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "error": "Bad Request",
+  "details": [
+    {
+      "field": "limit",
+      "constraints": {
+        "max": "limit must not be greater than 100"
+      }
+    }
+  ]
+}
+```
+
+### Ordenamiento
+
+Los usuarios se ordenan por defecto por:
+1. Fecha de creación (descendente)
+2. ID (descendente)
+
+### Campos Excluidos
+
+Por seguridad, los siguientes campos **nunca** se incluyen en la respuesta:
+- `passwordHash`: Hash de la contraseña
+- `deletedAt`: Timestamp de eliminación suave
+
+### Optimizaciones
+
+- **Relaciones**: Se incluyen automáticamente `rol` y `usuarioPermisos`
+- **Cache**: Los resultados se cachean por 5 minutos
+- **Índices**: Consultas optimizadas con índices en `estado`, `rolId`, `createdAt`
+
+:::note[Permisos]
+Solo usuarios con el permiso `usuarios.ver` pueden acceder a esta lista. Los administradores ven todos los usuarios, otros roles pueden tener restricciones adicionales.
+:::
+
+:::tip[Filtros]
+Usa los filtros para mejorar el performance. Filtrar por estado y rol reduce significativamente el tiempo de respuesta en bases de datos grandes.
+:::

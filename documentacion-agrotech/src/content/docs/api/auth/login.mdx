@@ -1,0 +1,208 @@
+---
+title: Inicio de Sesión
+description: Endpoint para autenticar usuarios en el sistema AgroTech
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /auth/login
+
+Autentica un usuario en el sistema AgroTech y devuelve un token JWT.
+
+### Parámetros de Entrada
+
+```typescript
+interface LoginDto {
+  correo: string;           // Email válido, máximo 100 caracteres
+  password: string;         // Mínimo 8 caracteres, máximo 100 caracteres
+}
+```
+
+### Validaciones
+
+- **Correo**: Obligatorio, formato email válido, máximo 100 caracteres
+- **Contraseña**: Obligatoria, mínimo 8 caracteres, máximo 100 caracteres
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{
+        "correo": "juan.perez@agrotech.com",
+        "password": "MiContraseña123!"
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const response = await fetch('/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        correo: 'juan.perez@agrotech.com',
+        password: 'MiContraseña123!'
+      })
+    });
+
+    const result = await response.json();
+    ```
+  </TabItem>
+
+  <TabItem label="Python (requests)">
+    ```python
+    import requests
+
+    data = {
+        'correo': 'juan.perez@agrotech.com',
+        'password': 'MiContraseña123!'
+    }
+
+    response = requests.post('/auth/login', json=data)
+    result = response.json()
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (200)
+
+```typescript
+interface LoginResponse {
+  access_token: string;     // JWT token para autenticación
+  user: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    identificacion: string;
+    idFicha?: string;
+    telefono?: string;
+    correo: string;
+    emailVerifiedAt?: Date;
+    estado: string;
+    lastLoginAt: Date;
+    avatarUrl?: string;
+    rolId: number;
+    rol?: {
+      id: number;
+      nombre: string;
+      descripcion: string;
+      esSistema: boolean;
+      estado: string;
+    };
+    permisos?: string[];    // Lista de permisos efectivos
+  };
+}
+```
+
+**Ejemplo de respuesta:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "nombre": "Juan",
+    "apellido": "Pérez",
+    "identificacion": "123456789",
+    "correo": "juan.perez@agrotech.com",
+    "estado": "activo",
+    "lastLoginAt": "2025-01-15T10:35:00.000Z",
+    "rolId": 1,
+    "rol": {
+      "id": 1,
+      "nombre": "Administrador",
+      "descripcion": "Usuario con acceso completo al sistema",
+      "esSistema": true,
+      "estado": "activo"
+    },
+    "permisos": [
+      "users:read",
+      "users:write",
+      "roles:read",
+      "roles:write"
+    ]
+  }
+}
+```
+
+### Comportamiento
+
+1. **Autenticación**: Verifica las credenciales usando email y contraseña
+2. **Estado del Usuario**: Solo usuarios con estado `activo` pueden iniciar sesión
+3. **Token JWT**: Se genera un token con expiración de 24 horas
+4. **Último Login**: Se actualiza automáticamente el campo `lastLoginAt`
+5. **Permisos**: Se incluyen los permisos efectivos del usuario (rol + directos)
+6. **Cookie**: El token también se establece en una cookie HTTP-only
+
+### Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Credenciales inválidas |
+| `401` | Usuario no verificado o inactivo |
+| `422` | Validación de DTO fallida |
+
+### Ejemplos de Errores
+
+**Credenciales inválidas:**
+```json
+{
+  "statusCode": 400,
+  "message": "Credenciales inválidas",
+  "error": "Bad Request"
+}
+```
+
+**Usuario no verificado:**
+```json
+{
+  "statusCode": 401,
+  "message": "Usuario no verificado. Por favor verifica tu correo electrónico",
+  "error": "Unauthorized"
+}
+```
+
+**Validación fallida:**
+```json
+{
+  "statusCode": 422,
+  "message": "Validation failed",
+  "error": "Unprocessable Entity",
+  "details": [
+    {
+      "field": "correo",
+      "constraints": {
+        "isEmail": "Debe proporcionar un correo electrónico válido"
+      }
+    }
+  ]
+}
+```
+
+### Uso del Token
+
+Después de obtener el `access_token`, inclúyelo en el header `Authorization`:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Próximos Pasos
+
+Una vez autenticado, el usuario puede:
+
+1. **Acceder a endpoints protegidos**: Usando el token JWT
+2. **Gestionar perfil**: Actualizar información personal
+3. **Realizar operaciones**: Según sus permisos asignados
+
+:::note[Seguridad]
+Los tokens JWT tienen una expiración de 24 horas. Para sesiones prolongadas, implementa refresh tokens.
+:::
+
+:::tip[Permisos]
+Los permisos incluidos en la respuesta corresponden a las acciones que el usuario puede realizar en el sistema.
+:::

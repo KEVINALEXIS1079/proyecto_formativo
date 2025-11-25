@@ -1,0 +1,379 @@
+---
+title: Perfil de Usuario
+description: Endpoints para gestión del perfil de usuario autenticado
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## GET /users/me
+
+Obtiene la información del perfil del usuario actualmente autenticado.
+
+### Autenticación
+
+Requiere token JWT válido (se obtiene automáticamente del header `Authorization`).
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X GET http://localhost:4000/users/me \
+      -H "Authorization: Bearer {token}"
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const response = await fetch('/users/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const profile = await response.json();
+    ```
+  </TabItem>
+
+  <TabItem label="Python (requests)">
+    ```python
+    import requests
+
+    headers = {'Authorization': f'Bearer {token}'}
+    response = requests.get('/users/me', headers=headers)
+    profile = response.json()
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (200)
+
+```typescript
+interface UserProfile {
+  id: number;
+  nombre: string;
+  apellido: string;
+  identificacion: string;
+  idFicha?: string;
+  telefono?: string;
+  correo: string;
+  emailVerifiedAt?: Date;
+  estado: 'activo' | 'inactivo' | 'pendiente_verificacion';
+  lastLoginAt?: Date;
+  avatarUrl?: string;
+  rolId?: number;
+  rol?: {
+    id: number;
+    nombre: string;
+    descripcion?: string;
+    esSistema: boolean;
+    estado: 'activo' | 'inactivo';
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+**Ejemplo de respuesta:**
+```json
+{
+  "id": 2,
+  "nombre": "Juan",
+  "apellido": "Pérez",
+  "identificacion": "987654321",
+  "idFicha": "FICHA001",
+  "telefono": "+57 300 123 4567",
+  "correo": "juan.perez@agrotech.com",
+  "emailVerifiedAt": "2025-01-15T11:00:00.000Z",
+  "estado": "activo",
+  "lastLoginAt": "2025-01-15T14:20:00.000Z",
+  "avatarUrl": "https://storage.agrotech.com/avatars/2/avatar.jpg",
+  "rolId": 2,
+  "rol": {
+    "id": 2,
+    "nombre": "Usuario",
+    "descripcion": "Usuario estándar del sistema",
+    "esSistema": false,
+    "estado": "activo"
+  },
+  "createdAt": "2025-01-15T10:45:00.000Z",
+  "updatedAt": "2025-01-15T14:20:00.000Z"
+}
+```
+
+## PATCH /users/me
+
+Actualiza la información del perfil del usuario autenticado.
+
+### Parámetros de Entrada
+
+```typescript
+interface UpdateProfileDto {
+  nombre?: string;      // Máximo 100 caracteres
+  apellido?: string;    // Máximo 100 caracteres
+  idFicha?: string;     // Máximo 20 caracteres, opcional
+  telefono?: string;    // Formato válido, máximo 20 caracteres, opcional
+  avatarUrl?: string;   // URL del avatar, opcional
+}
+```
+
+### Validaciones
+
+- **Nombre**: Opcional, máximo 100 caracteres
+- **Apellido**: Opcional, máximo 100 caracteres
+- **ID Ficha**: Opcional, máximo 20 caracteres
+- **Teléfono**: Opcional, debe coincidir con patrón `/^[0-9+\-\s()]+$/`, máximo 20 caracteres
+- **Avatar URL**: Opcional, debe ser una URL válida
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X PATCH http://localhost:4000/users/me \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "telefono": "+57 301 987 6543",
+        "avatarUrl": "https://storage.agrotech.com/avatars/2/new-avatar.jpg"
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const response = await fetch('/users/me', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        telefono: '+57 301 987 6543',
+        avatarUrl: 'https://storage.agrotech.com/avatars/2/new-avatar.jpg'
+      })
+    });
+
+    const updatedProfile = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+## PATCH /users/me/password
+
+Cambia la contraseña del usuario autenticado.
+
+### Parámetros de Entrada
+
+```typescript
+interface ChangePasswordDto {
+  currentPassword: string;  // Contraseña actual
+  newPassword: string;      // Nueva contraseña (mínimo 8 caracteres, mayúscula, minúscula, número)
+}
+```
+
+### Validaciones
+
+- **Contraseña Actual**: Obligatoria, debe coincidir con la contraseña actual
+- **Nueva Contraseña**: Obligatoria, mínimo 8 caracteres, debe contener mayúscula, minúscula y número
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X PATCH http://localhost:4000/users/me/password \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "currentPassword": "MiContraseña123!",
+        "newPassword": "NuevaContraseña456!"
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const response = await fetch('/users/me/password', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        currentPassword: 'MiContraseña123!',
+        newPassword: 'NuevaContraseña456!'
+      })
+    });
+
+    const result = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "message": "Contraseña actualizada exitosamente"
+}
+```
+
+## POST /users/me/avatar
+
+Sube un nuevo avatar para el usuario autenticado.
+
+### Parámetros
+
+- **file**: Archivo de imagen (multipart/form-data)
+- **Formatos soportados**: JPG, PNG, GIF
+- **Tamaño máximo**: 5MB
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/users/me/avatar \
+      -H "Authorization: Bearer {token}" \
+      -F "file=@avatar.jpg"
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    const response = await fetch('/users/me/avatar', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+        // No incluir Content-Type, se establece automáticamente
+      },
+      body: formData
+    });
+
+    const updatedProfile = await response.json();
+    ```
+  </TabItem>
+
+  <TabItem label="HTML Form">
+    ```html
+    <form action="/users/me/avatar" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" accept="image/*" />
+      <button type="submit">Subir Avatar</button>
+    </form>
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta de Upload
+
+Retorna el perfil actualizado con la nueva URL del avatar:
+
+```json
+{
+  "id": 2,
+  "nombre": "Juan",
+  "apellido": "Pérez",
+  // ... otros campos
+  "avatarUrl": "https://storage.agrotech.com/avatars/2/avatar_1640995200.jpg",
+  // ... otros campos
+}
+```
+
+## Códigos de Error
+
+### Errores Comunes
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o formato de archivo no soportado |
+| `401` | Token JWT faltante o inválido |
+| `413` | Archivo demasiado grande (Payload Too Large) |
+| `422` | Validación fallida en DTOs |
+
+### Ejemplos de Errores
+
+**Contraseña actual incorrecta:**
+```json
+{
+  "statusCode": 400,
+  "message": "La contraseña actual es incorrecta",
+  "error": "Bad Request"
+}
+```
+
+**Archivo inválido:**
+```json
+{
+  "statusCode": 400,
+  "message": "Formato de archivo no soportado. Use JPG, PNG o GIF",
+  "error": "Bad Request"
+}
+```
+
+**Validación fallida:**
+```json
+{
+  "statusCode": 422,
+  "message": "Validation failed",
+  "error": "Unprocessable Entity",
+  "details": [
+    {
+      "field": "newPassword",
+      "constraints": {
+        "matches": "La contraseña debe contener al menos una mayúscula, una minúscula y un número"
+      }
+    }
+  ]
+}
+```
+
+## Consideraciones de Seguridad
+
+### Campos Restringidos
+
+Los siguientes campos **NO** pueden ser modificados vía perfil:
+- `id`: Identificador único
+- `identificacion`: Número de identificación
+- `correo`: Email del usuario
+- `estado`: Estado de la cuenta
+- `rolId`: ID del rol asignado
+- `createdAt`: Fecha de creación
+
+### Validaciones Adicionales
+
+- **Contraseña Actual**: Siempre se requiere para cambiar contraseña
+- **Archivos**: Se validan tipo MIME y tamaño
+- **URLs**: Se validan formatos de URL seguros
+
+### Rate Limiting
+
+- **Cambio de Contraseña**: Máximo 5 intentos por hora
+- **Upload de Avatar**: Máximo 10 uploads por hora
+- **Actualización de Perfil**: Máximo 20 actualizaciones por hora
+
+## WebSocket Events
+
+Los cambios en el perfil generan eventos WebSocket:
+
+```typescript
+// Perfil actualizado
+socket.on('user:updated', (data) => {
+  // data: { user: User, changes: object }
+});
+
+// Avatar actualizado
+socket.on('user:avatar:updated', (data) => {
+  // data: { userId: number, avatarUrl: string }
+});
+```
+
+:::note[Self-Service]
+Estos endpoints están diseñados para auto-gestión del perfil. Los administradores usan endpoints separados para gestionar otros usuarios.
+:::
+
+:::tip[Avatar Storage]
+Los avatares se almacenan en un servicio de storage externo (AWS S3, Cloudinary, etc.) y se genera una URL pública.
+:::

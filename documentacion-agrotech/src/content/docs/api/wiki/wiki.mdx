@@ -1,0 +1,452 @@
+---
+title: Base de Conocimiento - Wiki Agrícola
+description: Gestión de EPAs (Estrategias de Protección Agrícola) y tipos de cultivo
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /epas
+
+Crea una nueva Estrategia de Protección Agrícola (EPA) en la base de conocimiento.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateEpaDto {
+  nombre: string;                  // Nombre de la EPA
+  descripcion: string;             // Descripción detallada
+  tipoEpa: TipoEpa;               // Tipo de estrategia
+  sintomas: string;               // Síntomas observables
+  causas: string;                 // Causas del problema
+  tratamiento: string;            // Tratamiento recomendado
+  prevencion?: string;            // Medidas preventivas
+  productosRecomendados?: string; // Productos sugeridos
+  dosis?: string;                 // Dosificación recomendada
+  frecuenciaAplicacion?: string;  // Frecuencia de aplicación
+  temporadaRecomendada?: string;  // Temporada óptima
+  mesInicio?: number;             // Mes de inicio (1-12)
+  mesFin?: number;                // Mes de fin (1-12)
+  efectividad?: number;           // Efectividad en porcentaje (0-100)
+  costoEstimado?: number;         // Costo aproximado
+  tiempoRecuperacion?: string;    // Tiempo de recuperación esperado
+  notasAdicionales?: string;      // Información adicional
+}
+
+enum TipoEpa {
+  PLAGA = 'PLAGA',
+  ENFERMEDAD = 'ENFERMEDAD',
+  MALEZA = 'MALEZA',
+  DEFICIENCIA_NUTRICIONAL = 'DEFICIENCIA_NUTRICIONAL',
+  ESTRES_AMBIENTAL = 'ESTRES_AMBIENTAL',
+  PRACTICA_CULTURAL = 'PRACTICA_CULTURAL',
+  OTRA = 'OTRA'
+}
+```
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/epas \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "nombre": "Control de Áfidos en Tomate",
+        "descripcion": "Estrategia integrada para el control de áfidos en cultivos de tomate",
+        "tipoEpa": "PLAGA",
+        "sintomas": "Hojas enrolladas, presencia de hormigas, melaza en hojas",
+        "causas": "Infestación por Myzus persicae (áfido verde del melocotón)",
+        "tratamiento": "Aplicación de insecticidas sistémicos + liberación de parasitoides",
+        "prevencion": "Monitoreo semanal, eliminación de malezas hospedadoras",
+        "productosRecomendados": "Imidacloprid 200 SL, Azadirachtin",
+        "dosis": "100-150 ml/ha",
+        "frecuenciaAplicacion": "Cada 10-15 días según infestación",
+        "temporadaRecomendada": "Todo el año, pico en temporada seca",
+        "mesInicio": 1,
+        "mesFin": 12,
+        "efectividad": 85,
+        "costoEstimado": 250000,
+        "tiempoRecuperacion": "7-10 días",
+        "notasAdicionales": "Compatible con agricultura orgánica"
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const epaData = {
+      nombre: "Mildiu en Papa",
+      descripcion: "Control del tizón tardío causado por Phytophthora infestans",
+      tipoEpa: "ENFERMEDAD",
+      sintomas: "Manchas irregulares en hojas, pudrición de tubérculos",
+      causas: "Humedad relativa >80%, temperaturas 10-20°C",
+      tratamiento: "Fungicidas de contacto + sistémicos, rotación de cultivos",
+      prevencion: "Drenaje adecuado, variedades resistentes, espaciamiento",
+      productosRecomendados: "Mancozeb, Metalaxil",
+      dosis: "2-3 kg/ha",
+      frecuenciaAplicacion: "Cada 7-10 días en condiciones favorables",
+      temporadaRecomendada: "Época lluviosa",
+      mesInicio: 3,
+      mesFin: 11,
+      efectividad: 90,
+      costoEstimado: 180000,
+      tiempoRecuperacion: "10-14 días"
+    };
+
+    const response = await fetch('/epas', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(epaData)
+    });
+
+    const nuevaEpa = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface Epa {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  tipoEpa: TipoEpa;
+  sintomas: string;
+  causas: string;
+  tratamiento: string;
+  prevencion?: string;
+  productosRecomendados?: string;
+  dosis?: string;
+  frecuenciaAplicacion?: string;
+  temporadaRecomendada?: string;
+  mesInicio?: number;
+  mesFin?: number;
+  efectividad?: number;
+  costoEstimado?: number;
+  tiempoRecuperacion?: string;
+  notasAdicionales?: string;
+
+  // Relaciones
+  tiposCultivo?: TipoCultivoWiki[];
+  fotosSintomas?: Foto[];
+  fotosGenerales?: Foto[];
+
+  // Metadata
+  usuarioId: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Foto {
+  id: number;
+  url: string;
+  descripcion?: string;
+  tipo: 'sintomas' | 'general';
+  createdAt: Date;
+}
+```
+
+## GET /epas
+
+Obtiene la lista paginada de EPAs con filtros avanzados.
+
+### Parámetros de Query
+
+```typescript
+interface EpasQueryParams {
+  page?: number;              // Página (default: 1)
+  limit?: number;             // Elementos por página (default: 10)
+  q?: string;                 // Búsqueda por texto
+  tipoEpa?: string;           // Filtrar por tipo
+  tipoCultivoWikiId?: number; // Filtrar por tipo de cultivo
+  mes?: number;               // Filtrar por mes
+  temporada?: string;         // Filtrar por temporada
+  conFotos?: boolean;         // Solo EPAs con fotos
+  orderBy?: string;           // Campo de ordenamiento
+  orderDir?: string;          // Dirección (ASC/DESC)
+}
+```
+
+### Ejemplos de Búsqueda
+
+```bash
+# Buscar por texto
+GET /epas?q=mildiu
+
+# EPAs para un tipo de cultivo específico
+GET /epas?tipoCultivoWikiId=1
+
+# EPAs de enfermedades en temporada de lluvias
+GET /epas?tipoEpa=ENFERMEDAD&temporada=lluviosa
+
+# EPAs con fotos ordenadas por efectividad
+GET /epas?conFotos=true&orderBy=efectividad&orderDir=DESC
+
+# EPAs para el mes actual
+GET /epas?mes=4
+```
+
+## GET /epas/:id
+
+Obtiene una EPA específica con todos sus detalles.
+
+## PATCH /epas/:id
+
+Actualiza una EPA existente.
+
+### Parámetros de Entrada
+
+```typescript
+interface UpdateEpaDto {
+  nombre?: string;
+  descripcion?: string;
+  tipoEpa?: TipoEpa;
+  sintomas?: string;
+  causas?: string;
+  tratamiento?: string;
+  prevencion?: string;
+  productosRecomendados?: string;
+  dosis?: string;
+  frecuenciaAplicacion?: string;
+  temporadaRecomendada?: string;
+  mesInicio?: number;
+  mesFin?: number;
+  efectividad?: number;
+  costoEstimado?: number;
+  tiempoRecuperacion?: string;
+  notasAdicionales?: string;
+}
+```
+
+## DELETE /epas/:id
+
+Elimina una EPA de la base de conocimiento.
+
+## Gestión de Tipos de Cultivo
+
+### POST /epas/tipos-cultivo
+
+Crea un nuevo tipo de cultivo para la wiki.
+
+```typescript
+interface CreateTipoCultivoWikiDto {
+  nombre: string;             // Nombre del cultivo
+  descripcion?: string;       // Descripción detallada
+  familia?: string;           // Familia botánica
+  cicloCultivo?: string;      // Ciclo de crecimiento
+  temporada?: string;         // Temporada óptima
+  climaRecomendado?: string;  // Condiciones climáticas
+  sueloRecomendado?: string;  // Tipo de suelo
+  riego?: string;             // Requerimientos de riego
+  plagasComunes?: string;     // Plagas frecuentes
+  enfermedadesComunes?: string; // Enfermedades frecuentes
+}
+```
+
+### GET /epas/tipos-cultivo
+
+Obtiene todos los tipos de cultivo disponibles.
+
+### PATCH /epas/tipos-cultivo/:id
+
+Actualiza un tipo de cultivo.
+
+### DELETE /epas/tipos-cultivo/:id
+
+Elimina un tipo de cultivo.
+
+## Relaciones EPA ↔ Tipo de Cultivo
+
+### POST /epas/:epaId/tipos-cultivo/:tipoId
+
+Asocia una EPA con un tipo de cultivo específico.
+
+### DELETE /epas/:epaId/tipos-cultivo/:tipoId
+
+Desasocia una EPA de un tipo de cultivo.
+
+### GET /epas/:epaId/tipos-cultivo
+
+Obtiene todos los tipos de cultivo asociados a una EPA.
+
+## Tipos de EPA
+
+### PLAGA - Control de Insectos y Arácnidos
+- Áfidos, gusanos, arañas, trips
+- Métodos: Insecticidas, parasitoides, trampas
+
+### ENFERMEDAD - Control de Patógenos
+- Bacterias, virus, hongos, nematodos
+- Métodos: Fungicidas, bactericidas, prácticas culturales
+
+### MALEZA - Control de Malezas
+- Hierbas competidoras
+- Métodos: Herbicidas, mecánicos, preventivos
+
+### DEFICIENCIA_NUTRICIONAL - Problemas Nutricionales
+- Falta de N, P, K, micronutrientes
+- Métodos: Fertilización correctiva
+
+### ESTRES_AMBIENTAL - Estrés Abiótico
+- Sequía, inundación, temperatura extrema
+- Métodos: Manejo del riego, sombrío
+
+### PRACTICA_CULTURAL - Mejores Prácticas
+- Rotación, densidad, poda, tutorado
+- Métodos: Técnicas agronómicas
+
+## Sistema de Búsqueda Avanzada
+
+### Búsqueda por Texto
+```bash
+GET /epas?q=fusarium+tomate
+```
+
+### Filtros Combinados
+```bash
+GET /epas?tipoEpa=ENFERMEDAD&tipoCultivoWikiId=1&mes=5&conFotos=true
+```
+
+### Ordenamiento
+```bash
+GET /epas?orderBy=efectividad&orderDir=DESC
+GET /epas?orderBy=costoEstimado&orderDir=ASC
+```
+
+## Gestión de Imágenes
+
+### Subida de Fotos
+
+Las EPAs pueden incluir fotos de síntomas y fotos generales:
+
+```typescript
+// FormData para subida múltiple
+const formData = new FormData();
+formData.append('fotosSintomas', file1);
+formData.append('fotosSintomas', file2);
+formData.append('fotosGenerales', file3);
+
+// Campos de texto
+formData.append('nombre', 'EPA Example');
+formData.append('descripcion', 'Descripción detallada');
+// ... otros campos
+```
+
+### Tipos de Imagen
+- **fotosSintomas**: Imágenes de síntomas observables
+- **fotosGenerales**: Fotos del cultivo, tratamiento, resultados
+
+## WebSocket Events
+
+Los cambios en la wiki generan eventos WebSocket:
+
+```typescript
+// Nueva EPA creada
+socket.on('epaCreated', (data) => {
+  // data: Epa completa
+});
+
+// EPA actualizada
+socket.on('epaUpdated', (data) => {
+  // data: Epa
+});
+
+// EPA eliminada
+socket.on('epaDeleted', (data) => {
+  // data: Epa
+});
+
+// Asociación creada
+socket.on('epaTipoCultivoAssociated', (data) => {
+  // data: { epaId, tipoCultivoId }
+});
+```
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o tipo de EPA inexistente |
+| `401` | Token JWT faltante o inválido |
+| `403` | Sin permisos requeridos |
+| `404` | EPA o tipo de cultivo no encontrado |
+| `409` | Asociación ya existe o conflicto de datos |
+
+## Ejemplos de EPAs Completas
+
+### Control de Fusarium en Tomate
+
+```json
+{
+  "nombre": "Fusarium oxysporum f.sp. lycopersici",
+  "tipoEpa": "ENFERMEDAD",
+  "sintomas": "Marchitez vascular, amarilleamiento de hojas, necrosis",
+  "causas": "Hongo Fusarium oxysporum, sobrevive en suelo por años",
+  "tratamiento": "Solarización del suelo, variedades resistentes, fungicidas",
+  "prevencion": "Rotación de cultivos (3-4 años), desinfección de semillas",
+  "productosRecomendados": "Benomyl, Carbendazim",
+  "dosis": "1-2 kg/ha",
+  "frecuenciaAplicacion": "Preventivo cada 15 días",
+  "temporadaRecomendada": "Todo el año",
+  "efectividad": 75,
+  "costoEstimado": 300000,
+  "tiempoRecuperacion": "No recuperable - prevención fundamental"
+}
+```
+
+### Deficiencia de Nitrógeno en Maíz
+
+```json
+{
+  "nombre": "Deficiencia de Nitrógeno (N)",
+  "tipoEpa": "DEFICIENCIA_NUTRICIONAL",
+  "sintomas": "Amarilleamiento uniforme desde punta de hoja, crecimiento lento",
+  "causas": "Suelo pobre en nitrógeno, lixiviación por lluvias",
+  "tratamiento": "Fertilización nitrogenada inmediata",
+  "prevencion": "Análisis de suelo, fertilización balanceada",
+  "productosRecomendados": "Urea, Nitrato de amonio",
+  "dosis": "100-150 kg/ha de N",
+  "frecuenciaAplicacion": "Al inicio y 30-45 días después",
+  "temporadaRecomendada": "Todo el ciclo del cultivo",
+  "efectividad": 95,
+  "costoEstimado": 80000,
+  "tiempoRecuperacion": "7-14 días"
+}
+```
+
+### Estrés por Sequía en Café
+
+```json
+{
+  "nombre": "Sequía Prolongada",
+  "tipoEpa": "ESTRES_AMBIENTAL",
+  "sintomas": "Pérdida de turgencia, marchitez, caída de hojas",
+  "causas": "Precipitación < 50mm/mes por más de 2 meses",
+  "tratamiento": "Riego de emergencia, mulch orgánico",
+  "prevencion": "Sistemas de riego, cobertura del suelo",
+  "productosRecomendados": "No aplicable",
+  "dosis": "No aplicable",
+  "frecuenciaAplicacion": "Según necesidad",
+  "temporadaRecomendada": "Época seca",
+  "efectividad": 80,
+  "costoEstimado": 150000,
+  "tiempoRecuperacion": "15-30 días con riego adecuado"
+}
+```
+
+:::note[Base de Conocimiento Viva]
+La wiki es un sistema vivo que se actualiza constantemente con nuevas experiencias y resultados de campo.
+:::
+
+:::tip[Asociaciones Inteligentes]
+Las EPAs se asocian automáticamente con tipos de cultivo relevantes para recomendaciones precisas.
+:::
+
+:::warning[Validación Experta]
+Todas las EPAs deben ser validadas por agrónomos o especialistas antes de su publicación.
+:::

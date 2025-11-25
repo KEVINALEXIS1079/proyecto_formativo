@@ -1,0 +1,602 @@
+---
+title: Esquemas TypeScript
+description: Definiciones completas de tipos de datos, interfaces y entidades del backend
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## Entidades Principales
+
+### Usuario (User)
+
+```typescript
+interface Usuario {
+  id: number;
+  nombre: string;
+  apellido: string;
+  identificacion: string;
+  idFicha?: string;
+  telefono?: string;
+  correo: string;
+  passwordHash: string;
+  emailVerifiedAt?: Date;
+  estado: 'activo' | 'inactivo' | 'pendiente_verificacion';
+  lastLoginAt?: Date;
+  avatarUrl?: string;
+  rolId?: number;
+  rol?: Rol;
+  usuarioPermisos?: UsuarioPermiso[];
+  emailCodes?: EmailCode[];
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date;
+}
+```
+
+### Rol (Role)
+
+```typescript
+interface Rol {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  esSistema: boolean;
+  estado: 'activo' | 'inactivo';
+  rolPermisos?: RolPermiso[];
+  usuarios?: Usuario[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### Permiso (Permission)
+
+```typescript
+interface Permiso {
+  id: number;
+  modulo: string;
+  accion: string;
+  clave: string; // formato: "modulo.accion"
+  descripcion?: string;
+  rolPermisos?: RolPermiso[];
+  usuarioPermisos?: UsuarioPermiso[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## DTOs de Autenticación
+
+### RegisterDto
+
+```typescript
+interface RegisterDto {
+  nombre: string;           // @MaxLength(100)
+  apellido: string;         // @MaxLength(100)
+  identificacion: string;   // @MaxLength(20)
+  idFicha?: string;         // @MaxLength(20), opcional
+  telefono?: string;        // @Matches(/^[0-9+\-\s()]+$/), @MaxLength(20), opcional
+  correo: string;           // @IsEmail, @MaxLength(100)
+  password: string;         // @MinLength(8), @MaxLength(100), @Matches(regex)
+}
+```
+
+### VerifyEmailDto
+
+```typescript
+interface VerifyEmailDto {
+  correo: string;   // @IsEmail
+  code: string;     // Código de verificación de 6 dígitos
+}
+```
+
+### RequestResetDto
+
+```typescript
+interface RequestResetDto {
+  correo: string;   // @IsEmail
+}
+```
+
+### ResetPasswordDto
+
+```typescript
+interface ResetPasswordDto {
+  correo: string;
+  code: string;
+  nuevaPassword: string;  // Mismas validaciones que RegisterDto.password
+}
+```
+
+## DTOs de Usuarios
+
+### UpdateUserDto
+
+```typescript
+interface UpdateUserDto {
+  nombre?: string;
+  apellido?: string;
+  telefono?: string;
+  avatarUrl?: string;
+}
+```
+
+### ChangePasswordDto
+
+```typescript
+interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;  // Mismas validaciones que RegisterDto.password
+}
+```
+
+## DTOs de Geografía
+
+### CreateLoteDto
+
+```typescript
+interface CreateLoteDto {
+  nombre: string;
+  descripcion?: string;
+  area: number;
+  geometria: GeoJSON.Polygon;  // GeoJSON Polygon
+  tipoSueloId?: number;
+  ubicacion?: string;
+}
+```
+
+### UpdateLoteDto
+
+```typescript
+interface UpdateLoteDto {
+  nombre?: string;
+  descripcion?: string;
+  area?: number;
+  geometria?: GeoJSON.Polygon;
+  tipoSueloId?: number;
+  ubicacion?: string;
+}
+```
+
+### CreateSubLoteDto
+
+```typescript
+interface CreateSubLoteDto {
+  nombre: string;
+  descripcion?: string;
+  area: number;
+  geometria: GeoJSON.Polygon;
+  loteId: number;
+}
+```
+
+## DTOs de Cultivos
+
+### CreateCultivoDto
+
+```typescript
+interface CreateCultivoDto {
+  nombre: string;
+  descripcion?: string;
+  fechaSiembra: Date;
+  fechaCosechaEstimada?: Date;
+  loteId: number;
+  tipoCultivoId: number;
+  variedad?: string;
+  cantidadSemillas?: number;
+  costoSemillas?: number;
+  notas?: string;
+}
+```
+
+### UpdateCultivoDto
+
+```typescript
+interface UpdateCultivoDto {
+  nombre?: string;
+  descripcion?: string;
+  fechaSiembra?: Date;
+  fechaCosechaEstimada?: Date;
+  loteId?: number;
+  tipoCultivoId?: number;
+  variedad?: string;
+  cantidadSemillas?: number;
+  costoSemillas?: number;
+  estado?: 'activo' | 'cosechado' | 'cancelado';
+  fechaCosechaReal?: Date;
+  rendimiento?: number;
+  notas?: string;
+}
+```
+
+## DTOs de Actividades
+
+### CreateActividadDto
+
+```typescript
+interface CreateActividadDto {
+  titulo: string;
+  descripcion?: string;
+  tipoActividadId: number;
+  cultivoId: number;
+  fechaProgramada: Date;
+  fechaEjecucion?: Date;
+  duracionEstimada?: number;  // en horas
+  costoEstimado?: number;
+  prioridad: 'baja' | 'media' | 'alta' | 'urgente';
+  notas?: string;
+  evidencias?: string[];  // URLs de fotos/videos
+}
+```
+
+### UpdateActividadDto
+
+```typescript
+interface UpdateActividadDto {
+  titulo?: string;
+  descripcion?: string;
+  tipoActividadId?: number;
+  cultivoId?: number;
+  fechaProgramada?: Date;
+  fechaEjecucion?: Date;
+  duracionEstimada?: number;
+  duracionReal?: number;
+  costoEstimado?: number;
+  costoReal?: number;
+  prioridad?: 'baja' | 'media' | 'alta' | 'urgente';
+  estado?: 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
+  notas?: string;
+  evidencias?: string[];
+}
+```
+
+## DTOs de Inventario
+
+### CreateInsumoDto
+
+```typescript
+interface CreateInsumoDto {
+  nombre: string;
+  descripcion?: string;
+  categoriaId: number;
+  unidadMedida: string;
+  precioUnitario: number;
+  stockMinimo: number;
+  stockActual: number;
+  proveedorId?: number;
+  ubicacionAlmacen?: string;
+  fechaCaducidad?: Date;
+  lote?: string;
+  notas?: string;
+}
+```
+
+### UpdateInsumoDto
+
+```typescript
+interface UpdateInsumoDto {
+  nombre?: string;
+  descripcion?: string;
+  categoriaId?: number;
+  unidadMedida?: string;
+  precioUnitario?: number;
+  stockMinimo?: number;
+  stockActual?: number;
+  proveedorId?: number;
+  ubicacionAlmacen?: string;
+  fechaCaducidad?: Date;
+  lote?: string;
+  estado?: 'activo' | 'inactivo';
+  notas?: string;
+}
+```
+
+### CreateMovimientoDto
+
+```typescript
+interface CreateMovimientoDto {
+  insumoId: number;
+  tipo: 'entrada' | 'salida' | 'ajuste';
+  cantidad: number;
+  motivo: string;
+  loteProduccionId?: number;
+  actividadId?: number;
+  costoUnitario?: number;
+  notas?: string;
+}
+```
+
+## DTOs de Producción
+
+### CreateLoteProduccionDto
+
+```typescript
+interface CreateLoteProduccionDto {
+  nombre: string;
+  descripcion?: string;
+  cultivoId: number;
+  fechaInicio: Date;
+  fechaFinEstimada?: Date;
+  cantidadEstimada: number;
+  unidadMedida: string;
+  costoEstimado?: number;
+  notas?: string;
+}
+```
+
+### CreateVentaDto
+
+```typescript
+interface CreateVentaDto {
+  loteProduccionId: number;
+  clienteId: number;
+  cantidad: number;
+  precioUnitario: number;
+  fechaVenta: Date;
+  metodoPago: 'efectivo' | 'transferencia' | 'cheque' | 'credito';
+  notas?: string;
+  pagos?: CreatePagoDto[];
+}
+```
+
+### CreateClienteDto
+
+```typescript
+interface CreateClienteDto {
+  nombre: string;
+  tipo: 'persona' | 'empresa';
+  identificacion?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  ciudad?: string;
+  notas?: string;
+}
+```
+
+## DTOs de IoT
+
+### CreateSensorDto
+
+```typescript
+interface CreateSensorDto {
+  nombre: string;
+  descripcion?: string;
+  tipoSensorId: number;
+  loteId?: number;
+  subLoteId?: number;
+  ubicacion?: GeoJSON.Point;
+  configuracion: Record<string, any>;  // Configuración específica del sensor
+  umbralMinimo?: number;
+  umbralMaximo?: number;
+  activo: boolean;
+}
+```
+
+### CreateLecturaDto
+
+```typescript
+interface CreateLecturaDto {
+  sensorId: number;
+  valor: number;
+  unidad: string;
+  timestamp: Date;
+  metadata?: Record<string, any>;
+}
+```
+
+### HttpSensorReadingDto
+
+```typescript
+interface HttpSensorReadingDto {
+  sensorId: string;
+  readings: Array<{
+    valor: number;
+    unidad: string;
+    timestamp: Date;
+    metadata?: Record<string, any>;
+  }>;
+}
+```
+
+## DTOs de Wiki
+
+### CreateEpaDto
+
+```typescript
+interface CreateEpaDto {
+  titulo: string;
+  descripcion: string;
+  contenido: string;
+  categoria: string;
+  etiquetas?: string[];
+  referencias?: string[];
+  autorId: number;
+}
+```
+
+### CreateTipoCultivoWikiDto
+
+```typescript
+interface CreateTipoCultivoWikiDto {
+  nombre: string;
+  nombreCientifico?: string;
+  descripcion: string;
+  caracteristicas?: Record<string, any>;
+  cicloVida?: string;
+  rendimientoEsperado?: string;
+  plagasComunes?: string[];
+  enfermedadesComunes?: string[];
+  cuidadosEspeciales?: string;
+}
+```
+
+## DTOs de Reportes
+
+### VentasReportDto
+
+```typescript
+interface VentasReportDto {
+  fechaInicio?: Date;
+  fechaFin?: Date;
+  clienteId?: number;
+  loteProduccionId?: number;
+  formato?: 'json' | 'csv' | 'excel';
+}
+```
+
+### PreciosHistoricosDto
+
+```typescript
+interface PreciosHistoricosDto {
+  cultivoId?: number;
+  fechaInicio?: Date;
+  fechaFin?: Date;
+  formato?: 'json' | 'csv' | 'excel';
+}
+```
+
+### RentabilidadReportDto
+
+```typescript
+interface RentabilidadReportDto {
+  cultivoId?: number;
+  loteId?: number;
+  subLoteId?: number;
+  fechaInicio?: Date;
+  fechaFin?: Date;
+  incluirCostosIndirectos?: boolean;
+  formato?: 'json' | 'csv' | 'excel';
+}
+```
+
+## Tipos de Respuesta Comunes
+
+### PaginatedResponse
+
+```typescript
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+```
+
+### ApiResponse
+
+```typescript
+interface ApiResponse<T = any> {
+  data?: T;
+  message?: string;
+  statusCode: number;
+  timestamp: Date;
+  path: string;
+}
+```
+
+### ErrorResponse
+
+```typescript
+interface ErrorResponse {
+  statusCode: number;
+  message: string | string[];
+  error: string;
+  details?: ValidationError[];
+  timestamp: Date;
+  path: string;
+}
+```
+
+### ValidationError
+
+```typescript
+interface ValidationError {
+  field: string;
+  constraints: Record<string, string>;
+}
+```
+
+## Tipos GeoJSON
+
+```typescript
+declare namespace GeoJSON {
+  interface Point {
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
+  }
+
+  interface Polygon {
+    type: 'Polygon';
+    coordinates: Array<Array<[number, number]>>; // Array de rings
+  }
+
+  interface MultiPolygon {
+    type: 'MultiPolygon';
+    coordinates: Array<Array<Array<[number, number]>>>; // Array de polygons
+  }
+}
+```
+
+## Enums y Constantes
+
+### Estados de Usuario
+
+```typescript
+type UserStatus = 'activo' | 'inactivo' | 'pendiente_verificacion';
+```
+
+### Estados de Cultivo
+
+```typescript
+type CultivoStatus = 'activo' | 'cosechado' | 'cancelado';
+```
+
+### Estados de Actividad
+
+```typescript
+type ActividadStatus = 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
+```
+
+### Prioridades
+
+```typescript
+type Prioridad = 'baja' | 'media' | 'alta' | 'urgente';
+```
+
+### Tipos de Movimiento
+
+```typescript
+type TipoMovimiento = 'entrada' | 'salida' | 'ajuste';
+```
+
+### Métodos de Pago
+
+```typescript
+type MetodoPago = 'efectivo' | 'transferencia' | 'cheque' | 'credito';
+```
+
+### Tipos de Cliente
+
+```typescript
+type TipoCliente = 'persona' | 'empresa';
+```
+
+### Estados de Sensor
+
+```typescript
+type SensorStatus = 'activo' | 'inactivo' | 'mantenimiento';
+```
+
+:::note[Generación Automática]
+Estos tipos están basados en las entidades y DTOs reales del backend. Se recomienda usar herramientas como `@nestjs/swagger` para generar documentación OpenAPI automática.
+:::
+
+:::tip[Validaciones]
+Todas las validaciones de class-validator están documentadas en los comentarios de cada propiedad. Asegúrate de implementar las mismas validaciones en el frontend.
+:::

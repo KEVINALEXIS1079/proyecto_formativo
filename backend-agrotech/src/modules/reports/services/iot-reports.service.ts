@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sensor } from '../../iot/entities/sensor.entity';
 import { SensorLectura } from '../../iot/entities/sensor-lectura.entity';
-import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 
 @Injectable()
 export class IotReportsService {
@@ -159,6 +159,69 @@ export class IotReportsService {
       sensoresActivos,
       alertasActivas: alertas,
       timestamp: new Date()
+    };
+  }
+
+  // RF50: Comparativa de sensores (ranking por métrica)
+  async compareSensors(filters: {
+    tipoSensorId?: number;
+    cultivoId?: number;
+    from?: Date;
+    to?: Date;
+    metric: 'avg' | 'max' | 'min';
+    limit: number;
+  }) {
+    const query = this.lecturaRepo.createQueryBuilder('lectura')
+      .leftJoin('lectura.sensor', 'sensor')
+      .leftJoin('sensor.tipoSensor', 'tipoSensor')
+      .select('sensor.id', 'sensorId')
+      .addSelect('sensor.nombre', 'sensorNombre')
+      .addSelect('tipoSensor.nombre', 'tipoSensor')
+      .groupBy('sensor.id')
+      .addGroupBy('sensor.nombre')
+      .addGroupBy('tipoSensor.nombre')
+      .limit(filters.limit);
+
+    // Seleccionar métrica
+    if (filters.metric === 'avg') {
+      query.addSelect('AVG(lectura.valor)', 'metricValue')
+           .orderBy('AVG(lectura.valor)', 'DESC');
+    } else if (filters.metric === 'max') {
+      query.addSelect('MAX(lectura.valor)', 'metricValue')
+           .orderBy('MAX(lectura.valor)', 'DESC');
+    } else {
+      query.addSelect('MIN(lectura.valor)', 'metricValue')
+           .orderBy('MIN(lectura.valor)', 'ASC');
+    }
+
+    // Filtros
+    if (filters.tipoSensorId) {
+      query.andWhere('sensor.tipoSensorId = :tipoSensorId', { tipoSensorId: filters.tipoSensorId });
+    }
+
+    if (filters.cultivoId) {
+      query.andWhere('sensor.cultivoId = :cultivoId', { cultivoId: filters.cultivoId });
+    }
+
+    if (filters.from) {
+      query.andWhere('lectura.fecha >= :from', { from: filters.from });
+    }
+
+    if (filters.to) {
+      query.andWhere('lectura.fecha <= :to', { to: filters.to });
+    }
+
+    const results = await query.getRawMany();
+
+    return {
+      metric: filters.metric,
+      ranking: results.map((r, index) => ({
+        rank: index + 1,
+        sensorId: r.sensorId,
+        sensorNombre: r.sensorNombre,
+        tipoSensor: r.tipoSensor,
+        metricValue: parseFloat(r.metricValue || '0'),
+      })),
     };
   }
 }

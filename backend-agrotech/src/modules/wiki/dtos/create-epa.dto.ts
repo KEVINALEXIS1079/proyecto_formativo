@@ -50,15 +50,6 @@ export class CreateEpaDto {
   @IsString({ each: true, message: 'Cada temporada debe ser un texto' })
   temporadas?: string[];
 
-  @IsOptional()
-  @IsArray({ message: 'Las fotos de síntomas deben ser un array' })
-  @IsString({ each: true, message: 'Cada foto debe ser una URL válida' })
-  fotosSintomas?: string[];
-
-  @IsOptional()
-  @IsArray({ message: 'Las fotos generales deben ser un array' })
-  @IsString({ each: true, message: 'Cada foto debe ser una URL válida' })
-  fotosGenerales?: string[];
 
   @IsOptional()
   @IsArray({ message: 'Los tags deben ser un array' })

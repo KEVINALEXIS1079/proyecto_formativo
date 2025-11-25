@@ -16,8 +16,8 @@ import {
 import { RedisService } from '../../../common/services/redis.service';
 import { EmailService } from '../../../common/services/email.service';
 import { ImageUploadService } from '../../../common/services/image-upload.service';
-import { UsersGateway } from '../gateways/users.gateway';
 import * as bcrypt from 'bcrypt';
+import { PaginationDto } from '../../../common/dtos/pagination.dto';
 
 @Injectable()
 export class UsersService {
@@ -26,7 +26,6 @@ export class UsersService {
     private redisService: RedisService,
     private emailService: EmailService,
     private imageUploadService: ImageUploadService,
-    private usersGateway: UsersGateway,
   ) {}
 
   // RF66: Búsqueda avanzada con filtros
@@ -56,6 +55,49 @@ export class UsersService {
     return queryBuilder
       .orderBy('usuario.createdAt', 'DESC')
       .getMany();
+  }
+
+  // RF65: Búsqueda paginada
+  async findAllPaginated(pagination: PaginationDto, filters?: { rolId?: number; estado?: string }) {
+    const { page = 1, limit = 20, orderBy = 'createdAt', orderDir = 'DESC', q } = pagination;
+    
+    const queryBuilder = this.usuarioRepo.createQueryBuilder('usuario')
+      .leftJoinAndSelect('usuario.rol', 'rol')
+      .where('usuario.deletedAt IS NULL');
+
+    // Búsqueda de texto
+    if (q) {
+      queryBuilder.andWhere(
+        '(usuario.nombre ILIKE :q OR usuario.apellido ILIKE :q OR usuario.correo ILIKE :q OR usuario.identificacion ILIKE :q)',
+        { q: `%${q}%` }
+      );
+    }
+
+    // Filtros adicionales
+    if (filters?.rolId) {
+      queryBuilder.andWhere('usuario.rolId = :rolId', { rolId: filters.rolId });
+    }
+    if (filters?.estado) {
+      queryBuilder.andWhere('usuario.estado = :estado', { estado: filters.estado });
+    }
+
+    // Paginación
+    queryBuilder
+      .orderBy(`usuario.${orderBy}`, orderDir.toUpperCase() as 'ASC' | 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findById(id: number) {
@@ -143,13 +185,7 @@ export class UsersService {
     // Opcional: Cerrar todas las sesiones activas
     await this.redisService.deleteAllUserSessions(id);
 
-    // Emitir eventos WebSocket
-    this.usersGateway.server.emit('users:updated', updatedUser);
-    this.usersGateway.server.emit('users:roleChanged', {
-      user: updatedUser,
-      oldRoleId,
-      newRoleId: data.rolId,
-    });
+    // WebSocket events are handled by the gateway or controller
 
     return { message: 'Rol actualizado. Sesiones cerradas. El usuario debe volver a iniciar sesión.' };
   }
@@ -215,8 +251,7 @@ export class UsersService {
     Object.assign(usuario, data);
     const updatedUser = await this.usuarioRepo.save(usuario);
 
-    // Emitir evento WebSocket
-    this.usersGateway.server.emit('users:updated', updatedUser);
+    // WebSocket events are handled by the gateway or controller
 
     return updatedUser;
   }

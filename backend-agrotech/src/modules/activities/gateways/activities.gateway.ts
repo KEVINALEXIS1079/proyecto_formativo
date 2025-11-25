@@ -1,7 +1,7 @@
 import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket, WebSocketServer } from '@nestjs/websockets';
 import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { ActivitiesController } from '../controllers/activities.controller';
+import { ActivitiesService } from '../services/activities.service';
 import {
   ActivitiesCreateDoDto,
   ActivitiesFindAllDoDto,
@@ -21,8 +21,8 @@ export class ActivitiesGateway {
   server: Server;
 
   constructor(
-    @Inject(forwardRef(() => ActivitiesController))
-    private readonly activitiesController: ActivitiesController,
+    @Inject(forwardRef(() => ActivitiesService))
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   @SubscribeMessage('createActivity')
@@ -33,7 +33,7 @@ export class ActivitiesGateway {
     @WsCurrentUser() user: any,
     @ConnectedSocket() client: Socket,
   ) {
-    const result = await this.activitiesController.create(createActivityDto, user.id);
+    const result = await this.activitiesService.create(createActivityDto, user.id);
     client.emit('createActivity.result', result);
     return result;
   }
@@ -45,7 +45,7 @@ export class ActivitiesGateway {
     @MessageBody() filters: ActivitiesFindAllDoDto,
     @ConnectedSocket() client: Socket,
   ) {
-    const result = await this.activitiesController.findAll();
+    const result = await this.activitiesService.findAll();
     client.emit('findAllActivities.result', result);
     return result;
   }
@@ -57,7 +57,7 @@ export class ActivitiesGateway {
     @MessageBody() data: ActivitiesFindOneDoDto,
     @ConnectedSocket() client: Socket,
   ) {
-    const result = await this.activitiesController.findOne(data.id);
+    const result = await this.activitiesService.findOne(data.id);
     client.emit('findOneActivity.result', result);
     return result;
   }
@@ -69,7 +69,7 @@ export class ActivitiesGateway {
     @MessageBody() payload: ActivitiesUpdateDoDto,
     @ConnectedSocket() client: Socket,
   ) {
-    const result = await this.activitiesController.update(payload.id, payload.data);
+    const result = await this.activitiesService.update(payload.id, payload.data);
     client.emit('updateActivity.result', result);
     return result;
   }
@@ -81,7 +81,7 @@ export class ActivitiesGateway {
     @MessageBody() data: ActivitiesRemoveDoDto,
     @ConnectedSocket() client: Socket,
   ) {
-    const result = await this.activitiesController.remove(data.id);
+    const result = await this.activitiesService.remove(data.id);
     client.emit('removeActivity.result', result);
     return result;
   }

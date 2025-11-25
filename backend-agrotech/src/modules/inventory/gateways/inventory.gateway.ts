@@ -1,7 +1,7 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';
-import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
-import { Socket } from 'socket.io';
-import { InventoryController } from '../controllers/inventory.controller';
+import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket, WebSocketServer } from '@nestjs/websockets';
+import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
+import { InventoryService } from '../services/inventory.service';
 import {
   InventoryFindAllInsumosDoDto,
   InventoryFindInsumoByIdDoDto,
@@ -22,7 +22,13 @@ import { WsCurrentUser } from '../../../common/decorators/ws-current-user.decora
 @WebSocketGateway({ namespace: 'inventory', cors: { origin: '*' } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
 export class InventoryGateway {
-  constructor(private readonly inventoryController: InventoryController) {}
+  @WebSocketServer()
+  server: Server;
+
+  constructor(
+    @Inject(forwardRef(() => InventoryService))
+    private readonly inventoryService: InventoryService,
+  ) {}
 
   // ==================== INSUMOS ====================
   
@@ -30,7 +36,7 @@ export class InventoryGateway {
   @RequirePermissions('inventario.ver')
   @UsePipes(new ValidationPipe())
   async findAllInsumos(@MessageBody() filters: InventoryFindAllInsumosDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.inventoryController.findAllInsumos(filters);
+    const result = await this.inventoryService.findAllInsumos(filters);
     client.emit('findAllInsumos.result', result);
     return result;
   }
@@ -39,7 +45,7 @@ export class InventoryGateway {
   @RequirePermissions('inventario.ver')
   @UsePipes(new ValidationPipe())
   async findInsumoById(@MessageBody() data: InventoryFindInsumoByIdDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.inventoryController.findInsumoById(data.id);
+    const result = await this.inventoryService.findInsumoById(data.id);
     client.emit('findInsumoById.result', result);
     return result;
   }
@@ -52,7 +58,7 @@ export class InventoryGateway {
     @WsCurrentUser() user: any,
     @ConnectedSocket() client: Socket,
   ) {
-    const result = await this.inventoryController.createInsumo(createInsumoDto, user.id);
+    const result = await this.inventoryService.createInsumo(createInsumoDto, user.id);
     client.emit('createInsumo.result', result);
     return result;
   }
@@ -62,7 +68,7 @@ export class InventoryGateway {
   @UsePipes(new ValidationPipe())
   async updateInsumo(@MessageBody() payload: InventoryUpdateInsumoDoDto, @ConnectedSocket() client: Socket) {
     const { id, data } = payload;
-    const result = await this.inventoryController.updateInsumo(id, data);
+    const result = await this.inventoryService.updateInsumo(id, data);
     client.emit('updateInsumo.result', result);
     return result;
   }
@@ -71,7 +77,7 @@ export class InventoryGateway {
   @RequirePermissions('inventario.eliminar')
   @UsePipes(new ValidationPipe())
   async removeInsumo(@MessageBody() data: InventoryRemoveInsumoDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.inventoryController.removeInsumo(data.id);
+    const result = await this.inventoryService.removeInsumo(data.id);
     client.emit('removeInsumo.result', result);
     return result;
   }
@@ -82,7 +88,7 @@ export class InventoryGateway {
   @RequirePermissions('inventario.editar')
   @UsePipes(new ValidationPipe())
   async createMovimiento(@MessageBody() data: InventoryCreateMovimientoDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.inventoryController.createMovimiento(data);
+    const result = await this.inventoryService.createMovimiento(data);
     client.emit('createMovimiento.result', result);
     return result;
   }
@@ -91,7 +97,7 @@ export class InventoryGateway {
   @RequirePermissions('inventario.ver')
   @UsePipes(new ValidationPipe())
   async findMovimientosByInsumo(@MessageBody() data: InventoryFindMovimientosByInsumoDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.inventoryController.findMovimientosByInsumo(data.insumoId);
+    const result = await this.inventoryService.findMovimientosByInsumo(data.insumoId);
     client.emit('findMovimientosByInsumo.result', result);
     return result;
   }
@@ -102,7 +108,7 @@ export class InventoryGateway {
   @RequirePermissions('inventario.ver')
   @UsePipes(new ValidationPipe())
   async findAllAlmacenes(@MessageBody() filters: InventoryFindAllAlmacenesDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.inventoryController.findAllAlmacenes();
+    const result = await this.inventoryService.findAllAlmacenes();
     client.emit('findAllAlmacenes.result', result);
     return result;
   }
@@ -111,7 +117,7 @@ export class InventoryGateway {
   @RequirePermissions('inventario.ver')
   @UsePipes(new ValidationPipe())
   async findAllProveedores(@MessageBody() filters: InventoryFindAllProveedoresDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.inventoryController.findAllProveedores();
+    const result = await this.inventoryService.findAllProveedores();
     client.emit('findAllProveedores.result', result);
     return result;
   }
@@ -120,8 +126,12 @@ export class InventoryGateway {
   @RequirePermissions('inventario.ver')
   @UsePipes(new ValidationPipe())
   async findAllCategorias(@MessageBody() filters: InventoryFindAllCategoriasDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.inventoryController.findAllCategorias();
+    const result = await this.inventoryService.findAllCategorias();
     client.emit('findAllCategorias.result', result);
     return result;
+  }
+
+  broadcast(event: string, data: any) {
+    this.server.emit(event, data);
   }
 }

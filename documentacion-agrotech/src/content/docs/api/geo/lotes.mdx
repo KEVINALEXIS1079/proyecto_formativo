@@ -1,0 +1,249 @@
+---
+title: Gestión de Lotes
+description: Endpoints para crear, listar, actualizar y eliminar lotes agrícolas
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /geo/lotes
+
+Crea un nuevo lote agrícola con geometría GeoJSON.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateLoteDto {
+  nombre: string;        // Máximo 100 caracteres
+  descripcion?: string;  // Máximo 500 caracteres, opcional
+  geom: GeoJSON.Polygon; // Geometría del lote en formato GeoJSON
+}
+```
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/geo/lotes \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "nombre": "Lote Norte Principal",
+        "descripcion": "Lote principal de 5 hectáreas en zona norte",
+        "geom": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-74.123456, 4.678901],
+            [-74.123456, 4.679000],
+            [-74.124000, 4.679000],
+            [-74.124000, 4.678901],
+            [-74.123456, 4.678901]
+          ]]
+        }
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const loteData = {
+      nombre: "Lote Norte Principal",
+      descripcion: "Lote principal de 5 hectáreas en zona norte",
+      geom: {
+        type: "Polygon",
+        coordinates: [[
+          [-74.123456, 4.678901],
+          [-74.123456, 4.679000],
+          [-74.124000, 4.679000],
+          [-74.124000, 4.678901],
+          [-74.123456, 4.678901]
+        ]]
+      }
+    };
+
+    const response = await fetch('/geo/lotes', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(loteData)
+    });
+
+    const nuevoLote = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface Lote {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  geom: GeoJSON.Polygon;
+  area: number;  // Área calculada automáticamente en m²
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+**Ejemplo de respuesta:**
+```json
+{
+  "id": 1,
+  "nombre": "Lote Norte Principal",
+  "descripcion": "Lote principal de 5 hectáreas en zona norte",
+  "geom": {
+    "type": "Polygon",
+    "coordinates": [[
+      [-74.123456, 4.678901],
+      [-74.123456, 4.679000],
+      [-74.124000, 4.679000],
+      [-74.124000, 4.678901],
+      [-74.123456, 4.678901]
+    ]]
+  },
+  "area": 50000,
+  "createdAt": "2025-01-15T10:30:00.000Z",
+  "updatedAt": "2025-01-15T10:30:00.000Z"
+}
+```
+
+## GET /geo/lotes
+
+Obtiene la lista de todos los lotes.
+
+### Permisos Requeridos
+
+- `geo.ver`
+
+### Ejemplo de Request
+
+```bash
+curl -X GET http://localhost:4000/geo/lotes \
+  -H "Authorization: Bearer {token}"
+```
+
+### Respuesta Exitosa (200)
+
+```typescript
+interface LotesResponse {
+  data: Lote[];
+}
+```
+
+## GET /geo/lotes/:id
+
+Obtiene un lote específico por su ID.
+
+### Parámetros de URL
+
+- `id`: ID numérico del lote
+
+### Ejemplo de Request
+
+```bash
+curl -X GET http://localhost:4000/geo/lotes/1 \
+  -H "Authorization: Bearer {token}"
+```
+
+### Respuesta Exitosa (200)
+
+Retorna el objeto `Lote` completo.
+
+## PATCH /geo/lotes/:id
+
+Actualiza un lote existente.
+
+### Parámetros de Entrada
+
+```typescript
+interface UpdateLoteDto {
+  nombre?: string;
+  descripcion?: string;
+  geom?: GeoJSON.Polygon;
+}
+```
+
+### Permisos Requeridos
+
+- `geo.editar`
+
+### Ejemplo de Request
+
+```bash
+curl -X PATCH http://localhost:4000/geo/lotes/1 \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "descripcion": "Lote actualizado con nueva descripción"
+  }'
+```
+
+## DELETE /geo/lotes/:id
+
+Elimina un lote.
+
+### Permisos Requeridos
+
+- `geo.eliminar`
+
+### Consideraciones
+
+- Un lote no puede eliminarse si tiene cultivos activos asociados
+- Los sublotes asociados serán eliminados en cascada
+
+### Ejemplo de Request
+
+```bash
+curl -X DELETE http://localhost:4000/geo/lotes/1 \
+  -H "Authorization: Bearer {token}"
+```
+
+### Respuesta Exitosa (204)
+
+No content.
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o geometría malformada |
+| `401` | Token JWT faltante o inválido |
+| `403` | Sin permisos requeridos |
+| `404` | Lote no encontrado |
+| `409` | Conflicto (lote con cultivos activos) |
+
+## Consideraciones Técnicas
+
+### Geometría GeoJSON
+
+- **Formato**: GeoJSON Polygon
+- **CRS**: WGS84 (EPSG:4326)
+- **Validación**: La geometría debe ser un polígono válido y cerrado
+- **Área**: Se calcula automáticamente usando PostGIS
+
+### Área Calculada
+
+El área se calcula automáticamente en metros cuadrados usando la función `ST_Area` de PostGIS con el sistema de coordenadas geográficas apropiado.
+
+### Índices Espaciales
+
+- Los lotes tienen índices espaciales para consultas eficientes
+- Soporte para consultas de intersección, contención y proximidad
+
+### Relaciones
+
+- Un lote puede tener múltiples sublotes
+- Un lote puede tener múltiples cultivos
+- Los lotes pueden solaparse (no hay restricción de exclusividad)
+
+:::note[Coordenadas]
+Las coordenadas deben estar en formato [longitude, latitude] según el estándar GeoJSON.
+:::
+
+:::tip[Área Automática]
+El área se calcula automáticamente del polígono, no es necesario proporcionarla manualmente.
+:::

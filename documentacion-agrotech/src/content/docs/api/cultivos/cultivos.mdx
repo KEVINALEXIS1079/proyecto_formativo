@@ -1,0 +1,331 @@
+---
+title: Gestión de Cultivos
+description: Endpoints para crear, listar, actualizar y eliminar cultivos agrícolas
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /cultivos
+
+Crea un nuevo cultivo en un lote o sub-lote específico.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateCultivoDto {
+  nombreCultivo: string;     // Nombre del cultivo (requerido)
+  tipoCultivo?: string;      // Tipo/variedad del cultivo
+  descripcion?: string;      // Descripción opcional
+  loteId?: number;           // ID del lote (XOR con subLoteId)
+  subLoteId?: number;        // ID del sub-lote (XOR con loteId)
+  fechaSiembra?: string;     // Fecha de siembra (YYYY-MM-DD)
+  fechaFinalizacion?: string; // Fecha de finalización (YYYY-MM-DD)
+  estado?: string;           // Estado inicial del cultivo
+}
+```
+
+### Validaciones
+
+- **XOR Lote/Sub-lote**: Debe especificar `loteId` O `subLoteId`, pero no ambos
+- **Fechas**: Si se proporcionan, deben estar en formato `YYYY-MM-DD`
+- **Estados válidos**: `planificado`, `activo`, `finalizado`, `cancelado`
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/cultivos \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "nombreCultivo": "Tomates Roma VF",
+        "tipoCultivo": "Tomate",
+        "descripcion": "Cultivo de tomates variedad Roma VF para exportación",
+        "subLoteId": 1,
+        "fechaSiembra": "2025-01-15",
+        "estado": "planificado"
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const cultivoData = {
+      nombreCultivo: "Tomates Roma VF",
+      tipoCultivo: "Tomate",
+      descripcion: "Cultivo de tomates variedad Roma VF para exportación",
+      subLoteId: 1,
+      fechaSiembra: "2025-01-15",
+      estado: "planificado"
+    };
+
+    const response = await fetch('/cultivos', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(cultivoData)
+    });
+
+    const nuevoCultivo = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface Cultivo {
+  id: number;
+  nombreCultivo: string;
+  tipoCultivo?: string;
+  descripcion?: string;
+  loteId?: number;
+  subLoteId?: number;
+  lote?: {
+    id: number;
+    nombre: string;
+  };
+  subLote?: {
+    id: number;
+    nombre: string;
+  };
+  fechaSiembra?: Date;
+  fechaFinalizacion?: Date;
+  estado: 'planificado' | 'activo' | 'finalizado' | 'cancelado';
+  usuarioId?: number;
+  usuario?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## GET /cultivos
+
+Obtiene la lista de cultivos con filtros opcionales.
+
+### Parámetros de Query
+
+```typescript
+interface CultivosQueryParams {
+  loteId?: number;     // Filtrar por lote
+  subLoteId?: number;  // Filtrar por sub-lote
+  estado?: string;     // Filtrar por estado
+  q?: string;          // Búsqueda por nombre
+}
+```
+
+### Ejemplos de Filtros
+
+```bash
+# Todos los cultivos
+GET /cultivos
+
+# Cultivos de un lote específico
+GET /cultivos?loteId=1
+
+# Cultivos activos
+GET /cultivos?estado=activo
+
+# Búsqueda por nombre
+GET /cultivos?q=tomate
+
+# Combinar filtros
+GET /cultivos?loteId=1&estado=activo&q=roma
+```
+
+### Respuesta Exitosa (200)
+
+```typescript
+interface CultivosResponse {
+  data: Cultivo[];
+}
+```
+
+## GET /cultivos/:id
+
+Obtiene un cultivo específico por su ID.
+
+### Respuesta Exitosa (200)
+
+Retorna el objeto `Cultivo` completo con todas sus relaciones.
+
+## PATCH /cultivos/:id
+
+Actualiza un cultivo existente.
+
+### Parámetros de Entrada
+
+```typescript
+interface UpdateCultivoDto {
+  nombreCultivo?: string;
+  tipoCultivo?: string;
+  descripcion?: string;
+  fechaSiembra?: string;
+  fechaFinalizacion?: string;
+  estado?: string;
+}
+```
+
+### Transiciones de Estado
+
+- `planificado` → `activo` (al iniciar el cultivo)
+- `activo` → `finalizado` (al cosechar)
+- `activo` → `cancelado` (si se aborta)
+- `planificado` → `cancelado` (si se cancela antes de iniciar)
+
+## DELETE /cultivos/:id
+
+Elimina un cultivo.
+
+### Consideraciones
+
+- Solo se pueden eliminar cultivos en estado `planificado`
+- Los cultivos `activo` o `finalizado` no pueden eliminarse
+- Se recomienda usar `cancelado` en su lugar
+
+## Estados del Cultivo
+
+| Estado | Descripción | Acciones Permitidas |
+|--------|-------------|---------------------|
+| `planificado` | Cultivo planeado pero no iniciado | Editar, eliminar, iniciar |
+| `activo` | Cultivo en curso | Editar, finalizar, cancelar |
+| `finalizado` | Cultivo completado | Solo lectura |
+| `cancelado` | Cultivo abortado | Solo lectura |
+
+## Ciclo de Vida
+
+### 1. Planificación
+```json
+{
+  "nombreCultivo": "Tomates Roma",
+  "tipoCultivo": "Tomate",
+  "subLoteId": 1,
+  "fechaSiembra": "2025-01-15",
+  "estado": "planificado"
+}
+```
+
+### 2. Inicio del Cultivo
+```json
+{
+  "estado": "activo",
+  "fechaSiembra": "2025-01-15"
+}
+```
+
+### 3. Seguimiento
+- Registro de actividades agrícolas
+- Monitoreo con sensores IoT
+- Control de plagas y enfermedades
+
+### 4. Cosecha y Finalización
+```json
+{
+  "estado": "finalizado",
+  "fechaFinalizacion": "2025-04-15"
+}
+```
+
+## Relaciones
+
+### Con Lotes y Sub-lotes
+- Un cultivo pertenece a un lote O un sub-lote (exclusivo)
+- Si pertenece a un lote, puede ocupar todo el lote
+- Si pertenece a un sub-lote, está limitado a esa área
+
+### Con Actividades
+- Un cultivo puede tener múltiples actividades agrícolas
+- Actividades incluyen: siembra, riego, fertilización, fumigación, cosecha
+
+### Con Inventario
+- Consumo de insumos (semillas, fertilizantes, pesticidas)
+- Movimientos de inventario asociados
+
+### Con Producción
+- Genera productos agrícolas
+- Asociado a lotes de producción y ventas
+
+### Con IoT
+- Sensores asociados al lote/sub-lote
+- Monitoreo de condiciones ambientales
+
+## WebSocket Events
+
+Los cambios en cultivos generan eventos WebSocket:
+
+```typescript
+// Nuevo cultivo
+socket.on('cultivoCreated', (data) => {
+  // data: Cultivo
+});
+
+// Cultivo actualizado
+socket.on('cultivoUpdated', (data) => {
+  // data: Cultivo
+});
+
+// Cultivo eliminado
+socket.on('cultivoDeleted', (data) => {
+  // data: Cultivo
+});
+```
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o conflicto lote/sub-lote |
+| `401` | Token JWT faltante o inválido |
+| `403` | Sin permisos requeridos |
+| `404` | Cultivo no encontrado |
+| `409` | Estado no permite la operación |
+
+## Ejemplos de Uso
+
+### Cultivo en Lote Completo
+```json
+{
+  "nombreCultivo": "Maíz Amarillo",
+  "tipoCultivo": "Maíz",
+  "loteId": 2,
+  "fechaSiembra": "2025-02-01",
+  "descripcion": "Cultivo extensivo de maíz para grano"
+}
+```
+
+### Cultivo en Sub-lote
+```json
+{
+  "nombreCultivo": "Fresas Hidropónicas",
+  "tipoCultivo": "Fresa",
+  "subLoteId": 3,
+  "fechaSiembra": "2025-01-20",
+  "descripcion": "Sistema hidropónico de alta densidad"
+}
+```
+
+### Cultivo Orgánico
+```json
+{
+  "nombreCultivo": "Lechuga Romana Orgánica",
+  "tipoCultivo": "Lechuga",
+  "subLoteId": 5,
+  "fechaSiembra": "2025-01-10",
+  "descripcion": "Cultivo orgánico certificado para exportación"
+}
+```
+
+:::note[Estados]
+Los estados del cultivo controlan las operaciones permitidas y mantienen la integridad del ciclo agrícola.
+:::
+
+:::tip[Planificación]
+Planificar cultivos con anticipación permite una mejor gestión de recursos y programación de actividades.
+:::

@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, ParseIntPipe, Query, Patch } from '@nestjs/common';
 import { PermissionsService } from '../services/permissions.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
+import { PaginationDto } from '../../../common/dtos/pagination.dto';
 
 @Controller('permissions')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -13,14 +14,26 @@ export class PermissionsController {
   
   @Get('permisos')
   @RequirePermissions('permisos.ver')
-  findAllPermisos() {
-    return this.permissionsService.findAllPermisos();
+  findAllPermisos(@Query() pagination: PaginationDto, @Query('q') q?: string) {
+    return this.permissionsService.findAllPermisosPaginated(pagination, { q });
   }
 
   @Post('permisos')
   @RequirePermissions('permisos.crear')
   createPermiso(@Body() data: { modulo: string; accion: string; descripcion?: string }) {
     return this.permissionsService.createPermiso(data);
+  }
+
+  @Get('permisos/:id')
+  @RequirePermissions('permisos.ver')
+  findPermisoById(@Param('id', ParseIntPipe) id: number) {
+    return this.permissionsService.findPermisoById(id);
+  }
+
+  @Delete('permisos/:id')
+  @RequirePermissions('permisos.eliminar')
+  deletePermiso(@Param('id', ParseIntPipe) id: number) {
+    return this.permissionsService.deletePermiso(id);
   }
 
   // ==================== ROLES ====================
@@ -35,6 +48,12 @@ export class PermissionsController {
   @RequirePermissions('roles.crear')
   createRol(@Body() data: { nombre: string; descripcion?: string }) {
     return this.permissionsService.createRol(data);
+  }
+
+  @Patch('roles/:id')
+  @RequirePermissions('roles.editar')
+  updateRol(@Param('id', ParseIntPipe) id: number, @Body() data: { nombre?: string; descripcion?: string; estado?: string }) {
+    return this.permissionsService.updateRol(id, data);
   }
 
   @Delete('roles/:id')

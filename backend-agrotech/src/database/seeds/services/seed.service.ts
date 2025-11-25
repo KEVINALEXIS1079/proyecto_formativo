@@ -1,8 +1,15 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { seedRolesAndAdmin } from '../roles-admin.seed';
+import { seedRolesAdmin } from '../roles-admin.seed';
 import { seedPermisos } from '../permisos.seed';
-import { seedPrueba1 } from '../prueba1.seed';
+import { seedUsuarios } from '../usuarios.seed';
+import { seedGeo } from '../geo.seed';
+import { seedCultivos } from '../cultivos.seed';
+import { seedInventory } from '../inventory.seed';
+import { seedActivities } from '../activities.seed';
+import { seedIot } from '../iot.seed';
+import { seedWiki } from '../wiki.seed';
+import { seedProduction } from '../production.seed';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -21,25 +28,18 @@ export class SeedService implements OnModuleInit {
     await queryRunner.connect();
 
     try {
-      // Drop log table if exists
-      await queryRunner.query(`DROP TABLE IF EXISTS ${this.SEED_LOG_TABLE}`);
-
-      // Create log table with new structure
-      await queryRunner.query(`
-        CREATE TABLE ${this.SEED_LOG_TABLE} (
-          id SERIAL PRIMARY KEY,
-          seed_name VARCHAR(255) NOT NULL UNIQUE,
-          executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          description TEXT
-        )
-      `);
-      this.logger.log(`Created ${this.SEED_LOG_TABLE} table`);
-
       // Define seeds
       const seeds = [
-        { name: 'roles-admin', fn: seedRolesAndAdmin },
+        { name: 'roles-admin', fn: seedRolesAdmin },
         { name: 'permisos', fn: seedPermisos },
-        { name: 'prueba1', fn: seedPrueba1 },
+        { name: 'usuarios', fn: seedUsuarios },
+        { name: 'geo', fn: seedGeo },
+        { name: 'cultivos', fn: seedCultivos },
+        { name: 'inventory', fn: seedInventory },
+        { name: 'activities', fn: seedActivities },
+        { name: 'iot', fn: seedIot },
+        { name: 'wiki', fn: seedWiki },
+        { name: 'production', fn: seedProduction },
       ];
 
       // Execute seeds individually if not already executed

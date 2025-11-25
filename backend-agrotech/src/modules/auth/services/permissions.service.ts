@@ -7,6 +7,7 @@ import { RolPermiso } from '../entities/rol-permiso.entity';
 import { UsuarioPermiso } from '../../users/entities/usuario-permiso.entity';
 import { Usuario } from '../../users/entities/usuario.entity';
 import { RedisService } from '../../../common/services/redis.service';
+import { PaginationDto } from '../../../common/dtos/pagination.dto';
 
 @Injectable()
 export class PermissionsService {
@@ -43,10 +44,56 @@ export class PermissionsService {
     return this.permisoRepo.find({ order: { modulo: 'ASC', accion: 'ASC' } });
   }
 
+  async findAllPermisosPaginated(pagination: PaginationDto, filters?: { q?: string }) {
+    const { page = 1, limit = 20, orderBy = 'modulo', orderDir = 'ASC', q } = pagination;
+
+    const queryBuilder = this.permisoRepo.createQueryBuilder('permiso');
+
+    // Aplicar filtros
+    if (q) {
+      queryBuilder.where('permiso.modulo ILIKE :q OR permiso.accion ILIKE :q OR permiso.descripcion ILIKE :q', { q: `%${q}%` });
+    }
+
+    // Aplicar ordenamiento
+    queryBuilder.orderBy(`permiso.${orderBy}`, orderDir.toUpperCase() as 'ASC' | 'DESC');
+
+    // Aplicar paginación
+    queryBuilder.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async findPermisoById(id: number) {
     const permiso = await this.permisoRepo.findOne({ where: { id } });
     if (!permiso) throw new NotFoundException(`Permiso ${id} not found`);
     return permiso;
+  }
+
+  // RF07: Eliminar permiso
+  async deletePermiso(id: number) {
+    const permiso = await this.findPermisoById(id);
+    
+    // Verificar que no esté asignado a ningún rol o usuario
+    const rolPermisos = await this.rolPermisoRepo.count({ where: { permisoId: id } });
+    const usuarioPermisos = await this.usuarioPermisoRepo.count({ where: { permisoId: id } });
+    
+    if (rolPermisos > 0 || usuarioPermisos > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar el permiso porque está asignado a ${rolPermisos} roles y ${usuarioPermisos} usuarios`
+      );
+    }
+    
+    return this.permisoRepo.softRemove(permiso);
   }
 
   // ==================== GESTIÓN DE ROLES ====================

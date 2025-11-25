@@ -1,0 +1,315 @@
+---
+title: Autenticación
+description: Sistema de autenticación JWT y manejo de tokens en AgroTech API
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## Sistema de Autenticación
+
+La API de AgroTech utiliza **JSON Web Tokens (JWT)** para autenticación stateless. El sistema incluye:
+
+- **Access Tokens**: Tokens de corta duración para acceso a recursos
+- **Refresh Tokens**: Tokens de larga duración para renovar access tokens
+- **Sistema de Permisos**: Control granular basado en roles y permisos directos
+
+## Flujo de Autenticación
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant DB
+
+    Client->>API: POST /auth/register
+    API->>DB: Crear usuario
+    API->>Client: Usuario creado
+
+    Client->>API: POST /auth/login
+    API->>DB: Validar credenciales
+    API->>Client: {accessToken, refreshToken}
+
+    Client->>API: GET /protected (con Bearer token)
+    API->>API: Validar JWT
+    API->>Client: Datos protegidos
+```
+
+## Endpoints de Autenticación
+
+### Registro de Usuario
+
+```http
+POST /auth/register
+Content-Type: application/json
+
+{
+  "email": "usuario@ejemplo.com",
+  "password": "Contraseña123!",
+  "firstName": "Juan",
+  "lastName": "Pérez",
+  "roleId": 2
+}
+```
+
+**Respuesta Exitosa (201):**
+```json
+{
+  "id": 1,
+  "email": "usuario@ejemplo.com",
+  "firstName": "Juan",
+  "lastName": "Pérez",
+  "role": {
+    "id": 2,
+    "name": "Usuario",
+    "permissions": []
+  },
+  "isEmailVerified": false,
+  "createdAt": "2025-01-15T10:30:00.000Z"
+}
+```
+
+### Inicio de Sesión
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@ejemplo.com",
+  "password": "Contraseña123!"
+}
+```
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "email": "usuario@ejemplo.com",
+    "firstName": "Juan",
+    "lastName": "Pérez",
+    "role": {
+      "id": 2,
+      "name": "Usuario"
+    }
+  }
+}
+```
+
+### Verificación de Email
+
+```http
+POST /auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "usuario@ejemplo.com",
+  "code": "123456"
+}
+```
+
+### Reenvío de Código de Verificación
+
+```http
+POST /auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "usuario@ejemplo.com"
+}
+```
+
+### Restablecer Contraseña
+
+```http
+POST /auth/request-reset
+Content-Type: application/json
+
+{
+  "email": "usuario@ejemplo.com"
+}
+```
+
+```http
+POST /auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "usuario@ejemplo.com",
+  "code": "123456",
+  "newPassword": "NuevaContraseña123!"
+}
+```
+
+### Cerrar Sesión
+
+```http
+POST /auth/logout
+Authorization: Bearer {accessToken}
+```
+
+## Uso de Tokens
+
+### Headers de Autenticación
+
+Todos los endpoints protegidos requieren el header `Authorization`:
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Renovación de Tokens
+
+Cuando el access token expira, usa el refresh token:
+
+```http
+POST /auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+## Sistema de Permisos
+
+### Roles y Permisos
+
+- **Roles**: Grupos de permisos predefinidos
+- **Permisos Directos**: Permisos asignados individualmente a usuarios
+- **Jerarquía**: Los permisos directos tienen prioridad sobre los de rol
+
+### Permisos Disponibles
+
+| Módulo | Permiso | Descripción |
+|--------|---------|-------------|
+| `auth` | `users:read` | Leer usuarios |
+| `auth` | `users:write` | Crear/editar usuarios |
+| `auth` | `users:delete` | Eliminar usuarios |
+| `geo` | `lotes:read` | Leer lotes |
+| `geo` | `lotes:write` | Crear/editar lotes |
+| `cultivos` | `cultivos:read` | Leer cultivos |
+| `cultivos` | `cultivos:write` | Gestionar cultivos |
+| `activities` | `activities:read` | Leer actividades |
+| `activities` | `activities:write` | Registrar actividades |
+| `inventory` | `insumos:read` | Leer inventario |
+| `inventory` | `insumos:write` | Gestionar inventario |
+| `production` | `ventas:read` | Leer ventas |
+| `production` | `ventas:write` | Gestionar ventas |
+| `reports` | `reports:read` | Acceder a reportes |
+| `iot` | `sensores:read` | Leer sensores |
+| `iot` | `sensores:write` | Gestionar sensores |
+
+### Verificación de Permisos
+
+```typescript
+// En controladores
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Permissions('users:read')
+@Get('users')
+async findAll() {
+  // Solo usuarios con permiso 'users:read'
+}
+```
+
+## Ejemplos de Uso
+
+<Tabs>
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    // Login
+    const loginResponse = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'usuario@ejemplo.com',
+        password: 'Contraseña123!'
+      })
+    });
+
+    const { accessToken } = await loginResponse.json();
+
+    // Usar token en requests posteriores
+    const usersResponse = await fetch('/users', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+    ```
+  </TabItem>
+
+  <TabItem label="Python (requests)">
+    ```python
+    import requests
+
+    # Login
+    login_data = {
+        'email': 'usuario@ejemplo.com',
+        'password': 'Contraseña123!'
+    }
+
+    login_response = requests.post('/auth/login', json=login_data)
+    tokens = login_response.json()
+    access_token = tokens['accessToken']
+
+    # Usar token
+    headers = {'Authorization': f'Bearer {access_token}'}
+    users_response = requests.get('/users', headers=headers)
+    ```
+  </TabItem>
+
+  <TabItem label="cURL">
+    ```bash
+    # Login
+    curl -X POST http://localhost:4000/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{"email":"usuario@ejemplo.com","password":"Contraseña123!"}' \
+      | jq -r '.accessToken' > token.txt
+
+    # Usar token
+    curl -H "Authorization: Bearer $(cat token.txt)" \
+      http://localhost:4000/users
+    ```
+  </TabItem>
+</Tabs>
+
+## Manejo de Errores de Autenticación
+
+### Errores Comunes
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "No autorizado"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "statusCode": 403,
+  "message": "Forbidden resource",
+  "error": "No tienes permisos para acceder a este recurso"
+}
+```
+
+**Token Expirado:**
+```json
+{
+  "statusCode": 401,
+  "message": "Token expired",
+  "error": "El token ha expirado"
+}
+```
+
+## Mejores Prácticas
+
+1. **Almacenamiento Seguro**: Nunca almacenes tokens en localStorage en producción
+2. **Renovación Automática**: Implementa renovación automática de tokens
+3. **Logout Seguro**: Invalida tokens en el servidor al hacer logout
+4. **Validación de Permisos**: Verifica permisos tanto en frontend como backend
+5. **Timeouts**: Configura timeouts apropiados para requests

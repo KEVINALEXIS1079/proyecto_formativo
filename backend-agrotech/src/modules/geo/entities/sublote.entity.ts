@@ -1,8 +1,9 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Lote } from './lote.entity';
 
 @Entity('sublotes')
+@Index('idx_sublotes_geom', ['geom'], { spatial: true })
 export class SubLote extends BaseEntity {
   @Column()
   nombre: string;

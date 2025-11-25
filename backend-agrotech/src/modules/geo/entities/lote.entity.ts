@@ -1,7 +1,8 @@
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, Index } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
 @Entity('lotes')
+@Index('idx_lotes_geom', ['geom'], { spatial: true })
 export class Lote extends BaseEntity {
   @Column()
   nombre: string;

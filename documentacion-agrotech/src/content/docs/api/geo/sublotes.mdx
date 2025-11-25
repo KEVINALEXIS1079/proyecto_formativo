@@ -1,0 +1,241 @@
+---
+title: Gestión de Sub-lotes
+description: Endpoints para crear, listar, actualizar y eliminar sub-lotes agrícolas
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /geo/sublotes
+
+Crea un nuevo sub-lote dentro de un lote existente.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateSubLoteDto {
+  nombre: string;        // Máximo 100 caracteres
+  descripcion?: string;  // Máximo 500 caracteres, opcional
+  loteId: number;        // ID del lote padre
+  geom: GeoJSON.Polygon; // Geometría del sub-lote en formato GeoJSON
+}
+```
+
+### Validaciones
+
+- El sub-lote debe estar completamente contenido dentro del lote padre
+- No puede solaparse con otros sub-lotes del mismo lote
+- La geometría debe ser un polígono válido
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/geo/sublotes \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "nombre": "Sub-lote Tomates A",
+        "descripcion": "Área dedicada al cultivo de tomates variedad Roma",
+        "loteId": 1,
+        "geom": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-74.123550, 4.678950],
+            [-74.123550, 4.678970],
+            [-74.123700, 4.678970],
+            [-74.123700, 4.678950],
+            [-74.123550, 4.678950]
+          ]]
+        }
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const subLoteData = {
+      nombre: "Sub-lote Tomates A",
+      descripcion: "Área dedicada al cultivo de tomates variedad Roma",
+      loteId: 1,
+      geom: {
+        type: "Polygon",
+        coordinates: [[
+          [-74.123550, 4.678950],
+          [-74.123550, 4.678970],
+          [-74.123700, 4.678970],
+          [-74.123700, 4.678950],
+          [-74.123550, 4.678950]
+        ]]
+      }
+    };
+
+    const response = await fetch('/geo/sublotes', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(subLoteData)
+    });
+
+    const nuevoSubLote = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface SubLote {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  loteId: number;
+  lote?: {
+    id: number;
+    nombre: string;
+  };
+  geom: GeoJSON.Polygon;
+  area: number;  // Área calculada automáticamente en m²
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## GET /geo/sublotes
+
+Obtiene la lista de sub-lotes con filtro opcional por lote.
+
+### Parámetros de Query
+
+```typescript
+interface SubLotesQueryParams {
+  loteId?: number;  // Filtrar por ID de lote padre
+}
+```
+
+### Ejemplo de Request
+
+```bash
+# Todos los sub-lotes
+curl -X GET http://localhost:4000/geo/sublotes \
+  -H "Authorization: Bearer {token}"
+
+# Sub-lotes de un lote específico
+curl -X GET "http://localhost:4000/geo/sublotes?loteId=1" \
+  -H "Authorization: Bearer {token}"
+```
+
+### Respuesta Exitosa (200)
+
+```typescript
+interface SubLotesResponse {
+  data: SubLote[];
+}
+```
+
+## GET /geo/sublotes/:id
+
+Obtiene un sub-lote específico por su ID.
+
+### Respuesta Exitosa (200)
+
+Retorna el objeto `SubLote` completo con información del lote padre.
+
+## PATCH /geo/sublotes/:id
+
+Actualiza un sub-lote existente.
+
+### Parámetros de Entrada
+
+```typescript
+interface UpdateSubLoteDto {
+  nombre?: string;
+  descripcion?: string;
+  geom?: GeoJSON.Polygon;
+}
+```
+
+### Validaciones
+
+- Si se actualiza la geometría, debe mantenerse dentro del lote padre
+- No puede solaparse con otros sub-lotes del mismo lote
+
+## DELETE /geo/sublotes/:id
+
+Elimina un sub-lote.
+
+### Consideraciones
+
+- Un sub-lote no puede eliminarse si tiene cultivos activos asociados
+- Los sensores asociados serán desvinculados automáticamente
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Geometría inválida o fuera del lote padre |
+| `401` | Token JWT faltante o inválido |
+| `403` | Sin permisos requeridos |
+| `404` | Sub-lote o lote padre no encontrado |
+| `409` | Conflicto geométrico con otros sub-lotes |
+
+## Relaciones y Restricciones
+
+### Contención Geográfica
+- Los sub-lotes deben estar completamente contenidos dentro de su lote padre
+- Se usa `ST_Contains` de PostGIS para validar la contención
+
+### No Solapamiento
+- Los sub-lotes del mismo lote no pueden solaparse
+- Se usa `ST_Intersects` de PostGIS para detectar solapamientos
+
+### Dependencias
+- **Lote Padre**: Obligatorio, debe existir
+- **Cultivos**: Un sub-lote puede tener múltiples cultivos
+- **Sensores**: Un sub-lote puede tener múltiples sensores IoT
+
+### Área y Dimensiones
+- El área se calcula automáticamente de la geometría
+- Se valida que el área sea mayor a 1 m²
+- No hay límite superior de área
+
+## Casos de Uso
+
+### 1. División de Lotes Grandes
+```json
+{
+  "nombre": "Zona Norte A",
+  "loteId": 1,
+  "geom": { /* polígono pequeño dentro del lote */ }
+}
+```
+
+### 2. Zonas de Cultivo Específicas
+```json
+{
+  "nombre": "Tomates Hidropónicos",
+  "descripcion": "Área con sistema de riego hidropónico",
+  "loteId": 2,
+  "geom": { /* zona específica */ }
+}
+```
+
+### 3. Monitoreo por Zonas
+```json
+{
+  "nombre": "Zona Sensor 1",
+  "descripcion": "Área cubierta por sensor de humedad S1",
+  "loteId": 1,
+  "geom": { /* área de cobertura del sensor */ }
+}
+```
+
+:::note[Geometría]
+La geometría debe ser un GeoJSON Polygon válido con coordenadas en formato [longitude, latitude].
+:::
+
+:::tip[Validación]
+El sistema valida automáticamente que los sub-lotes estén dentro de su lote padre y no se solapen entre sí.
+:::

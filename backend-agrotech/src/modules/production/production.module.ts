@@ -7,6 +7,9 @@ import { ProductoAgro } from './entities/producto-agro.entity';
 import { LoteProduccion } from './entities/lote-produccion.entity';
 import { MovimientoProduccion } from './entities/movimiento-produccion.entity';
 import { Cliente } from './entities/cliente.entity';
+import { Cultivo } from '../cultivos/entities/cultivo.entity';
+import { Lote } from '../geo/entities/lote.entity';
+import { SubLote } from '../geo/entities/sublote.entity';
 import { Venta } from './entities/venta.entity';
 import { VentaDetalle } from './entities/venta-detalle.entity';
 import { Pago } from './entities/pago.entity';
@@ -14,6 +17,10 @@ import { Factura } from './entities/factura.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
+import { ReportsModule } from '../reports/reports.module';
+import { CultivosModule } from '../cultivos/cultivos.module';
+import { GeoModule } from '../geo/geo.module';
+import { ExportService } from '../../common/services/export.service';
 
 @Module({
   imports: [
@@ -26,6 +33,9 @@ import { AuthModule } from '../auth/auth.module';
       VentaDetalle,
       Pago,
       Factura,
+      Cultivo,
+      Lote,
+      SubLote,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -35,9 +45,12 @@ import { AuthModule } from '../auth/auth.module';
       inject: [ConfigService],
     }),
     AuthModule,
+    ReportsModule,
+    CultivosModule,
+    GeoModule,
   ],
   controllers: [ProductionController],
-  providers: [ProductionService, ProductionGateway, ProductionController],
+  providers: [ProductionService, ProductionGateway, ExportService],
   exports: [ProductionService],
 })
 export class ProductionModule {}

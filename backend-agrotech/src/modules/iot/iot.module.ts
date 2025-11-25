@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { IotService } from './services/iot.service';
+import { MqttService } from './services/mqtt.service';
 import { IotGateway } from './gateways/iot.gateway';
 import { IotController } from './controllers/iot.controller';
 import { Sensor } from './entities/sensor.entity';
@@ -24,7 +25,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [IotController],
-  providers: [IotService, IotGateway, IotController],
+  providers: [IotGateway, IotService, MqttService],
   exports: [IotService],
 })
 export class IotModule {}

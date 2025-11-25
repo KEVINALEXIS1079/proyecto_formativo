@@ -1,33 +1,42 @@
 import { Lote } from '../entities/lote.entity';
 import { SubLote } from '../entities/sublote.entity';
-import { Cultivo } from '../entities/cultivo.entity';
 
-export type GeoFindAllLotesResultDto = Lote[];
+export class GeoFindAllLotesResultDto {
+  lotes: Lote[];
+}
 
-export type GeoFindLoteByIdResultDto = Lote;
+export class GeoFindLoteByIdResultDto {
+  lote: Lote;
+}
 
-export type GeoCreateLoteResultDto = Lote;
+export class GeoCreateLoteResultDto {
+  lote: Lote;
+}
 
-export type GeoUpdateLoteResultDto = Lote;
+export class GeoUpdateLoteResultDto {
+  lote: Lote;
+}
 
-export type GeoRemoveLoteResultDto = Lote;
+export class GeoRemoveLoteResultDto {
+  lote: Lote;
+}
 
-export type GeoFindAllSubLotesResultDto = SubLote[];
+export class GeoFindAllSubLotesResultDto {
+  sublotes: SubLote[];
+}
 
-export type GeoFindSubLoteByIdResultDto = SubLote;
+export class GeoFindSubLoteByIdResultDto {
+  sublote: SubLote;
+}
 
-export type GeoCreateSubLoteResultDto = SubLote;
+export class GeoCreateSubLoteResultDto {
+  sublote: SubLote;
+}
 
-export type GeoUpdateSubLoteResultDto = SubLote;
+export class GeoUpdateSubLoteResultDto {
+  sublote: SubLote;
+}
 
-export type GeoRemoveSubLoteResultDto = SubLote;
-
-export type GeoFindAllCultivosResultDto = Cultivo[];
-
-export type GeoFindCultivoByIdResultDto = Cultivo;
-
-export type GeoCreateCultivoResultDto = Cultivo;
-
-export type GeoUpdateCultivoResultDto = Cultivo;
-
-export type GeoRemoveCultivoResultDto = Cultivo;
+export class GeoRemoveSubLoteResultDto {
+  sublote: SubLote;
+}

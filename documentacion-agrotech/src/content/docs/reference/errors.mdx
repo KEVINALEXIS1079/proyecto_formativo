@@ -1,0 +1,571 @@
+---
+title: Manejo de Errores
+description: Guía completa para el manejo de errores y excepciones en la API
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## Estructura de Errores
+
+Todos los errores siguen una estructura consistente:
+
+```typescript
+interface ErrorResponse {
+  statusCode: number;        // Código HTTP
+  message: string | string[]; // Mensaje de error
+  error: string;            // Tipo de error
+  details?: ValidationError[]; // Detalles de validación (opcional)
+  timestamp: string;        // Timestamp ISO
+  path: string;            // Endpoint que causó el error
+}
+```
+
+### Error de Validación
+
+```typescript
+interface ValidationError {
+  field: string;            // Campo que falló
+  constraints: Record<string, string>; // Restricciones violadas
+}
+```
+
+## Tipos de Errores
+
+### Errores de Validación (400, 422)
+
+**Campos requeridos faltantes:**
+```json
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "error": "Bad Request",
+  "details": [
+    {
+      "field": "correo",
+      "constraints": {
+        "isNotEmpty": "correo should not be empty"
+      }
+    }
+  ]
+}
+```
+
+**Formato inválido:**
+```json
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "error": "Bad Request",
+  "details": [
+    {
+      "field": "correo",
+      "constraints": {
+        "isEmail": "correo must be a valid email"
+      }
+    }
+  ]
+}
+```
+
+**Validaciones de negocio:**
+```json
+{
+  "statusCode": 422,
+  "message": "La contraseña debe contener al menos una mayúscula, una minúscula y un número",
+  "error": "Unprocessable Entity"
+}
+```
+
+### Errores de Autenticación (401)
+
+**Token faltante o inválido:**
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "No autorizado"
+}
+```
+
+**Token expirado:**
+```json
+{
+  "statusCode": 401,
+  "message": "Token expired",
+  "error": "El token ha expirado"
+}
+```
+
+**Usuario inactivo:**
+```json
+{
+  "statusCode": 401,
+  "message": "Usuario inactivo o eliminado",
+  "error": "No autorizado"
+}
+```
+
+**Email no verificado:**
+```json
+{
+  "statusCode": 401,
+  "message": "El usuario debe tener el email verificado para acceder",
+  "error": "No autorizado"
+}
+```
+
+### Errores de Autorización (403)
+
+**Permisos insuficientes:**
+```json
+{
+  "statusCode": 403,
+  "message": "Forbidden resource",
+  "error": "No tienes permisos para acceder a este recurso"
+}
+```
+
+### Errores de Recurso No Encontrado (404)
+
+**Usuario no encontrado:**
+```json
+{
+  "statusCode": 404,
+  "message": "Usuario no encontrado",
+  "error": "Not Found"
+}
+```
+
+**Cultivo no encontrado:**
+```json
+{
+  "statusCode": 404,
+  "message": "Cultivo no encontrado",
+  "error": "Not Found"
+}
+```
+
+### Errores de Conflicto (409)
+
+**Email ya registrado:**
+```json
+{
+  "statusCode": 409,
+  "message": "El correo ya está registrado",
+  "error": "Conflict"
+}
+```
+
+**Identificación ya registrada:**
+```json
+{
+  "statusCode": 409,
+  "message": "La identificación ya está registrada",
+  "error": "Conflict"
+}
+```
+
+**Permiso ya asignado:**
+```json
+{
+  "statusCode": 409,
+  "message": "El permiso ya está asignado al usuario",
+  "error": "Conflict"
+}
+```
+
+### Errores de Servidor (500)
+
+**Error interno:**
+```json
+{
+  "statusCode": 500,
+  "message": "Internal server error",
+  "error": "Internal Server Error"
+}
+```
+
+## Clases de Excepción
+
+### Excepciones Personalizadas
+
+```typescript
+// BadRequestException - Datos inválidos
+throw new BadRequestException('Datos inválidos');
+
+// UnauthorizedException - No autenticado
+throw new UnauthorizedException('Credenciales inválidas');
+
+// ForbiddenException - Sin permisos
+throw new ForbiddenException('Permisos insuficientes');
+
+// NotFoundException - Recurso no encontrado
+throw new NotFoundException('Usuario no encontrado');
+
+// ConflictException - Conflicto de datos
+throw new ConflictException('Email ya registrado');
+```
+
+### Filtros Globales
+
+```typescript
+// AllExceptionsFilter - Maneja todas las excepciones
+@Injectable()
+export class AllExceptionsFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message = 'Internal server error';
+    let error = 'Internal Server Error';
+
+    // Manejar diferentes tipos de excepciones
+    if (exception instanceof BadRequestException) {
+      status = HttpStatus.BAD_REQUEST;
+      message = exception.message;
+      error = 'Bad Request';
+    } else if (exception instanceof UnauthorizedException) {
+      status = HttpStatus.UNAUTHORIZED;
+      message = exception.message;
+      error = 'Unauthorized';
+    }
+    // ... más tipos de excepciones
+
+    response.status(status).json({
+      statusCode: status,
+      message,
+      error,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+    });
+  }
+}
+```
+
+## Validaciones de DTO
+
+### Class-Validator Decorators
+
+```typescript
+import {
+  IsString, IsEmail, MinLength, IsOptional,
+  Matches, MaxLength, IsNotEmpty
+} from 'class-validator';
+
+export class RegisterDto {
+  @IsString({ message: 'El nombre debe ser un texto válido' })
+  @MaxLength(100, { message: 'El nombre no puede exceder 100 caracteres' })
+  @IsNotEmpty({ message: 'El nombre es requerido' })
+  nombre: string;
+
+  @IsEmail({}, { message: 'Debe proporcionar un correo electrónico válido' })
+  @MaxLength(100, { message: 'El correo no puede exceder 100 caracteres' })
+  correo: string;
+
+  @IsString({ message: 'La contraseña debe ser un texto válido' })
+  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
+  @MaxLength(100, { message: 'La contraseña no puede exceder 100 caracteres' })
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+    { message: 'La contraseña debe contener al menos una mayúscula, una minúscula y un número' }
+  )
+  password: string;
+
+  @IsOptional()
+  @IsString({ message: 'El teléfono debe ser un texto válido' })
+  @Matches(/^[0-9+\-\s()]+$/, { message: 'El teléfono solo puede contener números y símbolos +, -, (), espacios' })
+  @MaxLength(20, { message: 'El teléfono no puede exceder 20 caracteres' })
+  telefono?: string;
+}
+```
+
+### Validaciones Personalizadas
+
+```typescript
+// Validación de unicidad
+export function IsUnique(entity: any, field: string) {
+  return function (object: Object, propertyName: string) {
+    // Implementación de validación de unicidad
+  };
+}
+
+// Validación de existencia
+export function Exists(entity: any, field: string) {
+  return function (object: Object, propertyName: string) {
+    // Implementación de validación de existencia
+  };
+}
+```
+
+## Manejo de Errores en el Cliente
+
+### JavaScript/TypeScript
+
+```typescript
+// Clases de error personalizadas
+class ApiError extends Error {
+  constructor(message: string, public statusCode: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+class ValidationError extends ApiError {
+  constructor(message: string, public details: ValidationError[]) {
+    super(message, 400);
+    this.name = 'ValidationError';
+  }
+}
+
+class AuthenticationError extends ApiError {
+  constructor(message: string) {
+    super(message, 401);
+    this.name = 'AuthenticationError';
+  }
+}
+
+class PermissionError extends ApiError {
+  constructor(message: string) {
+    super(message, 403);
+    this.name = 'PermissionError';
+  }
+}
+
+// Función de manejo de errores
+async function handleApiError(error: any): Promise<never> {
+  if (error.response) {
+    const { status, data } = error.response;
+
+    switch (status) {
+      case 400:
+      case 422:
+        throw new ValidationError(data.message, data.details);
+      case 401:
+        // Limpiar token y redirigir a login
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        throw new AuthenticationError(data.message);
+      case 403:
+        throw new PermissionError(data.message);
+      case 404:
+        throw new ApiError(data.message, 404);
+      case 409:
+        throw new ApiError(data.message, 409);
+      case 429:
+        // Implementar retry con backoff
+        throw new ApiError(data.message, 429);
+      default:
+        throw new ApiError(data.message || 'Error desconocido', status);
+    }
+  } else if (error.request) {
+    // Error de red
+    throw new ApiError('Error de conexión', 0);
+  } else {
+    // Error desconocido
+    throw new ApiError(error.message, 0);
+  }
+}
+```
+
+### Python
+
+```python
+# Clases de error personalizadas
+class ApiError(Exception):
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
+class ValidationError(ApiError):
+    def __init__(self, message: str, details: list = None):
+        super().__init__(message, 400)
+        self.details = details
+
+class AuthenticationError(ApiError):
+    def __init__(self, message: str):
+        super().__init__(message, 401)
+
+class PermissionError(ApiError):
+    def __init__(self, message: str):
+        super().__init__(message, 403)
+
+# Función de manejo de errores
+def handle_api_error(error):
+    if hasattr(error, 'response') and error.response:
+        status = error.response.status_code
+        data = error.response.json()
+
+        if status in [400, 422]:
+            raise ValidationError(data.get('message'), data.get('details'))
+        elif status == 401:
+            # Limpiar token y redirigir
+            raise AuthenticationError(data.get('message'))
+        elif status == 403:
+            raise PermissionError(data.get('message'))
+        elif status == 404:
+            raise ApiError(data.get('message'), 404)
+        elif status == 409:
+            raise ApiError(data.get('message'), 409)
+        elif status == 429:
+            # Implementar retry
+            raise ApiError(data.get('message'), 429)
+        else:
+            raise ApiError(data.get('message', 'Error desconocido'), status)
+    else:
+        # Error de red
+        raise ApiError('Error de conexión', 0)
+```
+
+### React Hook
+
+```typescript
+// Hook personalizado para manejo de errores
+function useApiError() {
+  const [error, setError] = useState<ApiError | null>(null);
+
+  const handleError = useCallback((error: any) => {
+    try {
+      handleApiError(error);
+    } catch (apiError) {
+      setError(apiError as ApiError);
+
+      // Mostrar notificación
+      toast.error(apiError.message);
+
+      // Logging
+      console.error('API Error:', apiError);
+    }
+  }, []);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  return { error, handleError, clearError };
+}
+
+// Uso en componente
+function UserForm() {
+  const { error, handleError, clearError } = useApiError();
+
+  const handleSubmit = async (data: UserData) => {
+    try {
+      clearError();
+      await createUser(data);
+      toast.success('Usuario creado exitosamente');
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Campos del formulario */}
+      {error instanceof ValidationError && (
+        <ValidationSummary errors={error.details} />
+      )}
+    </form>
+  );
+}
+```
+
+## Logging de Errores
+
+### Configuración de Logging
+
+```typescript
+// Logger personalizado
+@Injectable()
+export class ApiLogger {
+  private logger = winston.createLogger({
+    level: 'error',
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.errors({ stack: true }),
+      winston.format.json()
+    ),
+    transports: [
+      new winston.transports.File({ filename: 'logs/error.log' }),
+      new winston.transports.Console({
+        format: winston.format.simple()
+      })
+    ]
+  });
+
+  logError(error: any, context?: string) {
+    this.logger.error({
+      message: error.message,
+      stack: error.stack,
+      context,
+      timestamp: new Date().toISOString(),
+      userId: this.getCurrentUserId(),
+      requestId: this.getRequestId()
+    });
+  }
+}
+```
+
+### Middleware de Logging
+
+```typescript
+@Injectable()
+export class ErrorLoggingMiddleware implements NestMiddleware {
+  constructor(private logger: ApiLogger) {}
+
+  use(req: Request, res: Response, next: Function) {
+    const originalSend = res.send;
+    res.send = function(data) {
+      if (res.statusCode >= 400) {
+        this.logger.logError({
+          statusCode: res.statusCode,
+          method: req.method,
+          url: req.url,
+          userAgent: req.get('User-Agent'),
+          ip: req.ip,
+          body: req.body,
+          response: data
+        }, 'HTTP_ERROR');
+      }
+      originalSend.call(this, data);
+    };
+    next();
+  }
+}
+```
+
+## Mejores Prácticas
+
+### 1. Mensajes de Error Consistentes
+- Usa mensajes claros y descriptivos
+- Mantén consistencia en el idioma (español)
+- Incluye contexto cuando sea necesario
+
+### 2. Validación Temprana
+- Valida datos lo antes posible
+- Usa DTOs con class-validator
+- Implementa validaciones de negocio personalizadas
+
+### 3. Manejo Seguro de Errores
+- No expongas información sensible en errores
+- Registra errores internos para debugging
+- Usa códigos de error apropiados
+
+### 4. Recuperación de Errores
+- Implementa reintentos para errores temporales
+- Proporciona opciones de recuperación al usuario
+- Maneja errores de red graceful
+
+### 5. Monitoreo y Alertas
+- Configura alertas para errores 5xx
+- Monitorea tasas de error por endpoint
+- Implementa health checks
+
+:::note[Idioma]
+Todos los mensajes de error están en español para mantener consistencia con la interfaz de usuario.
+:::
+
+:::tip[Testing]
+Incluye pruebas para casos de error en tus tests unitarios e integración.
+:::

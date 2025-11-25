@@ -1,0 +1,544 @@
+---
+title: Gestión de Producción y Ventas
+description: Endpoints para gestionar lotes de producción, ventas, clientes y reportes comerciales
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /production/lotes-produccion
+
+Crea un nuevo lote de producción a partir de un cultivo cosechado.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateLoteProduccionDto {
+  cultivoId: number;              // ID del cultivo cosechado
+  cantidadInicialKg: number;      // Cantidad inicial en kg
+  precioVentaEstimado?: number;   // Precio estimado por kg
+  fechaProduccion: string;        // Fecha de producción (YYYY-MM-DD)
+  descripcion?: string;           // Descripción opcional
+  calidad?: string;               // Calidad del producto (A, B, C, etc.)
+  loteOrigen?: string;            // Lote de origen del cultivo
+}
+```
+
+### Validaciones
+
+- El cultivo debe existir y estar en estado `finalizado`
+- La cantidad inicial debe ser mayor a 0
+- El cultivo debe tener una cosecha registrada
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/production/lotes-produccion \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "cultivoId": 1,
+        "cantidadInicialKg": 850,
+        "precioVentaEstimado": 12000,
+        "fechaProduccion": "2025-04-15",
+        "descripcion": "Tomates Roma VF primera cosecha",
+        "calidad": "A",
+        "loteOrigen": "LOTE-001"
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const loteProduccionData = {
+      cultivoId: 1,
+      cantidadInicialKg: 850,
+      precioVentaEstimado: 12000,
+      fechaProduccion: "2025-04-15",
+      descripcion: "Tomates Roma VF primera cosecha",
+      calidad: "A",
+      loteOrigen: "LOTE-001"
+    };
+
+    const response = await fetch('/production/lotes-produccion', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(loteProduccionData)
+    });
+
+    const nuevoLote = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface LoteProduccion {
+  id: number;
+  cultivoId: number;
+  cultivo?: {
+    id: number;
+    nombreCultivo: string;
+    tipoCultivo?: string;
+  };
+  cantidadInicialKg: number;
+  cantidadActualKg: number;      // Se actualiza con ventas/movimientos
+  precioVentaEstimado?: number;
+  fechaProduccion: Date;
+  descripcion?: string;
+  calidad?: string;
+  loteOrigen?: string;
+  estado: 'activo' | 'agotado' | 'caducado';
+  usuarioId: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## POST /production/ventas
+
+Registra una nueva venta con múltiples productos y formas de pago.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateVentaDto {
+  clienteId?: number;           // ID del cliente (opcional para ventas anónimas)
+  detalles: Array<{             // Productos vendidos
+    loteProduccionId: number;
+    cantidadKg: number;
+    precioUnitarioKg: number;
+  }>;
+  pagos: Array<{                // Formas de pago
+    metodoPago: MetodoPago;
+    monto: number;
+    referencia?: string;        // Para transferencias/cheques
+  }>;
+  notas?: string;               // Notas adicionales de la venta
+  fechaEntrega?: string;        // Fecha de entrega programada
+}
+
+enum MetodoPago {
+  EFECTIVO = 'EFECTIVO',
+  TARJETA_CREDITO = 'TARJETA_CREDITO',
+  TARJETA_DEBITO = 'TARJETA_DEBITO',
+  TRANSFERENCIA = 'TRANSFERENCIA',
+  CHEQUE = 'CHEQUE',
+  CREDITO = 'CREDITO'
+}
+```
+
+### Validaciones
+
+- Los lotes de producción deben existir y tener stock suficiente
+- La suma de pagos debe igualar el total de la venta
+- Los precios unitarios deben ser positivos
+
+### Ejemplo de Venta Compleja
+
+```json
+{
+  "clienteId": 1,
+  "detalles": [
+    {
+      "loteProduccionId": 1,
+      "cantidadKg": 50,
+      "precioUnitarioKg": 12000
+    },
+    {
+      "loteProduccionId": 2,
+      "cantidadKg": 25,
+      "precioUnitarioKg": 10000
+    }
+  ],
+  "pagos": [
+    {
+      "metodoPago": "EFECTIVO",
+      "monto": 350000
+    },
+    {
+      "metodoPago": "TARJETA_CREDITO",
+      "monto": 250000,
+      "referencia": "****-****-****-1234"
+    }
+  ],
+  "notas": "Venta mayorista - Supermercado Central",
+  "fechaEntrega": "2025-04-20"
+}
+```
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface Venta {
+  id: number;
+  clienteId?: number;
+  cliente?: {
+    id: number;
+    nombre: string;
+    identificacion?: string;
+  };
+  detalles: VentaDetalle[];
+  pagos: Pago[];
+  totalVenta: number;           // Calculado automáticamente
+  totalPagado: number;          // Calculado automáticamente
+  saldoPendiente: number;       // Calculado automáticamente
+  estado: 'completada' | 'pendiente' | 'anulada';
+  notas?: string;
+  fechaEntrega?: Date;
+  usuarioId: number;
+  usuario?: {
+    id: number;
+    nombre: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface VentaDetalle {
+  id: number;
+  loteProduccionId: number;
+  loteProduccion?: {
+    id: number;
+    cultivo?: {
+      nombreCultivo: string;
+    };
+  };
+  cantidadKg: number;
+  precioUnitarioKg: number;
+  subtotal: number;             // Calculado automáticamente
+}
+
+interface Pago {
+  id: number;
+  metodoPago: MetodoPago;
+  monto: number;
+  referencia?: string;
+  fechaPago: Date;
+}
+```
+
+## GET /production/ventas
+
+Obtiene la lista paginada de ventas con filtros avanzados.
+
+### Parámetros de Query
+
+```typescript
+interface FindAllVentasDto {
+  page?: number;           // Página (default: 1)
+  limit?: number;          // Elementos por página (default: 10)
+  clienteId?: number;      // Filtrar por cliente
+  fechaInicio?: string;    // Fecha inicio (YYYY-MM-DD)
+  fechaFin?: string;       // Fecha fin (YYYY-MM-DD)
+  estado?: string;         // Estado de la venta
+  metodoPago?: string;     // Método de pago
+}
+```
+
+### Ejemplos de Filtros
+
+```bash
+# Ventas del mes actual
+GET /production/ventas?fechaInicio=2025-04-01&fechaFin=2025-04-30
+
+# Ventas de un cliente específico
+GET /production/ventas?clienteId=1
+
+# Ventas pendientes de pago
+GET /production/ventas?estado=pendiente
+
+# Ventas pagadas con tarjeta
+GET /production/ventas?metodoPago=TARJETA_CREDITO
+```
+
+## POST /production/clientes
+
+Crea un nuevo cliente para el sistema de ventas.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateClienteDto {
+  nombre: string;              // Nombre completo del cliente
+  identificacion?: string;     // Cédula/NIT/RUC
+  telefono?: string;           // Teléfono de contacto
+  correo?: string;             // Correo electrónico
+  direccion?: string;          // Dirección física
+  notas?: string;              // Notas adicionales
+  tipoCliente?: TipoCliente;   // Tipo de cliente
+}
+
+enum TipoCliente {
+  PERSONA_NATURAL = 'PERSONA_NATURAL',
+  PERSONA_JURIDICA = 'PERSONA_JURIDICA',
+  DISTRIBUIDOR = 'DISTRIBUIDOR',
+  SUPERMERCADO = 'SUPERMERCADO',
+  RESTAURANTE = 'RESTAURANTE',
+  EXPORTADOR = 'EXPORTADOR'
+}
+```
+
+## GET /production/reportes/ventas
+
+Genera reportes detallados de ventas por período.
+
+### Parámetros de Query
+
+```typescript
+interface VentasReportDto {
+  fechaInicio: string;        // Fecha inicio (YYYY-MM-DD)
+  fechaFin: string;           // Fecha fin (YYYY-MM-DD)
+  clienteId?: number;         // Filtrar por cliente
+  agruparPor?: AgruparPor;    // Cómo agrupar los datos
+}
+
+enum AgruparPor {
+  DIA = 'DIA',
+  SEMANA = 'SEMANA',
+  MES = 'MES',
+  CLIENTE = 'CLIENTE',
+  PRODUCTO = 'PRODUCTO'
+}
+```
+
+### Respuesta del Reporte
+
+```typescript
+interface VentasReport {
+  resumen: {
+    totalVentas: number;
+    totalIngresos: number;
+    cantidadClientes: number;
+    productosMasVendidos: Array<{
+      producto: string;
+      cantidadKg: number;
+      ingresos: number;
+    }>;
+  };
+  datos: Array<{
+    periodo: string;           // Día/semana/mes según agrupación
+    ventas: number;
+    ingresos: number;
+    clientes: number;
+    productos: Array<{
+      nombre: string;
+      cantidad: number;
+      ingresos: number;
+    }>;
+  }>;
+}
+```
+
+## GET /production/reportes/precios-historicos
+
+Obtiene el histórico de precios de productos por período.
+
+### Parámetros de Query
+
+```typescript
+interface PreciosHistoricosDto {
+  productoAgroId?: number;     // ID del producto (opcional)
+  fechaInicio: string;         // Fecha inicio (YYYY-MM-DD)
+  fechaFin: string;            // Fecha fin (YYYY-MM-DD)
+  agruparPor: AgruparPor;      // Agrupación temporal
+}
+```
+
+### Respuesta
+
+```typescript
+interface PreciosHistoricosReport {
+  producto?: string;
+  datos: Array<{
+    periodo: string;
+    precioMinimo: number;
+    precioMaximo: number;
+    precioPromedio: number;
+    volumenTotal: number;
+  }>;
+}
+```
+
+## GET /production/reportes/rentabilidad
+
+Analiza la rentabilidad por cultivo, lote o sub-lote.
+
+### Parámetros de Query
+
+```typescript
+interface RentabilidadReportDto {
+  tipo: TipoRentabilidad;      // Nivel de análisis
+  id: number;                  // ID del cultivo/lote/sub-lote
+  fechaInicio?: string;        // Período de análisis
+  fechaFin?: string;
+}
+
+enum TipoRentabilidad {
+  CULTIVO = 'CULTIVO',
+  LOTE = 'LOTE',
+  SUBLOTE = 'SUBLOTE'
+}
+```
+
+### Respuesta Compleja
+
+```typescript
+interface RentabilidadReport {
+  entidad: {
+    id: number;
+    nombre: string;
+    tipo: string;
+  };
+  periodo: {
+    inicio: Date;
+    fin: Date;
+  };
+  costos: {
+    insumos: number;
+    manoObra: number;
+    servicios: number;
+    totalCostos: number;
+  };
+  ingresos: {
+    ventas: number;
+    otros: number;
+    totalIngresos: number;
+  };
+  rentabilidad: {
+    utilidadBruta: number;
+    utilidadNeta: number;
+    margenBruto: number;        // porcentaje
+    margenNeto: number;         // porcentaje
+    roi: number;                // Retorno de inversión
+  };
+  detalleActividades: Array<{
+    actividad: string;
+    fecha: Date;
+    costos: number;
+    descripcion?: string;
+  }>;
+}
+```
+
+## POST /production/movimientos/traslado
+
+Registra un traslado de producto entre lotes de producción.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateTrasladoDto {
+  loteOrigenId: number;        // Lote de origen
+  loteDestinoId: number;       // Lote de destino
+  cantidadKg: number;          // Cantidad a trasladar
+  descripcion?: string;        // Motivo del traslado
+}
+```
+
+### Validaciones
+
+- El lote de origen debe tener stock suficiente
+- Los lotes deben ser diferentes
+- La cantidad debe ser positiva
+
+## WebSocket Events
+
+Los cambios en producción generan eventos WebSocket:
+
+```typescript
+// Nueva venta registrada
+socket.on('ventaCreated', (data) => {
+  // data: Venta completa
+});
+
+// Lote de producción actualizado
+socket.on('loteProduccionUpdated', (data) => {
+  // data: LoteProduccion
+});
+
+// Movimiento registrado
+socket.on('movimientoCreated', (data) => {
+  // data: MovimientoProduccion
+});
+```
+
+## Estados y Ciclo de Vida
+
+### Estados de Lotes de Producción
+- **activo**: Disponible para ventas
+- **agotado**: Stock completamente vendido
+- **caducado**: Producto vencido o no vendible
+
+### Estados de Ventas
+- **completada**: Pagada y entregada
+- **pendiente**: No completamente pagada
+- **anulada**: Cancelada por el usuario
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o stock insuficiente |
+| `401` | Token JWT faltante o inválido |
+| `403` | Sin permisos requeridos |
+| `404` | Lote/venta/cliente no encontrado |
+| `409` | Conflicto (venta ya anulada, stock insuficiente) |
+
+## Ejemplos de Uso Avanzado
+
+### Venta con Múltiples Productos y Pagos
+
+```json
+{
+  "clienteId": 2,
+  "detalles": [
+    { "loteProduccionId": 1, "cantidadKg": 100, "precioUnitarioKg": 15000 },
+    { "loteProduccionId": 3, "cantidadKg": 50, "precioUnitarioKg": 12000 },
+    { "loteProduccionId": 5, "cantidadKg": 25, "precioUnitarioKg": 18000 }
+  ],
+  "pagos": [
+    { "metodoPago": "EFECTIVO", "monto": 1000000 },
+    { "metodoPago": "CREDITO", "monto": 650000, "referencia": "CRED-001" }
+  ],
+  "notas": "Venta mayorista con crédito aprobado",
+  "fechaEntrega": "2025-04-25"
+}
+```
+
+### Análisis de Rentabilidad por Cultivo
+
+```bash
+GET /production/reportes/rentabilidad?tipo=CULTIVO&id=1&fechaInicio=2025-01-01&fechaFin=2025-12-31
+```
+
+Respuesta incluye:
+- Costos detallados por actividad
+- Ingresos por ventas
+- Márgenes de ganancia
+- ROI del cultivo
+
+### Reporte de Tendencias de Precios
+
+```bash
+GET /production/reportes/precios-historicos?fechaInicio=2025-01-01&fechaFin=2025-12-31&agruparPor=MES
+```
+
+Muestra evolución mensual de precios para tomar decisiones de venta.
+
+:::note[Stock Automático]
+El stock de lotes de producción se actualiza automáticamente con cada venta y movimiento registrado.
+:::
+
+:::tip[Reportes Avanzados]
+Los reportes de rentabilidad permiten analizar la viabilidad económica de cada cultivo y lote.
+:::
+
+:::warning[Validaciones de Stock]
+El sistema valida automáticamente que haya stock suficiente antes de registrar ventas o traslados.
+:::

@@ -1,7 +1,7 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';
-import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
-import { Socket } from 'socket.io';
-import { ProductionController } from '../controllers/production.controller';
+import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket, WebSocketServer } from '@nestjs/websockets';
+import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
+import { ProductionService } from '../services/production.service';
 import { CreateProductoAgroDto } from '../dtos/create-producto-agro.dto';
 import {
   ProductionFindAllLotesProduccionDoDto,
@@ -19,7 +19,13 @@ import { WsCurrentUser } from '../../../common/decorators/ws-current-user.decora
 @WebSocketGateway({ namespace: 'production', cors: { origin: '*' } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
 export class ProductionGateway {
-  constructor(private readonly productionController: ProductionController) {}
+  @WebSocketServer()
+  server: Server;
+
+  constructor(
+    @Inject(forwardRef(() => ProductionService))
+    private readonly productionService: ProductionService,
+  ) {}
 
   // ==================== PRODUCTO AGRO ====================
 
@@ -28,7 +34,7 @@ export class ProductionGateway {
   @SubscribeMessage('findAllProductos')
   @RequirePermissions('ventas.ver')
   async findAllProductos(@ConnectedSocket() client: Socket) {
-    const result = await this.productionController.findAllProductos();
+    const result = await this.productionService.findAllProductos();
     client.emit('findAllProductos.result', result);
     return result;
   }
@@ -39,7 +45,7 @@ export class ProductionGateway {
   @RequirePermissions('ventas.crear')
   @UsePipes(new ValidationPipe())
   async createProducto(@MessageBody() createProductoDto: CreateProductoAgroDto, @ConnectedSocket() client: Socket) {
-    const result = await this.productionController.createProducto(createProductoDto);
+    const result = await this.productionService.createProducto(createProductoDto);
     client.emit('createProducto.result', result);
     return result;
   }
@@ -52,7 +58,7 @@ export class ProductionGateway {
   @RequirePermissions('ventas.ver')
   @UsePipes(new ValidationPipe())
   async findAllLotesProduccion(@MessageBody() filters: ProductionFindAllLotesProduccionDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.productionController.findAllLotesProduccion(filters);
+    const result = await this.productionService.findAllLotesProduccion(filters);
     client.emit('findAllLotesProduccion.result', result);
     return result;
   }
@@ -65,7 +71,7 @@ export class ProductionGateway {
   @RequirePermissions('ventas.crear')
   @UsePipes(new ValidationPipe())
   async createVenta(@MessageBody() data: ProductionCreateVentaDoDto, @WsCurrentUser() user: any, @ConnectedSocket() client: Socket) {
-    const result = await this.productionController.createVenta(data, user.id);
+    const result = await this.productionService.createVenta({ ...data, usuarioId: user.id });
     client.emit('createVenta.result', result);
     return result;
   }
@@ -81,7 +87,7 @@ export class ProductionGateway {
       fechaInicio: filters.fechaInicio ? new Date(filters.fechaInicio) : undefined,
       fechaFin: filters.fechaFin ? new Date(filters.fechaFin) : undefined,
     };
-    const result = await this.productionController.findAllVentas(transformedFilters);
+    const result = await this.productionService.findAllVentas(transformedFilters);
     client.emit('findAllVentas.result', result);
     return result;
   }
@@ -92,7 +98,7 @@ export class ProductionGateway {
   @RequirePermissions('ventas.ver')
   @UsePipes(new ValidationPipe())
   async findVentaById(@MessageBody() data: ProductionFindVentaByIdDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.productionController.findVentaById(data.id);
+    const result = await this.productionService.findVentaById(data.id);
     client.emit('findVentaById.result', result);
     return result;
   }
@@ -103,7 +109,7 @@ export class ProductionGateway {
   @RequirePermissions('ventas.anular')
   @UsePipes(new ValidationPipe())
   async anularVenta(@MessageBody() data: ProductionAnularVentaDoDto, @WsCurrentUser() user: any, @ConnectedSocket() client: Socket) {
-    const result = await this.productionController.anularVenta(data.ventaId, user.id);
+    const result = await this.productionService.anularVenta(data.ventaId, user.id);
     client.emit('anularVenta.result', result);
     return result;
   }
@@ -115,7 +121,7 @@ export class ProductionGateway {
   @SubscribeMessage('findAllClientes')
   @RequirePermissions('ventas.ver')
   async findAllClientes(@ConnectedSocket() client: Socket) {
-    const result = await this.productionController.findAllClientes();
+    const result = await this.productionService.findAllClientes();
     client.emit('findAllClientes.result', result);
     return result;
   }
@@ -126,8 +132,12 @@ export class ProductionGateway {
   @RequirePermissions('ventas.crear')
   @UsePipes(new ValidationPipe())
   async createCliente(@MessageBody() data: ProductionCreateClienteDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.productionController.createCliente(data);
+    const result = await this.productionService.createCliente(data);
     client.emit('createCliente.result', result);
     return result;
+  }
+
+  broadcast(event: string, data: any) {
+    this.server.emit(event, data);
   }
 }

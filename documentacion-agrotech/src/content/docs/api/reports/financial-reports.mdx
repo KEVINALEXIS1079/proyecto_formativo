@@ -1,0 +1,472 @@
+---
+title: Reportes Financieros Avanzados
+description: Análisis financiero completo de ventas, costos y rentabilidad
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## GET /reports/financial/sales
+
+Reporte detallado de ventas con filtros avanzados.
+
+### Parámetros de Query
+
+```typescript
+interface SalesReportQuery {
+  from?: string;          // Fecha inicio (YYYY-MM-DD)
+  to?: string;            // Fecha fin (YYYY-MM-DD)
+  clienteId?: string;     // ID del cliente
+  productoAgroId?: string; // ID del producto
+  cultivoId?: string;     // ID del cultivo origen
+}
+```
+
+### Respuesta Compleja
+
+```typescript
+interface SalesReport {
+  resumen: {
+    totalVentas: number;
+    totalIngresos: number;
+    totalClientes: number;
+    productosVendidos: number;
+    ticketPromedio: number;
+    periodo: {
+      inicio: Date;
+      fin: Date;
+      dias: number;
+    };
+  };
+  ventasPorPeriodo: Array<{
+    periodo: string;      // YYYY-MM-DD
+    ventas: number;
+    ingresos: number;
+    clientes: number;
+    productos: number;
+  }>;
+  topProductos: Array<{
+    producto: string;
+    cantidadVendida: number;
+    ingresosTotales: number;
+    precioPromedio: number;
+    margenPromedio: number;
+  }>;
+  topClientes: Array<{
+    cliente: string;
+    totalCompras: number;
+    frecuenciaCompras: number;
+    ticketPromedio: number;
+    ultimoCompra: Date;
+  }>;
+  metodosPago: Array<{
+    metodo: string;
+    cantidad: number;
+    porcentaje: number;
+    montoTotal: number;
+  }>;
+}
+```
+
+## GET /reports/financial/prices
+
+Análisis histórico de precios por producto.
+
+### Parámetros de Query
+
+```typescript
+interface HistoricalPricesQuery {
+  productoAgroId: number; // Obligatorio
+  from?: string;          // Fecha inicio
+  to?: string;            // Fecha fin
+  cultivoId?: string;     // Filtrar por cultivo origen
+}
+```
+
+### Respuesta
+
+```typescript
+interface HistoricalPricesReport {
+  producto: {
+    id: number;
+    nombre: string;
+    unidadMedida: string;
+  };
+  estadisticasGenerales: {
+    precioMinimo: number;
+    precioMaximo: number;
+    precioPromedio: number;
+    desviacionEstandar: number;
+    totalTransacciones: number;
+  };
+  preciosPorPeriodo: Array<{
+    periodo: string;      // YYYY-MM
+    precioMinimo: number;
+    precioMaximo: number;
+    precioPromedio: number;
+    volumenTotal: number;
+    transacciones: number;
+  }>;
+  tendencias: {
+    direccion: 'ASCENDENTE' | 'DESCENDENTE' | 'ESTABLE';
+    cambioPorcentual: number;
+    volatilidad: 'BAJA' | 'MEDIA' | 'ALTA';
+  };
+}
+```
+
+## GET /reports/financial/rentability/:cultivoId
+
+Análisis completo de rentabilidad de un cultivo.
+
+### Respuesta Detallada
+
+```typescript
+interface CropRentabilityReport {
+  cultivo: {
+    id: number;
+    nombreCultivo: string;
+    lote?: {
+      nombre: string;
+    };
+    areaTotal: number;
+  };
+  periodoAnalisis: {
+    inicio: Date;
+    fin: Date;
+  };
+  costos: {
+    totalCostos: number;
+    costoPorHectarea: number;
+    desglose: {
+      insumos: number;
+      manoObra: number;
+      servicios: number;
+      otros: number;
+    };
+    costoPorTipoActividad: Array<{
+      tipoActividad: string;
+      costoTotal: number;
+      porcentaje: number;
+    }>;
+  };
+  ingresos: {
+    totalIngresos: number;
+    ingresoPorHectarea: number;
+    productosVendidos: Array<{
+      producto: string;
+      cantidad: number;
+      precioPromedio: number;
+      ingresos: number;
+    }>;
+  };
+  rentabilidad: {
+    utilidadBruta: number;
+    utilidadNeta: number;
+    margenBruto: number;        // porcentaje
+    margenNeto: number;         // porcentaje
+    roi: number;                // Retorno de inversión
+    paybackPeriod?: number;     // meses
+  };
+  indicadores: {
+    productividad: number;      // kg/ha
+    eficienciaCosto: number;    // $/kg
+    rentabilidadHectarea: number; // $/ha
+  };
+}
+```
+
+## GET /reports/financial/rentability/lote/:loteId
+
+Análisis de rentabilidad por lote específico.
+
+### Respuesta
+
+Similar a `CropRentabilityReport` pero enfocado en un lote específico con:
+- Costos específicos del lote
+- Ingresos de productos del lote
+- Comparación con otros lotes similares
+
+## GET /reports/financial/rentability/sublote/:subLoteId
+
+Análisis granular por sub-lote.
+
+### Respuesta
+
+Análisis más detallado incluyendo:
+- Variaciones microclimáticas
+- Eficiencia por zonas
+- Optimizaciones específicas
+
+## GET /reports/financial/crop-summary/:cultivoId
+
+Resumen ejecutivo de cultivo con métricas clave.
+
+### Respuesta
+
+```typescript
+interface CropSummary {
+  cultivo: {
+    id: number;
+    nombreCultivo: string;
+    estado: string;
+    progreso: number; // 0-100
+  };
+  metricasPrincipales: {
+    areaCultivada: number;
+    costoTotal: number;
+    costoPorHectarea: number;
+    rendimientoEsperado: number;
+    rendimientoActual: number;
+    ingresosEstimados: number;
+    utilidadEstimada: number;
+  };
+  rendimiento: {
+    actual: number;
+    esperado: number;
+    porcentajeCumplimiento: number;
+    tendencia: 'MEJORANDO' | 'ESTABLE' | 'EMPEORANDO';
+  };
+  eficiencia: {
+    costoInsumo: number;     // $/kg
+    costoManoObra: number;   // $/ha
+    costoTotal: number;      // $/ha
+    benchmark: {             // comparación con promedio del sector
+      costoInsumo: number;
+      costoManoObra: number;
+      rendimiento: number;
+    };
+  };
+}
+```
+
+## GET /reports/financial/export
+
+Exporta reportes financieros a Excel/CSV.
+
+### Parámetros de Query
+
+- `from`: Fecha inicio
+- `to`: Fecha fin
+- `clienteId`: ID del cliente
+- `productoAgroId`: ID del producto
+- `cultivoId`: ID del cultivo
+- `format`: `csv` | `xlsx` (default: `xlsx`)
+
+### Estructura del Excel Exportado
+
+```
+📊 Reportes Financieros
+├── 📈 Resumen Ejecutivo
+├── 💰 Ventas Detalladas
+├── 📦 Productos Más Vendidos
+├── 👥 Top Clientes
+├── 💳 Métodos de Pago
+├── 📊 Análisis por Período
+└── 📋 Detalle de Transacciones
+```
+
+## Ejemplos de Análisis Financiero
+
+### Análisis de Rentabilidad
+
+```javascript
+// Obtener rentabilidad de cultivo
+const rentabilidad = await fetch('/reports/financial/rentability/1')
+  .then(r => r.json());
+
+// Calcular indicadores clave
+const roi = rentabilidad.rentabilidad.roi;
+const margenNeto = rentabilidad.rentabilidad.margenNeto;
+
+console.log(`ROI: ${roi.toFixed(2)}%`);
+console.log(`Margen Neto: ${margenNeto.toFixed(2)}%`);
+
+// Evaluar viabilidad
+if (roi > 15 && margenNeto > 10) {
+  console.log('✅ Cultivo rentable');
+} else if (roi > 5) {
+  console.log('⚠️ Cultivo marginal');
+} else {
+  console.log('❌ Cultivo no rentable');
+}
+```
+
+### Seguimiento de Precios
+
+```javascript
+// Analizar evolución de precios
+const precios = await fetch('/reports/financial/prices?productoAgroId=1&from=2025-01-01')
+  .then(r => r.json());
+
+// Detectar tendencias
+const tendencia = precios.tendencias.direccion;
+const cambio = precios.tendencias.cambioPorcentual;
+
+if (tendencia === 'ASCENDENTE' && cambio > 10) {
+  console.log('📈 Precios aumentando significativamente');
+} else if (tendencia === 'DESCENDENTE') {
+  console.log('📉 Precios disminuyendo');
+}
+```
+
+### Benchmarking de Costos
+
+```javascript
+// Comparar con estándares del sector
+const summary = await fetch('/reports/financial/crop-summary/1')
+  .then(r => r.json());
+
+const eficiencia = summary.eficiencia;
+const benchmark = eficiencia.benchmark;
+
+// Comparar costos
+const costoInsumoVsBenchmark = (eficiencia.costoInsumo / benchmark.costoInsumo - 1) * 100;
+
+if (costoInsumoVsBenchmark < -10) {
+  console.log('💰 Costos de insumos por debajo del promedio');
+} else if (costoInsumoVsBenchmark > 10) {
+  console.log('⚠️ Costos de insumos por encima del promedio');
+}
+```
+
+## Indicadores Financieros Avanzados
+
+### ROI (Retorno de Inversión)
+```
+ROI = (Utilidad Neta / Inversión Total) × 100
+```
+
+### Margen Bruto
+```
+Margen Bruto = (Ingresos - Costos Variables) / Ingresos × 100
+```
+
+### Margen Neto
+```
+Margen Neto = Utilidad Neta / Ingresos × 100
+```
+
+### Payback Period
+```
+Payback = Inversión Total / Flujo de Caja Anual
+```
+
+### EVA (Economic Value Added)
+```
+EVA = Utilidad Neta - (Capital Invertido × Costo de Capital)
+```
+
+## Análisis de Tendencias
+
+### Análisis de Series Temporales
+- **Tendencia**: Dirección general (ascendente/descendente)
+- **Estacionalidad**: Patrones recurrentes
+- **Ciclicidad**: Ciclos económicos largos
+- **Componente Irregular**: Variaciones aleatorias
+
+### Predicción de Precios
+- **Modelos ARIMA**: Para series temporales
+- **Análisis de Regresión**: Correlación con variables externas
+- **Machine Learning**: Modelos predictivos avanzados
+
+## Optimización Financiera
+
+### Estrategias de Precio
+1. **Precio Premium**: Para productos de calidad superior
+2. **Precio Dinámico**: Basado en oferta/demanda
+3. **Descuentos por Volumen**: Incentivar compras grandes
+4. **Precios Psicológicos**: Estrategias de marketing
+
+### Gestión de Costos
+1. **Análisis ABC**: Clasificar costos por importancia
+2. **Costeo por Actividad**: Asignar costos precisos
+3. **Benchmarking**: Comparar con mejores prácticas
+4. **Optimización de Insumos**: Reducir desperdicios
+
+### Mejora de Rentabilidad
+1. **Aumento de Productividad**: Más producción por unidad
+2. **Reducción de Costos**: Eficiencia operativa
+3. **Mejora de Calidad**: Precios premium
+4. **Diversificación**: Nuevos productos/markets
+
+## Alertas Financieras
+
+### Umbrales de Rentabilidad
+- **ROI < 5%**: Alerta crítica
+- **ROI 5-10%**: Alerta moderada
+- **ROI 10-15%**: Rentable
+- **ROI > 15%**: Muy rentable
+
+### Límites de Costo
+- **Costo > 80% de ingresos**: Problema crítico
+- **Costo 70-80% de ingresos**: Requiere atención
+- **Costo < 70% de ingresos**: Saludable
+
+## Integración con Otros Módulos
+
+### Con Producción
+- Costos de producción por lote
+- Análisis de precios de venta
+- Rentabilidad por producto
+
+### Con Inventario
+- Costos de insumos por cultivo
+- Rotación de inventario
+- Valor del inventario
+
+### Con Actividades
+- Costos por tipo de actividad
+- Eficiencia de mano de obra
+- ROI por actividad
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Parámetros de fecha inválidos |
+| `403` | Sin permisos para reportes financieros |
+| `404` | Cultivo/cliente/producto no encontrado |
+| `422` | Datos insuficientes para análisis |
+| `500` | Error en cálculos financieros |
+
+## Configuración Avanzada
+
+### Reglas de Costeo
+```typescript
+interface CostingRules {
+  metodoCosteo: 'FIFO' | 'LIFO' | 'PROMEDIO';
+  incluirDepreciacion: boolean;
+  costoFinanciero: number; // porcentaje
+  moneda: string;
+  inflacion: number; // porcentaje anual
+}
+```
+
+### Escenarios de Análisis
+```typescript
+interface AnalysisScenario {
+  nombre: string;
+  variables: {
+    precioVenta: number;
+    costoInsumos: number;
+    rendimiento: number;
+  };
+  resultado: {
+    utilidad: number;
+    roi: number;
+    payback: number;
+  };
+}
+```
+
+:::note[Actualización Automática]
+Los reportes financieros se actualizan automáticamente con cada venta registrada.
+:::
+
+:::tip[Análisis Comparativo]
+Compara rentabilidad entre cultivos para optimizar la rotación y diversificación.
+:::
+
+:::warning[Validación de Datos]
+Asegúrate de que todos los costos estén correctamente registrados para análisis precisos.
+:::

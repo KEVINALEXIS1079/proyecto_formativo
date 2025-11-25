@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { ProductoAgro } from './producto-agro.entity';
-import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 import { MovimientoProduccion } from './movimiento-produccion.entity';
 
 @Entity('lotes_produccion')

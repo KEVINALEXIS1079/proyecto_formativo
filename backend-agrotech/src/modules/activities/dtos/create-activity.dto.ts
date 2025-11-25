@@ -86,4 +86,26 @@ export class CreateActivityDto {
   @ValidateIf((o) => o.subtipo === SubtipoActividad.SIEMBRA)
   @IsDateString({}, { message: 'La fecha de siembra debe ser válida' })
   fechaSiembra?: string;
+
+  // SERVICIOS (RF18)
+  @IsOptional()
+  servicios?: {
+    nombreServicio: string;
+    horas: number;
+    precioHora: number;
+  }[];
+
+  // EVIDENCIAS (RF19)
+  @IsOptional()
+  evidencias?: {
+    descripcion: string;
+  }[];
+
+  // INSUMOS (RF20)
+  @IsOptional()
+  insumos?: {
+    insumoId: number;
+    cantidadUso: number;
+    precioUnitarioUso: number;
+  }[];
 }

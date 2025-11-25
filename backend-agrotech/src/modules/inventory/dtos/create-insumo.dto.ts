@@ -10,11 +10,8 @@ import {
 } from 'class-validator';
 
 export enum TipoMateria {
-  SEMILLA = 'SEMILLA',
-  FERTILIZANTE = 'FERTILIZANTE',
-  PLAGUICIDA = 'PLAGUICIDA',
-  HERRAMIENTA = 'HERRAMIENTA',
-  OTRO = 'OTRO',
+  LIQUIDO = 'liquido',
+  SOLIDO = 'solido',
 }
 
 export class CreateInsumoDto {

@@ -8,7 +8,7 @@ export class Pago extends BaseEntity {
   ventaId: number;
 
   @Column()
-  metodo: string;
+  metodoPago: string;
 
   @Column('float')
   monto: number;

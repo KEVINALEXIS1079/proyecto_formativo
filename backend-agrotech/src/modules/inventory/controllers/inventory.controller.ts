@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, Req, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, Req, UnauthorizedException, Query } from '@nestjs/common';
 import type { Request } from 'express';
 import { InventoryService } from '../services/inventory.service';
 import { CreateInsumoDto } from '../dtos/create-insumo.dto';
@@ -6,6 +6,7 @@ import { UpdateInsumoDto } from '../dtos/update-insumo.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
+import { PaginationDto } from '../../../common/dtos/pagination.dto';
 
 @Controller('insumos')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -32,8 +33,8 @@ export class InventoryController {
 
   @Get()
   @RequirePermissions('inventario.ver')
-  async findAllInsumosHttp() {
-    return this.findAllInsumos();
+  async findAllInsumosHttp(@Query() pagination: PaginationDto, @Query('categoriaId') categoriaId?: number, @Query('almacenId') almacenId?: number) {
+    return this.inventoryService.findAllInsumosPaginated(pagination, { categoriaId, almacenId });
   }
 
   @Get(':id')

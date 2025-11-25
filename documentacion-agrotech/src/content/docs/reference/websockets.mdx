@@ -1,0 +1,592 @@
+---
+title: WebSockets
+description: Comunicación en tiempo real con WebSockets en AgroTech API
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## Arquitectura WebSocket
+
+La API de AgroTech utiliza **Socket.IO** para comunicación bidireccional en tiempo real. Cada módulo tiene su propio namespace para mantener la organización y seguridad.
+
+### Namespaces Disponibles
+
+- `/auth` - Eventos de autenticación
+- `/users` - Eventos de usuarios
+- `/geo` - Eventos de geografía
+- `/cultivos` - Eventos de cultivos
+- `/activities` - Eventos de actividades
+- `/inventory` - Eventos de inventario
+- `/production` - Eventos de producción
+- `/reports` - Eventos de reportes
+- `/wiki` - Eventos de wiki
+- `/iot` - Eventos de IoT
+
+## Conexión
+
+### Autenticación WebSocket
+
+```typescript
+import io from 'socket.io-client';
+
+// Conectar con token JWT
+const socket = io('http://localhost:4000', {
+  auth: {
+    token: 'your-jwt-token'
+  },
+  transports: ['websocket', 'polling']
+});
+
+// Conectar a namespace específico
+const cultivosSocket = io('http://localhost:4000/cultivos', {
+  auth: {
+    token: 'your-jwt-token'
+  }
+});
+```
+
+### Verificación de Conexión
+
+```typescript
+socket.on('connect', () => {
+  console.log('Conectado:', socket.id);
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('Desconectado:', reason);
+});
+
+socket.on('connect_error', (error) => {
+  console.log('Error de conexión:', error);
+});
+```
+
+## Eventos Globales
+
+### Conexión y Autenticación
+
+```typescript
+// Evento de conexión exitosa
+socket.on('connected', (data) => {
+  console.log('Usuario conectado:', data.user);
+  // data: { user: User, permissions: string[] }
+});
+
+// Error de autenticación
+socket.on('unauthorized', (error) => {
+  console.log('No autorizado:', error.message);
+  // Desconectar o renovar token
+});
+```
+
+### Heartbeat
+
+```typescript
+// Ping del servidor
+socket.on('ping', () => {
+  socket.emit('pong');
+});
+
+// Mantener conexión activa
+setInterval(() => {
+  socket.emit('heartbeat');
+}, 30000);
+```
+
+## Eventos por Módulo
+
+### Autenticación (`/auth`)
+
+```typescript
+const authSocket = io('/auth');
+
+// Usuario inició sesión
+authSocket.on('user:login', (data) => {
+  // data: { userId: number, timestamp: Date }
+});
+
+// Usuario cerró sesión
+authSocket.on('user:logout', (data) => {
+  // data: { userId: number, timestamp: Date }
+});
+
+// Sesión expirada
+authSocket.on('session:expired', (data) => {
+  // data: { userId: number, sessionId: string }
+});
+```
+
+### Usuarios (`/users`)
+
+```typescript
+const usersSocket = io('/users');
+
+// Usuario creado
+usersSocket.on('user:created', (data) => {
+  // data: { user: User }
+});
+
+// Usuario actualizado
+usersSocket.on('user:updated', (data) => {
+  // data: { user: User, changes: object }
+});
+
+// Usuario eliminado
+usersSocket.on('user:deleted', (data) => {
+  // data: { userId: number }
+});
+
+// Avatar actualizado
+usersSocket.on('user:avatar:updated', (data) => {
+  // data: { userId: number, avatarUrl: string }
+});
+```
+
+### Geografía (`/geo`)
+
+```typescript
+const geoSocket = io('/geo');
+
+// Lote creado
+geoSocket.on('lote:created', (data) => {
+  // data: { lote: Lote }
+});
+
+// Lote actualizado
+geoSocket.on('lote:updated', (data) => {
+  // data: { lote: Lote, changes: object }
+});
+
+// Lote eliminado
+geoSocket.on('lote:deleted', (data) => {
+  // data: { loteId: number }
+});
+
+// Sub-lote creado
+geoSocket.on('sublote:created', (data) => {
+  // data: { sublote: SubLote }
+});
+```
+
+### Cultivos (`/cultivos`)
+
+```typescript
+const cultivosSocket = io('/cultivos');
+
+// Cultivo creado
+cultivosSocket.on('cultivo:created', (data) => {
+  // data: { cultivo: Cultivo }
+});
+
+// Cultivo actualizado
+cultivosSocket.on('cultivo:updated', (data) => {
+  // data: { cultivo: Cultivo, changes: object }
+});
+
+// Estado de cultivo cambiado
+cultivosSocket.on('cultivo:status:changed', (data) => {
+  // data: { cultivoId: number, oldStatus: string, newStatus: string }
+});
+
+// Cosecha registrada
+cultivosSocket.on('cultivo:cosecha', (data) => {
+  // data: { cultivoId: number, cantidad: number, fecha: Date }
+});
+```
+
+### Actividades (`/activities`)
+
+```typescript
+const activitiesSocket = io('/activities');
+
+// Actividad creada
+activitiesSocket.on('actividad:created', (data) => {
+  // data: { actividad: Actividad }
+});
+
+// Actividad actualizada
+activitiesSocket.on('actividad:updated', (data) => {
+  // data: { actividad: Actividad, changes: object }
+});
+
+// Estado de actividad cambiado
+activitiesSocket.on('actividad:status:changed', (data) => {
+  // data: { actividadId: number, oldStatus: string, newStatus: string }
+});
+
+// Evidencia agregada
+activitiesSocket.on('actividad:evidencia:added', (data) => {
+  // data: { actividadId: number, evidencia: string[] }
+});
+```
+
+### Inventario (`/inventory`)
+
+```typescript
+const inventorySocket = io('/inventory');
+
+// Insumo creado
+inventorySocket.on('insumo:created', (data) => {
+  // data: { insumo: Insumo }
+});
+
+// Stock actualizado
+inventorySocket.on('insumo:stock:updated', (data) => {
+  // data: { insumoId: number, oldStock: number, newStock: number }
+});
+
+// Movimiento registrado
+inventorySocket.on('movimiento:created', (data) => {
+  // data: { movimiento: MovimientoInsumo }
+});
+
+// Alerta de stock bajo
+inventorySocket.on('insumo:stock:low', (data) => {
+  // data: { insumoId: number, currentStock: number, minStock: number }
+});
+```
+
+### Producción (`/production`)
+
+```typescript
+const productionSocket = io('/production');
+
+// Lote de producción creado
+productionSocket.on('lote-produccion:created', (data) => {
+  // data: { loteProduccion: LoteProduccion }
+});
+
+// Venta registrada
+productionSocket.on('venta:created', (data) => {
+  // data: { venta: Venta }
+});
+
+// Venta anulada
+productionSocket.on('venta:anulada', (data) => {
+  // data: { ventaId: number, motivo: string }
+});
+
+// Cliente creado
+productionSocket.on('cliente:created', (data) => {
+  // data: { cliente: Cliente }
+});
+```
+
+### IoT (`/iot`)
+
+```typescript
+const iotSocket = io('/iot');
+
+// Sensor creado
+iotSocket.on('sensor:created', (data) => {
+  // data: { sensor: Sensor }
+});
+
+// Lectura registrada
+iotSocket.on('lectura:created', (data) => {
+  // data: { lectura: SensorLectura }
+});
+
+// Sensor fuera de rango
+iotSocket.on('sensor:out-of-range', (data) => {
+  // data: { sensorId: number, valor: number, umbralMin: number, umbralMax: number }
+});
+
+// Sensor desconectado
+iotSocket.on('sensor:disconnected', (data) => {
+  // data: { sensorId: number, lastSeen: Date }
+});
+```
+
+### Wiki (`/wiki`)
+
+```typescript
+const wikiSocket = io('/wiki');
+
+// EPA creada
+wikiSocket.on('epa:created', (data) => {
+  // data: { epa: Epa }
+});
+
+// EPA actualizada
+wikiSocket.on('epa:updated', (data) => {
+  // data: { epa: Epa, changes: object }
+});
+
+// Tipo de cultivo creado
+wikiSocket.on('tipo-cultivo:created', (data) => {
+  // data: { tipoCultivo: TipoCultivoWiki }
+});
+```
+
+## Envío de Eventos
+
+### Desde el Cliente
+
+```typescript
+// Unirse a sala específica
+socket.emit('join', { room: 'cultivos:1' });
+
+// Dejar sala
+socket.emit('leave', { room: 'cultivos:1' });
+
+// Enviar mensaje personalizado
+socket.emit('custom:event', { data: 'value' });
+```
+
+### Salas Disponibles
+
+- `users:all` - Todos los eventos de usuarios
+- `cultivos:{cultivoId}` - Eventos de un cultivo específico
+- `lotes:{loteId}` - Eventos de un lote específico
+- `activities:{actividadId}` - Eventos de una actividad específica
+- `sensors:{sensorId}` - Eventos de un sensor específico
+
+## Manejo de Errores
+
+### Errores de Conexión
+
+```typescript
+socket.on('connect_error', (error) => {
+  if (error.message === 'Authentication failed') {
+    // Token inválido, renovar o redirigir a login
+    refreshToken();
+  } else if (error.message === 'Forbidden') {
+    // Sin permisos para el namespace
+    console.error('Sin permisos para acceder a este módulo');
+  }
+});
+```
+
+### Timeouts y Reconección
+
+```typescript
+const socket = io('/cultivos', {
+  auth: { token },
+  timeout: 5000,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000
+});
+
+socket.on('reconnect', (attemptNumber) => {
+  console.log(`Reconectado después de ${attemptNumber} intentos`);
+});
+
+socket.on('reconnect_error', (error) => {
+  console.error('Error de reconexión:', error);
+});
+```
+
+## Ejemplos Completos
+
+### React Hook para WebSockets
+
+```typescript
+import { useEffect, useRef } from 'react';
+import io, { Socket } from 'socket.io-client';
+
+export function useWebSocket(namespace: string, token: string) {
+  const socketRef = useRef<Socket>();
+
+  useEffect(() => {
+    // Crear conexión
+    socketRef.current = io(namespace, {
+      auth: { token },
+      transports: ['websocket']
+    });
+
+    const socket = socketRef.current;
+
+    // Manejar conexión
+    socket.on('connect', () => {
+      console.log('WebSocket conectado');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('WebSocket desconectado');
+    });
+
+    // Cleanup
+    return () => {
+      socket.disconnect();
+    };
+  }, [namespace, token]);
+
+  return socketRef.current;
+}
+
+// Uso en componente
+function CultivosList() {
+  const socket = useWebSocket('/cultivos', token);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    // Escuchar eventos
+    socket.on('cultivo:created', (data) => {
+      console.log('Nuevo cultivo:', data.cultivo);
+      // Actualizar lista
+    });
+
+    socket.on('cultivo:updated', (data) => {
+      console.log('Cultivo actualizado:', data.cultivo);
+      // Actualizar item
+    });
+
+    return () => {
+      socket.off('cultivo:created');
+      socket.off('cultivo:updated');
+    };
+  }, [socket]);
+
+  return <div>Lista de cultivos...</div>;
+}
+```
+
+### Node.js Client
+
+```typescript
+import io from 'socket.io-client';
+
+class AgroTechWebSocketClient {
+  private sockets: Map<string, Socket> = new Map();
+
+  connect(namespace: string, token: string): Socket {
+    const socket = io(`ws://localhost:4000${namespace}`, {
+      auth: { token },
+      transports: ['websocket']
+    });
+
+    this.sockets.set(namespace, socket);
+    return socket;
+  }
+
+  disconnect(namespace: string) {
+    const socket = this.sockets.get(namespace);
+    if (socket) {
+      socket.disconnect();
+      this.sockets.delete(namespace);
+    }
+  }
+
+  // Método genérico para escuchar eventos
+  on<T>(namespace: string, event: string, callback: (data: T) => void) {
+    const socket = this.sockets.get(namespace);
+    if (socket) {
+      socket.on(event, callback);
+    }
+  }
+
+  // Método genérico para emitir eventos
+  emit(namespace: string, event: string, data: any) {
+    const socket = this.sockets.get(namespace);
+    if (socket) {
+      socket.emit(event, data);
+    }
+  }
+}
+
+// Uso
+const wsClient = new AgroTechWebSocketClient();
+const iotSocket = wsClient.connect('/iot', token);
+
+iotSocket.on('lectura:created', (data) => {
+  console.log('Nueva lectura:', data.lectura);
+});
+```
+
+## Configuración del Servidor
+
+### Gateway WebSocket
+
+```typescript
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  SubscribeMessage,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+
+@WebSocketGateway({
+  namespace: '/cultivos',
+  cors: {
+    origin: process.env.FRONTEND_URL,
+    credentials: true
+  }
+})
+export class CultivosGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
+
+  async handleConnection(client: Socket) {
+    // Verificar autenticación
+    const token = client.handshake.auth.token;
+    if (!token) {
+      client.disconnect();
+      return;
+    }
+
+    // Verificar permisos
+    const user = await this.authService.verifyToken(token);
+    if (!user) {
+      client.disconnect();
+      return;
+    }
+
+    client.data.user = user;
+    console.log(`Cliente conectado: ${client.id}`);
+  }
+
+  handleDisconnect(client: Socket) {
+    console.log(`Cliente desconectado: ${client.id}`);
+  }
+
+  @SubscribeMessage('join')
+  handleJoin(client: Socket, data: { room: string }) {
+    client.join(data.room);
+  }
+
+  @SubscribeMessage('leave')
+  handleLeave(client: Socket, data: { room: string }) {
+    client.leave(data.room);
+  }
+}
+```
+
+## Mejores Prácticas
+
+### 1. Gestión de Conexiones
+- Implementa reconexión automática
+- Maneja timeouts apropiadamente
+- Limita el número de conexiones por usuario
+
+### 2. Seguridad
+- Siempre verifica tokens JWT
+- Implementa rate limiting
+- Valida permisos por namespace
+
+### 3. Performance
+- Usa compresión de mensajes
+- Implementa heartbeat
+- Limita el tamaño de mensajes
+
+### 4. Escalabilidad
+- Usa Redis adapter para múltiples instancias
+- Implementa rooms para targeting específico
+- Balancea carga de conexiones
+
+### 5. Monitoreo
+- Registra eventos de conexión/desconexión
+- Monitorea uso de recursos
+- Implementa health checks
+
+:::note[Namespaces]
+Cada módulo tiene su propio namespace para mantener la separación de responsabilidades y mejorar la seguridad.
+:::
+
+:::tip[Salas]
+Usa salas para enviar eventos a grupos específicos de usuarios interesados en los mismos recursos.
+:::

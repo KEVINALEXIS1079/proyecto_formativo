@@ -1,0 +1,439 @@
+---
+title: Gestión de Insumos
+description: Endpoints para gestionar el inventario de insumos agrícolas
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /insumos
+
+Crea un nuevo insumo en el inventario.
+
+### Parámetros de Entrada
+
+```typescript
+interface CreateInsumoDto {
+  nombre: string;           // Nombre del insumo (requerido)
+  descripcion?: string;     // Descripción opcional
+  tipoMateria: 'liquido' | 'solido'; // Tipo de materia (requerido)
+  unidadUso: string;        // Unidad de uso (automática según tipoMateria)
+  stockUso: number;         // Stock en unidad de uso (requerido)
+  precioUnitarioUso: number; // Precio por unidad de uso (requerido)
+  presentacionUnidad?: string; // Unidad de presentación (opcional)
+  presentacionCantidad?: number; // Cantidad por presentación (opcional)
+  factorConversionUso?: number; // Factor de conversión (calculado automáticamente)
+  almacenId?: number;       // Almacén donde se guarda
+  proveedorId?: number;     // Proveedor principal
+  categoriaId?: number;     // ID de la categoría
+}
+```
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/insumos \
+      -H "Authorization: Bearer {token}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "nombre": "Fertilizante NPK 20-20-20",
+        "descripcion": "Fertilizante balanceado para cultivos",
+        "tipoMateria": "solido",
+        "unidadUso": "gramos",
+        "stockUso": 50000,
+        "precioUnitarioUso": 0.5,
+        "presentacionUnidad": "kg",
+        "presentacionCantidad": 25,
+        "almacenId": 1,
+        "proveedorId": 1,
+        "categoriaId": 1
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const insumoData = {
+      nombre: "Fertilizante NPK 20-20-20",
+      descripcion: "Fertilizante balanceado para cultivos",
+      tipoMateria: "solido",
+      unidadUso: "gramos",
+      stockUso: 50000,
+      precioUnitarioUso: 0.5,
+      presentacionUnidad: "kg",
+      presentacionCantidad: 25,
+      almacenId: 1,
+      proveedorId: 1,
+      categoriaId: 1
+    };
+
+    const response = await fetch('/insumos', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(insumoData)
+    });
+
+    const nuevoInsumo = await response.json();
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface Insumo {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  categoriaId: number;
+  categoria?: {
+    id: number;
+    nombre: string;
+    descripcion?: string;
+  };
+  unidadMedida: string;
+  precioUnitario?: number;
+  stockMinimo?: number;
+  stockMaximo?: number;
+  stockActual: number;  // Calculado de movimientos
+  almacenId?: number;
+  almacen?: {
+    id: number;
+    nombre: string;
+    ubicacion?: string;
+  };
+  proveedorId?: number;
+  proveedor?: {
+    id: number;
+    nombre: string;
+    contacto?: string;
+  };
+  codigoBarras?: string;
+  activo: boolean;
+  usuarioId: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## GET /insumos
+
+Obtiene la lista paginada de insumos con filtros opcionales.
+
+### Parámetros de Query
+
+```typescript
+interface InsumosQueryParams {
+  page?: number;       // Página (default: 1)
+  limit?: number;      // Elementos por página (default: 10)
+  categoriaId?: number; // Filtrar por categoría
+  almacenId?: number;   // Filtrar por almacén
+}
+```
+
+### Ejemplos de Filtros
+
+```bash
+# Todos los insumos
+GET /insumos
+
+# Insumos de una categoría específica
+GET /insumos?categoriaId=1
+
+# Insumos de un almacén específico
+GET /insumos?almacenId=2
+
+# Paginación
+GET /insumos?page=2&limit=20
+```
+
+### Respuesta Exitosa (200)
+
+```typescript
+interface InsumosResponse {
+  data: Insumo[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+```
+
+## GET /insumos/:id
+
+Obtiene un insumo específico por su ID.
+
+### Respuesta Exitosa (200)
+
+Retorna el objeto `Insumo` completo con todas sus relaciones.
+
+## PATCH /insumos/:id
+
+Actualiza un insumo existente.
+
+### Parámetros de Entrada
+
+```typescript
+interface UpdateInsumoDto {
+  nombre?: string;
+  descripcion?: string;
+  categoriaId?: number;
+  unidadMedida?: string;
+  precioUnitario?: number;
+  stockMinimo?: number;
+  stockMaximo?: number;
+  almacenId?: number;
+  proveedorId?: number;
+  codigoBarras?: string;
+  activo?: boolean;
+}
+```
+
+## DELETE /insumos/:id
+
+Elimina un insumo del inventario.
+
+### Consideraciones
+
+- Solo se pueden eliminar insumos sin movimientos asociados
+- Los insumos con stock actual > 0 no pueden eliminarse
+- Se recomienda desactivar en lugar de eliminar
+
+## Gestión de Stock
+
+### Stock Actual
+
+El stock actual se calcula automáticamente de los movimientos:
+
+```typescript
+stockActual = Σ(movimientos_entrada) - Σ(movimientos_salida)
+```
+
+### Alertas de Stock
+
+- **Stock Bajo**: `stockActual <= stockMinimo`
+- **Stock Alto**: `stockActual >= stockMaximo`
+- **Sin Stock**: `stockActual = 0`
+
+### Movimientos de Inventario
+
+Los movimientos se registran automáticamente cuando:
+- Se recibe mercancía de proveedores
+- Se consume en actividades agrícolas
+- Se transfieren entre almacenes
+- Se desechan o pierden insumos
+
+## Categorías de Insumos
+
+### Categorías Comunes
+
+| ID | Nombre | Descripción |
+|----|--------|-------------|
+| 1 | Fertilizantes | Nutrientes para plantas |
+| 2 | Pesticidas | Control de plagas y enfermedades |
+| 3 | Semillas | Material de siembra |
+| 4 | Herramientas | Equipos y herramientas |
+| 5 | Insumos Varios | Otros materiales |
+
+### Crear Nueva Categoría
+
+```json
+{
+  "nombre": "Riego",
+  "descripcion": "Sistemas y componentes de riego"
+}
+```
+
+## Tipo de Materia y Unidades Automáticas
+
+### Tipos de Materia
+
+El sistema clasifica los insumos según su estado físico:
+
+- **`liquido`**: Para insumos líquidos (pesticidas, fertilizantes líquidos, etc.)
+- **`solido`**: Para insumos sólidos (fertilizantes granulados, semillas, etc.)
+
+### Unidades Automáticas
+
+Según el tipo de materia, el sistema asigna automáticamente la unidad de uso:
+
+| Tipo de Materia | Unidad de Uso |
+|-----------------|---------------|
+| `liquido` | `cm³` (centímetros cúbicos) |
+| `solido` | `gramos` |
+
+### Factores de Conversión
+
+El sistema calcula automáticamente el factor de conversión entre unidades de presentación y unidades de uso:
+
+#### Para Líquidos
+- **Litros → cm³**: `1 litro = 1000 cm³`
+- **Mililitros → cm³**: `1 mL = 1 cm³`
+
+#### Para Sólidos
+- **Kilogramos → gramos**: `1 kg = 1000 gramos`
+- **Toneladas → gramos**: `1 tonelada = 1,000,000 gramos`
+
+### Ejemplo de Cálculo
+
+```typescript
+// Fertilizante líquido en presentación de 5 litros
+{
+  "tipoMateria": "liquido",           // → unidadUso = "cm³"
+  "presentacionUnidad": "litros",
+  "presentacionCantidad": 5,          // 5 litros
+  // factorConversionUso = 5 * 1000 = 5000 cm³ por presentación
+}
+
+// Fertilizante sólido en presentación de 25 kg
+{
+  "tipoMateria": "solido",            // → unidadUso = "gramos"
+  "presentacionUnidad": "kg",
+  "presentacionCantidad": 25,         // 25 kg
+  // factorConversionUso = 25 * 1000 = 25000 gramos por presentación
+}
+```
+
+## Unidades de Medida
+
+### Unidades Comunes
+
+- **Peso**: `kg`, `g`, `ton`
+- **Volumen**: `L`, `mL`, `m³`
+- **Cantidad**: `unidades`, `paquetes`, `cajas`
+- **Área**: `m²`, `hectáreas`
+- **Longitud**: `m`, `cm`, `km`
+
+## Relaciones
+
+### Con Proveedores
+
+- Un insumo puede tener un proveedor principal
+- Múltiples proveedores pueden suministrar el mismo insumo
+- Información de contacto para reabastecimiento
+
+### Con Almacenes
+
+- Cada insumo se almacena en un lugar específico
+- Control de inventario por ubicación
+- Facilita la logística interna
+
+### Con Actividades
+
+- Los insumos se consumen en actividades agrícolas
+- Seguimiento de uso por cultivo y fecha
+- Control de costos por actividad
+
+### Con Producción
+
+- Insumos utilizados en la producción
+- Costos incluidos en análisis de rentabilidad
+- Trazabilidad desde campo hasta producto final
+
+## WebSocket Events
+
+Los cambios en insumos generan eventos WebSocket:
+
+```typescript
+// Nuevo insumo
+socket.on('insumoCreated', (data) => {
+  // data: Insumo
+});
+
+// Insumo actualizado
+socket.on('insumoUpdated', (data) => {
+  // data: Insumo
+});
+
+// Insumo eliminado
+socket.on('insumoDeleted', (data) => {
+  // data: Insumo
+});
+
+// Movimiento registrado
+socket.on('movimientoCreated', (data) => {
+  // data: MovimientoInsumo
+});
+```
+
+## Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o categoría/almacén inexistente |
+| `401` | Token JWT faltante o inválido |
+| `403` | Sin permisos requeridos |
+| `404` | Insumo no encontrado |
+| `409` | Conflicto (insumo con movimientos asociados) |
+
+## Ejemplos de Uso
+
+### Fertilizante Líquido
+
+```json
+{
+  "nombre": "Fertilizante Líquido NPK",
+  "descripcion": "Fertilizante líquido balanceado para fertirrigación",
+  "tipoMateria": "liquido",
+  "unidadUso": "cm³",
+  "stockUso": 100000,
+  "precioUnitarioUso": 0.025,
+  "presentacionUnidad": "litros",
+  "presentacionCantidad": 20,
+  "almacenId": 1,
+  "proveedorId": 1,
+  "categoriaId": 1
+}
+```
+
+### Semillas Certificadas
+
+```json
+{
+  "nombre": "Semillas Maíz HT-789",
+  "descripcion": "Semillas híbridas de alto rendimiento",
+  "tipoMateria": "solido",
+  "unidadUso": "gramos",
+  "stockUso": 50000,
+  "precioUnitarioUso": 0.09,
+  "presentacionUnidad": "kg",
+  "presentacionCantidad": 25,
+  "almacenId": 1,
+  "proveedorId": 2,
+  "categoriaId": 3
+}
+```
+
+### Pesticida Líquido
+
+```json
+{
+  "nombre": "Pesticida Orgánico Neem",
+  "descripcion": "Pesticida natural a base de neem para control de plagas",
+  "tipoMateria": "liquido",
+  "unidadUso": "cm³",
+  "stockUso": 50000,
+  "precioUnitarioUso": 0.08,
+  "presentacionUnidad": "litros",
+  "presentacionCantidad": 5,
+  "almacenId": 1,
+  "proveedorId": 3,
+  "categoriaId": 2
+}
+```
+
+:::note[Stock Automático]
+El stock actual se calcula automáticamente de los movimientos. No es necesario actualizarlo manualmente.
+:::
+
+:::tip[Alertas]
+Configura niveles de stock mínimo y máximo para recibir alertas automáticas de reabastecimiento.
+:::

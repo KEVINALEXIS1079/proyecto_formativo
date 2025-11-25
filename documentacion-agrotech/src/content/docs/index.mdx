@@ -1,40 +1,80 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Documentación API - AgroTech
+description: Documentación completa de la API REST y WebSocket del sistema AgroTech para gestión agrícola integral.
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
+  tagline: Sistema Integral de Gestión Agrícola
   image:
     file: ../../assets/houston.webp
-  actions:
-    - text: Example Guide
-      link: /guides/example/
-      icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
-      variant: minimal
+actions:
+  - text: Ver API Reference
+    link: /api/auth/
+    icon: right-arrow
+  - text: Guías de Uso
+    link: /guides/example/
+    icon: document
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Next steps
+## Módulos del Sistema
 
 <CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
+	<Card title="Autenticación" icon="user">
+		Gestión de usuarios, JWT, permisos y roles del sistema.
 	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
+	<Card title="Usuarios" icon="users">
+		Administración de perfiles, cambio de contraseñas y gestión de roles.
 	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
+	<Card title="Geografía" icon="map">
+		Gestión de lotes y sublotes con geometrías GeoJSON.
 	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
+	<Card title="Cultivos" icon="leaf">
+		Ciclo de vida de cultivos asociados a áreas geográficas.
 	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
+	<Card title="Actividades" icon="checklist">
+		Registro de actividades agrícolas con evidencias y costos.
+	</Card>
+	<Card title="Inventario" icon="package">
+		Gestión de insumos, almacenes, proveedores y movimientos.
+	</Card>
+	<Card title="IoT" icon="satellite">
+		Sensores inteligentes, lecturas en tiempo real y monitoreo.
+	</Card>
+	<Card title="Producción" icon="factory">
+		Lotes de producción, ventas, clientes y reportes financieros.
+	</Card>
+	<Card title="Reportes" icon="chart">
+		Exportación de datos en múltiples formatos (CSV, Excel).
+	</Card>
+	<Card title="Wiki" icon="book">
+		Base de conocimiento de EPAs y buenas prácticas agrícolas.
+	</Card>
+	<Card title="Jobs" icon="gears">
+		Trabajos automáticos de mantenimiento y limpieza.
 	</Card>
 </CardGrid>
+
+## Características Generales
+
+### Autenticación y Autorización
+- **JWT Tokens**: Autenticación stateless con refresh tokens
+- **Sistema de Permisos**: Control granular basado en roles y permisos directos
+- **Guards Automáticos**: Protección automática de endpoints
+
+### Comunicación en Tiempo Real
+- **WebSocket**: Actualizaciones en tiempo real para todas las operaciones
+- **Namespaces**: Canales separados por módulo
+- **Eventos**: Notificaciones automáticas de cambios
+
+### Arquitectura
+- **REST API**: Endpoints HTTP RESTful con paginación
+- **WebSocket**: Comunicación bidireccional en tiempo real
+- **Validación**: DTOs con class-validator para entrada de datos
+- **Documentación**: OpenAPI/Swagger integrada
+
+### Tecnologías
+- **Backend**: NestJS con TypeScript
+- **Base de Datos**: PostgreSQL con TypeORM
+- **Cache**: Redis para sesiones y permisos
+- **Documentación**: Starlight (Astro)

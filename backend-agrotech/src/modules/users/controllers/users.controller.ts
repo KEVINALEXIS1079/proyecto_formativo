@@ -1,7 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException, UploadedFile, UseGuards, UseInterceptors, UsePipes, ValidationPipe, ParseIntPipe, OnModuleInit } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException, UploadedFile, UseGuards, UseInterceptors, UsePipes, ValidationPipe, ParseIntPipe } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
-import { ModuleRef } from '@nestjs/core';
 import { UsersService } from '../services/users.service';
 import {
   CreateUserByAdminDto,
@@ -14,17 +13,13 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
+import { PaginationDto } from '../../../common/dtos/pagination.dto';
+import { Query } from '@nestjs/common';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-export class UsersController implements OnModuleInit {
-  private usersService: UsersService;
-
-  constructor(private readonly moduleRef: ModuleRef) {}
-
-  onModuleInit() {
-    this.usersService = this.moduleRef.get(UsersService, { strict: false });
-  }
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
 
   private extractUserId(request: Request | any): number {
     const userId = request?.user?.id ?? request?.user?.userId;
@@ -80,9 +75,12 @@ export class UsersController implements OnModuleInit {
 
   @Get()
   @RequirePermissions('usuarios.ver')
-  async findAllUsersHttp() {
-    const users = await this.findAll();
-    return users.map(user => this.sanitizeUser(user));
+  async findAllUsersHttp(@Query() pagination: PaginationDto, @Query('rolId') rolId?: number, @Query('estado') estado?: string) {
+    const result = await this.usersService.findAllPaginated(pagination, { rolId, estado });
+    return {
+      ...result,
+      data: result.data.map(user => this.sanitizeUser(user)),
+    };
   }
 
   // RF72: Perfil self-service

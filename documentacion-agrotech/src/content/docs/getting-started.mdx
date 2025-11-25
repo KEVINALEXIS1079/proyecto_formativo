@@ -1,0 +1,132 @@
+---
+title: Primeros Pasos
+description: Guía para comenzar a usar la API de AgroTech
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+## Configuración Inicial
+
+<Steps>
+
+1. ### Instalación del Backend
+   ```bash
+   # Clonar el repositorio
+   git clone https://github.com/KEVINALEXIS1079/proyecto_formativo.git
+   cd proyecto_formativo/backend-agrotech
+
+   # Instalar dependencias
+   npm install
+
+   # Configurar variables de entorno
+   cp .env.example .env
+   # Editar .env con tus configuraciones
+   ```
+
+2. ### Configuración de Base de Datos
+   ```bash
+   # Asegurarse de que PostgreSQL esté ejecutándose
+   # Crear base de datos 'agrotech'
+
+   # Ejecutar migraciones
+   npm run migration:run
+
+   # Ejecutar seeds (datos iniciales)
+   npm run seed
+   ```
+
+3. ### Iniciar el Servidor
+   ```bash
+   # Modo desarrollo
+   npm run start:dev
+
+   # El servidor estará disponible en http://localhost:4000
+   ```
+
+4. ### Verificar Instalación
+   ```bash
+   # Health check
+   curl http://localhost:4000
+
+   # Debería retornar: {"status":"ok","message":"AgroTech API"}
+   ```
+
+</Steps>
+
+## Variables de Entorno Requeridas
+
+```env
+# Base de datos
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+DB_DATABASE=agrotech
+
+# JWT
+JWT_SECRET=your_jwt_secret_key
+JWT_REFRESH_SECRET=your_refresh_secret_key
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Email (opcional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+```
+
+## Primer Request
+
+Una vez que el servidor esté ejecutándose, puedes hacer tu primer request:
+
+```bash
+# Registro de usuario administrador
+curl -X POST http://localhost:4000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@agrotech.com",
+    "password": "Admin123!",
+    "firstName": "Admin",
+    "lastName": "AgroTech",
+    "roleId": 1
+  }'
+```
+
+## Estructura del Proyecto
+
+```
+backend-agrotech/
+├── src/
+│   ├── main.ts                 # Punto de entrada
+│   ├── app.module.ts          # Módulo principal
+│   ├── modules/               # Módulos de negocio
+│   │   ├── auth/             # Autenticación
+│   │   ├── users/            # Usuarios
+│   │   ├── geo/              # Geografía
+│   │   ├── cultivos/         # Cultivos
+│   │   ├── activities/       # Actividades
+│   │   ├── inventory/        # Inventario
+│   │   ├── production/       # Producción
+│   │   ├── reports/          # Reportes
+│   │   ├── wiki/             # Base de conocimiento
+│   │   └── iot/              # IoT
+│   ├── common/               # Utilidades compartidas
+│   ├── database/             # Configuración BD
+│   └── config/               # Configuración global
+├── test/                     # Tests
+└── docs/                     # Documentación
+```
+
+## Próximos Pasos
+
+1. **Autenticación**: Obtén tu token JWT
+2. **Explora la API**: Revisa los endpoints disponibles
+3. **WebSockets**: Configura conexiones en tiempo real
+4. **Testing**: Ejecuta los tests incluidos
+
+:::tip[Documentación Interactiva]
+La API incluye documentación Swagger integrada en `/api/docs` cuando está en modo desarrollo.
+:::

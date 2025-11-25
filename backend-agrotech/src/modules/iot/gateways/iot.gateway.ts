@@ -1,7 +1,7 @@
 import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, ConnectedSocket } from '@nestjs/websockets';
-import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef, OnModuleInit } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { IotController } from '../controllers/iot.controller';
+import { IotService } from '../services/iot.service';
 import { IotCreateSensorDoDto, IotRemoveSensorDoDto, IotFindAllLecturasDoDto, IotCreateLecturaDoDto } from '../dtos/iot-do.dto';
 import { WsJwtGuard } from '../../../common/guards/ws-jwt.guard';
 import { WsPermissionsGuard } from '../../../common/guards/ws-permissions.guard';
@@ -10,16 +10,34 @@ import { WsCurrentUser } from '../../../common/decorators/ws-current-user.decora
 
 @WebSocketGateway({ namespace: 'iot', cors: { origin: '*' } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
-export class IotGateway {
+export class IotGateway implements OnModuleInit {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly iotController: IotController) {}
+  constructor(
+    @Inject(forwardRef(() => IotService))
+    private readonly iotService: IotService,
+  ) {}
+
+  async onModuleInit() {
+    // Listen for MQTT readings
+    this.server.on('processMqttReading', async (data: { sensorId: number; valor: number; fechaLectura: Date; protocolo: string }) => {
+      try {
+        await this.iotService.createLectura({
+          sensorId: data.sensorId,
+          valor: data.valor,
+          fechaLectura: data.fechaLectura,
+        }, this);
+      } catch (error) {
+        console.error('Error processing MQTT reading:', error);
+      }
+    });
+  }
 
   @SubscribeMessage('findAllSensors')
   @RequirePermissions('iot.ver')
   async findAllSensors(@ConnectedSocket() client: Socket) {
-    const result = await this.iotController.findAllSensors();
+    const result = await this.iotService.findAllSensors();
     client.emit('findAllSensors.result', result);
     return result;
   }
@@ -32,7 +50,7 @@ export class IotGateway {
     @WsCurrentUser() user: any,
     @ConnectedSocket() client: Socket,
   ) {
-    const result = await this.iotController.createSensor(createSensorDto, user.id);
+    const result = await this.iotService.createSensor(createSensorDto, user.id);
     client.emit('createSensor.result', result);
     return result;
   }
@@ -40,7 +58,7 @@ export class IotGateway {
   @SubscribeMessage('removeSensor')
   @RequirePermissions('iot.eliminar')
   async removeSensor(@MessageBody() data: IotRemoveSensorDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.iotController.removeSensor(data);
+    const result = await this.iotService.removeSensor(data.id);
     client.emit('removeSensor.result', result);
     return result;
   }
@@ -48,7 +66,7 @@ export class IotGateway {
   @SubscribeMessage('findAllLecturas')
   @RequirePermissions('iot.ver')
   async findAllLecturas(@MessageBody() data: IotFindAllLecturasDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.iotController.findAllLecturas(data);
+    const result = await this.iotService.findAllLecturas(data.sensorId);
     client.emit('findAllLecturas.result', result);
     return result;
   }
@@ -57,8 +75,8 @@ export class IotGateway {
   @RequirePermissions('iot.crear')
   @UsePipes(new ValidationPipe())
   async createLectura(@MessageBody() createLecturaDto: IotCreateLecturaDoDto, @ConnectedSocket() client: Socket) {
-    // Pass 'this' (gateway instance) to controller, which passes it to service
-    const result = await this.iotController.createLectura(createLecturaDto, this);
+    // Pass 'this' (gateway instance) to service
+    const result = await this.iotService.createLectura(createLecturaDto, this);
     client.emit('createLectura.result', result);
     return result;
   }
@@ -66,5 +84,9 @@ export class IotGateway {
   // RF34: Emitir lectura en tiempo real
   emitLectura(lectura: any) {
     this.server.emit('nuevaLectura', lectura);
+  }
+
+  broadcast(event: string, data: any) {
+    this.server.emit(event, data);
   }
 }

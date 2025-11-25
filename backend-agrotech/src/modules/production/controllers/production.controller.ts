@@ -1,8 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, Req, Query } from '@nestjs/common';
+import type { Request } from 'express';
 import { ProductionService } from '../services/production.service';
 import { CreateProductoAgroDto } from '../dtos/create-producto-agro.dto';
 import { CreateLoteProduccionDto } from '../dtos/create-lote-produccion.dto';
 import { UpdateLoteProduccionDto } from '../dtos/update-lote-produccion.dto';
+import { CreateVentaDto } from '../dtos/create-venta.dto';
+import { FindAllVentasDto } from '../dtos/find-all-ventas.dto';
+import { VentasReportDto } from '../dtos/ventas-report.dto';
+import { PreciosHistoricosDto } from '../dtos/precios-historicos.dto';
+import { RentabilidadReportDto } from '../dtos/rentabilidad-report.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -94,7 +100,117 @@ export class ProductionController {
     return this.productionService.anularVenta(ventaId, userId);
   }
 
+  // ==================== VENTAS HTTP ====================
+
+  @Post('ventas')
+  @RequirePermissions('produccion.ventas.crear')
+  @UsePipes(new ValidationPipe())
+  async createVentaHttp(@Body() dto: CreateVentaDto, @Req() req: Request) {
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+    return this.productionService.createVenta({ ...dto, usuarioId: userId });
+  }
+
+  @Get('ventas')
+  @RequirePermissions('produccion.ventas.ver')
+  async findAllVentasHttp(@Query() query: FindAllVentasDto) {
+    const { page, limit, ...filters } = query;
+    return this.productionService.findAllVentas(filters, { page, limit });
+  }
+
+  @Get('ventas/:id')
+  @RequirePermissions('produccion.ventas.ver')
+  async findVentaByIdHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.productionService.findVentaById(id);
+  }
+
+  @Post('ventas/:id/anular')
+  @RequirePermissions('produccion.ventas.anular')
+  async anularVentaHttp(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+    return this.productionService.anularVenta(id, userId);
+  }
+
+  @Get('ventas/:id/factura')
+  @RequirePermissions('produccion.ventas.ver')
+  async generarFacturaHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.productionService.generarFactura(id);
+  }
+
+  // ==================== REPORTES ====================
+
+  @Get('reportes/ventas')
+  @RequirePermissions('produccion.ventas.ver')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async getVentasReport(@Query() query: VentasReportDto, @Req() req: Request) {
+    return this.productionService.getVentasReport(query);
+  }
+
+  @Get('reportes/precios-historicos')
+  @RequirePermissions('produccion.ventas.ver')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async getPreciosHistoricos(@Query() query: PreciosHistoricosDto, @Req() req: Request) {
+    return this.productionService.getPreciosHistoricos(query);
+  }
+
+  @Get('reportes/rentabilidad')
+  @RequirePermissions('produccion.ventas.ver')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async getRentabilidadReport(@Query() query: RentabilidadReportDto, @Req() req: Request) {
+    return this.productionService.getRentabilidadReport(query);
+  }
+
   // ==================== CLIENTES ====================
+
+  @Get('clientes')
+  @RequirePermissions('produccion.clientes.ver')
+  async findAllClientesHttp() {
+    return this.productionService.findAllClientes( );
+  }
+
+  @Get('clientes/:id')
+  @RequirePermissions('produccion.clientes.ver')
+  async findClienteByIdHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.productionService.findClienteById(id);
+  }
+
+  @Post('clientes')
+  @RequirePermissions('produccion.clientes.crear')
+  @UsePipes(new ValidationPipe())
+  async createClienteHttp(@Body() data: { nombre: string; identificacion?: string; telefono?: string; correo?: string; direccion?: string; notas?: string }) {
+    return this.productionService.createCliente(data);
+  }
+
+  @Patch('clientes/:id')
+  @RequirePermissions('produccion.clientes.editar')
+  @UsePipes(new ValidationPipe())
+  async updateClienteHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: Partial<{ nombre: string; identificacion?: string; telefono?: string; correo?: string; direccion?: string; notas?: string }>
+  ) {
+    return this.productionService.updateCliente(id, data);
+  }
+
+  @Delete('clientes/:id')
+  @RequirePermissions('produccion.clientes.eliminar')
+  async removeClienteHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.productionService.removeCliente(id);
+  }
+
+  // ==================== MOVIMIENTOS PRODUCCION ====================
+
+  @Get('lotes-produccion/:id/movimientos')
+  @RequirePermissions('produccion.ver')
+  async getMovimientosHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.productionService.getMovimientosHistorial(id);
+  }
+
+  @Post('movimientos/traslado')
+  @RequirePermissions('produccion.crear')
+  @UsePipes(new ValidationPipe())
+  async createTrasladoHttp(@Req() req: Request, @Body() data: { loteOrigenId: number; loteDestinoId: number; cantidadKg: number; descripcion?: string }) {
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+    return this.productionService.createMovimientoTraslado({ ...data, usuarioId: userId });
+  }
 
   // Internal method for WebSocket: handles finding all clients by calling the service
   // Flow: Gateway calls this method -> calls productionService.findAllClientes -> returns client list

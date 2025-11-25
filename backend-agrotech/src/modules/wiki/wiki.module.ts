@@ -9,6 +9,7 @@ import { EPA_TipoCultivoWiki } from './entities/epa-tipo-cultivo-wiki.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
+import { ImageUploadService } from '../../common/services/image-upload.service';
 
 
 @Module({
@@ -23,6 +24,7 @@ import { AuthModule } from '../auth/auth.module';
     }),
     AuthModule,
   ],
-  providers: [WikiService, WikiGateway, WikiController],
+  controllers: [WikiController],
+  providers: [WikiService, WikiGateway, ImageUploadService],
 })
 export class WikiModule {}

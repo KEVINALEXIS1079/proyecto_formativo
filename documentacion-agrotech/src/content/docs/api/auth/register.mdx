@@ -1,0 +1,202 @@
+---
+title: Registro de Usuario
+description: Endpoint para registrar nuevos usuarios en el sistema AgroTech
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## POST /auth/register
+
+Registra un nuevo usuario en el sistema AgroTech.
+
+### Parámetros de Entrada
+
+```typescript
+interface RegisterDto {
+  nombre: string;           // Máximo 100 caracteres
+  apellido: string;         // Máximo 100 caracteres
+  identificacion: string;   // Máximo 20 caracteres, único
+  idFicha?: string;         // Máximo 20 caracteres, opcional
+  telefono?: string;        // Formato válido, máximo 20 caracteres, opcional
+  correo: string;           // Email válido, máximo 100 caracteres, único
+  password: string;         // Mínimo 8 caracteres, debe contener mayúscula, minúscula y número
+}
+```
+
+### Validaciones
+
+- **Nombre**: Obligatorio, máximo 100 caracteres
+- **Apellido**: Obligatorio, máximo 100 caracteres
+- **Identificación**: Obligatoria, máximo 20 caracteres, debe ser única
+- **ID Ficha**: Opcional, máximo 20 caracteres
+- **Teléfono**: Opcional, debe coincidir con patrón `/^[0-9+\-\s()]+$/`, máximo 20 caracteres
+- **Correo**: Obligatorio, formato email válido, máximo 100 caracteres, debe ser único
+- **Contraseña**: Obligatoria, mínimo 8 caracteres, debe contener al menos una mayúscula, una minúscula y un número
+
+### Ejemplo de Request
+
+<Tabs>
+  <TabItem label="cURL">
+    ```bash
+    curl -X POST http://localhost:4000/auth/register \
+      -H "Content-Type: application/json" \
+      -d '{
+        "nombre": "Juan",
+        "apellido": "Pérez",
+        "identificacion": "123456789",
+        "idFicha": "FICHA001",
+        "telefono": "+57 300 123 4567",
+        "correo": "juan.perez@agrotech.com",
+        "password": "MiContraseña123!"
+      }'
+    ```
+  </TabItem>
+
+  <TabItem label="JavaScript (fetch)">
+    ```javascript
+    const response = await fetch('/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        nombre: 'Juan',
+        apellido: 'Pérez',
+        identificacion: '123456789',
+        idFicha: 'FICHA001',
+        telefono: '+57 300 123 4567',
+        correo: 'juan.perez@agrotech.com',
+        password: 'MiContraseña123!'
+      })
+    });
+
+    const user = await response.json();
+    ```
+  </TabItem>
+
+  <TabItem label="Python (requests)">
+    ```python
+    import requests
+
+    data = {
+        'nombre': 'Juan',
+        'apellido': 'Pérez',
+        'identificacion': '123456789',
+        'idFicha': 'FICHA001',
+        'telefono': '+57 300 123 4567',
+        'correo': 'juan.perez@agrotech.com',
+        'password': 'MiContraseña123!'
+    }
+
+    response = requests.post('/auth/register', json=data)
+    user = response.json()
+    ```
+  </TabItem>
+</Tabs>
+
+### Respuesta Exitosa (201)
+
+```typescript
+interface RegisterResponse {
+  id: number;
+  nombre: string;
+  apellido: string;
+  identificacion: string;
+  idFicha?: string;
+  telefono?: string;
+  correo: string;
+  emailVerifiedAt?: Date;
+  estado: string;           // 'pendiente_verificacion'
+  lastLoginAt?: Date;
+  avatarUrl?: string;
+  rolId: number;           // 5 (Invitado por defecto)
+  rol?: Rol;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+**Ejemplo de respuesta:**
+```json
+{
+  "id": 1,
+  "nombre": "Juan",
+  "apellido": "Pérez",
+  "identificacion": "123456789",
+  "idFicha": "FICHA001",
+  "telefono": "+57 300 123 4567",
+  "correo": "juan.perez@agrotech.com",
+  "estado": "pendiente_verificacion",
+  "rolId": 5,
+  "rol": {
+    "id": 5,
+    "nombre": "Invitado",
+    "descripcion": "Usuario con permisos limitados",
+    "esSistema": true,
+    "estado": "activo"
+  },
+  "createdAt": "2025-01-15T10:30:00.000Z",
+  "updatedAt": "2025-01-15T10:30:00.000Z"
+}
+```
+
+### Comportamiento
+
+1. **Validación de Unicidad**: Verifica que la identificación y correo no estén registrados
+2. **Encriptación**: La contraseña se encripta usando bcrypt con salt rounds = 10
+3. **Rol por Defecto**: Asigna automáticamente el rol "Invitado" (ID: 5)
+4. **Estado Inicial**: El usuario queda en estado `pendiente_verificacion`
+5. **Código de Verificación**: Se genera y envía automáticamente un código al correo
+6. **Campos Sensibles**: El `passwordHash` nunca se incluye en la respuesta
+
+### Códigos de Error
+
+| Código | Descripción |
+|--------|-------------|
+| `400` | Datos inválidos o validaciones fallidas |
+| `409` | Correo electrónico ya registrado |
+| `409` | Identificación ya registrada |
+| `422` | Validación de DTO fallida |
+
+### Ejemplos de Errores
+
+**Correo ya registrado:**
+```json
+{
+  "statusCode": 400,
+  "message": "El correo ya está registrado",
+  "error": "Bad Request"
+}
+```
+
+**Validación fallida:**
+```json
+{
+  "statusCode": 422,
+  "message": "Validation failed",
+  "error": "Unprocessable Entity",
+  "details": [
+    {
+      "field": "password",
+      "constraints": {
+        "matches": "La contraseña debe contener al menos una mayúscula, una minúscula y un número"
+      }
+    }
+  ]
+}
+```
+
+### Próximos Pasos
+
+Después del registro exitoso, el usuario debe:
+
+1. **Verificar Email**: Usar el endpoint `/auth/verify-email` con el código recibido
+2. **Iniciar Sesión**: Una vez verificado, podrá hacer login con `/auth/login`
+
+:::note[Estado del Usuario]
+Los usuarios registrados quedan inicialmente en estado `pendiente_verificacion` y no pueden iniciar sesión hasta verificar su correo electrónico.
+:::
+
+:::tip[Roles del Sistema]
+El rol "Invitado" tiene permisos limitados. Los administradores pueden asignar roles más avanzados posteriormente.
+:::

@@ -17,4 +17,9 @@ export default registerAs('config', () => ({
     secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '1d',
   },
+  jobs: {
+    sensorDisconnectTtlMinutes: parseInt(process.env.SENSOR_DISCONNECT_TTL_MINUTES || '10', 10),
+    sensorReadingsRetentionYears: parseInt(process.env.SENSOR_READINGS_RETENTION_YEARS || '1', 10),
+    inventoryMovementsRetentionYears: parseInt(process.env.INVENTORY_MOVEMENTS_RETENTION_YEARS || '2', 10),
+  },
 }));

@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException, UseGuards, UsePipes, ValidationPipe, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { ActivitiesService } from '../services/activities.service';
 import { CreateActivityDto } from '../dtos/create-activity.dto';
@@ -6,6 +7,8 @@ import { UpdateActivityDto } from '../dtos/update-activity.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
+import { PaginationDto } from '../../../common/dtos/pagination.dto';
+import { Query } from '@nestjs/common';
 
 import { forwardRef, Inject } from '@nestjs/common';
 import { ActivitiesGateway } from '../gateways/activities.gateway';
@@ -31,21 +34,22 @@ export class ActivitiesController {
 
   @Post()
   @RequirePermissions('actividades.crear')
+  @UseInterceptors(FilesInterceptor('evidencias'))
   @UsePipes(new ValidationPipe())
-  async createActivityHttp(@Req() req: Request, @Body() dto: CreateActivityDto) {
+  async createActivityHttp(@Req() req: Request, @Body() dto: CreateActivityDto, @UploadedFiles() files: Express.Multer.File[]) {
     const userId = this.extractUserId(req);
-    const result = await this.create(dto, userId);
-    
+    const result = await this.create(dto, userId, files);
+
     // RF63: Emitir evento en tiempo real
     this.activitiesGateway.broadcast('createActivity.result', result);
-    
+
     return result;
   }
 
   @Get()
   @RequirePermissions('actividades.ver')
-  async findAllActivitiesHttp() {
-    return this.findAll();
+  async findAllActivitiesHttp(@Query() pagination: PaginationDto, @Query('cultivoId') cultivoId?: number, @Query('loteId') loteId?: number, @Query('tipo') tipo?: string) {
+    return this.activitiesService.findAllPaginated(pagination, { cultivoId, loteId, tipo });
   }
 
   @Get(':id')
@@ -72,9 +76,9 @@ export class ActivitiesController {
   // Internal method for WebSocket: handles creating an activity by calling the service
   // Flow: Gateway calls this method -> calls activitiesService.create -> returns created activity
   @UsePipes(new ValidationPipe())
-  async create(createActivityDto: CreateActivityDto, userId: number) {
+  async create(createActivityDto: CreateActivityDto, userId: number, files?: Express.Multer.File[]) {
     // Validation or extra logic can go here
-    return this.activitiesService.create(createActivityDto, userId);
+    return this.activitiesService.create(createActivityDto, userId, files);
   }
 
   // Internal method for WebSocket: handles finding all activities by calling the service
