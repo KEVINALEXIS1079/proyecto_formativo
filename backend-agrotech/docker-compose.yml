@@ -46,7 +46,6 @@ volumes:
   redis_data:
   pgadmin_data:
 
-
 networks:
   agrotech_network:
     driver: bridge

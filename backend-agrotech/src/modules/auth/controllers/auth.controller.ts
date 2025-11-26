@@ -54,16 +54,12 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    console.log('Logout method started');
     const token = req.cookies['auth_token'];
-    console.log('Token extracted:', token);
     if (token) {
       try {
         const payload = this.jwtService.verify(token) as any;
-        console.log('Token verified, payload:', payload);
         const sessionId = payload.jti;
         const ttl = Math.max(0, Math.floor((payload.exp * 1000 - Date.now()) / 1000));
-        console.log('Calling authService.logout with sessionId:', sessionId, 'token:', token, 'ttl:', ttl);
         await this.authService.logout(sessionId, token, ttl);
       } catch (error) {
         // Token inválido, no proceder con logout de sesión

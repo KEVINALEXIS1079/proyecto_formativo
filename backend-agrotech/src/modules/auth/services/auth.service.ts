@@ -166,7 +166,6 @@ export class AuthService {
     };
 
     const access_token = this.jwtService.sign(payload);
-    console.log('Token generado:', access_token);
 
     // Crear sesión en Redis (7 días)
     await this.redisService.createSession(sessionId, user.id, 604800);
@@ -188,7 +187,6 @@ export class AuthService {
     // Agregar token a blacklist
     await this.redisService.blacklistToken(token, tokenTtl);
 
-    console.log('Cierre de sesión realizado');
     return { message: 'Logout exitoso' };
   }
 

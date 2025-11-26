@@ -10,11 +10,8 @@ import {
 } from 'class-validator';
 
 export enum TipoMateria {
-  SEMILLA = 'SEMILLA',
-  FERTILIZANTE = 'FERTILIZANTE',
-  PLAGUICIDA = 'PLAGUICIDA',
-  HERRAMIENTA = 'HERRAMIENTA',
-  OTRO = 'OTRO',
+  SOLIDO = 'solido',
+  LIQUIDO = 'liquido',
 }
 
 export class CreateInsumoDto {
@@ -28,21 +25,28 @@ export class CreateInsumoDto {
   @MaxLength(500, { message: 'La descripción no puede exceder 500 caracteres' })
   descripcion?: string;
 
-  @IsEnum(TipoMateria, { message: 'El tipo de materia debe ser: SEMILLA, FERTILIZANTE, PLAGUICIDA, HERRAMIENTA u OTRO' })
+  @IsEnum(TipoMateria, { message: 'El tipo de materia debe ser: solido o liquido' })
   tipoMateria: TipoMateria;
 
+  @IsOptional()
   @IsString({ message: 'La unidad de uso debe ser un texto válido' })
-  @IsNotEmpty({ message: 'La unidad de uso es requerida' })
   @MaxLength(20, { message: 'La unidad de uso no puede exceder 20 caracteres' })
-  unidadUso: string;
+  unidadUso?: string;
 
+  @IsOptional()
   @IsNumber({}, { message: 'El stock de uso debe ser un número válido' })
   @Min(0, { message: 'El stock de uso no puede ser negativo' })
-  stockUso: number;
+  stockUso?: number;
 
+  @IsOptional()
   @IsNumber({}, { message: 'El precio unitario de uso debe ser un número válido' })
   @Min(0, { message: 'El precio unitario de uso no puede ser negativo' })
-  precioUnitarioUso: number;
+  precioUnitarioUso?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El precio unitario de presentación debe ser un número válido' })
+  @Min(0, { message: 'El precio unitario de presentación no puede ser negativo' })
+  precioUnitarioPresentacion?: number;
 
   @IsOptional()
   @IsString({ message: 'La unidad de presentación debe ser un texto válido' })

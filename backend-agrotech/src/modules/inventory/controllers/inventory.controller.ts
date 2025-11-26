@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, Req, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, Req, UnauthorizedException, Query } from '@nestjs/common';
 import type { Request } from 'express';
 import { InventoryService } from '../services/inventory.service';
 import { CreateInsumoDto } from '../dtos/create-insumo.dto';
@@ -91,35 +91,54 @@ export class InventoryController {
 
   // ==================== MOVIMIENTOS ====================
 
-  // Internal method for WebSocket: handles creating a movimiento by calling the service
-  // Flow: Gateway calls this method -> calls inventoryService.createMovimiento -> returns created movimiento
-  async createMovimiento(data: any) {
+  @Post('movimientos')
+  @RequirePermissions('inventario.crear')
+  @UsePipes(new ValidationPipe())
+  async createMovimiento(@Body() data: any) {
     return this.inventoryService.createMovimiento(data);
   }
 
-  // Internal method for WebSocket: handles finding movimientos by insumo by calling the service
-  // Flow: Gateway calls this method -> calls inventoryService.findMovimientosByInsumo -> returns movimientos list
-  async findMovimientosByInsumo(insumoId: number) {
+  @Get('movimientos')
+  @RequirePermissions('inventario.ver')
+  async findMovimientosByInsumo(@Query('insumoId', ParseIntPipe) insumoId: number) {
     return this.inventoryService.findMovimientosByInsumo(insumoId);
   }
 
   // ==================== CATÁLOGOS ====================
 
-  // Internal method for WebSocket: handles finding all almacenes by calling the service
-  // Flow: Gateway calls this method -> calls inventoryService.findAllAlmacenes -> returns almacenes list
+  @Get('almacenes')
+  @RequirePermissions('inventario.ver')
   async findAllAlmacenes() {
     return this.inventoryService.findAllAlmacenes();
   }
 
-  // Internal method for WebSocket: handles finding all proveedores by calling the service
-  // Flow: Gateway calls this method -> calls inventoryService.findAllProveedores -> returns proveedores list
+  @Post('almacenes')
+  @RequirePermissions('inventario.crear')
+  async createAlmacen(@Body() data: { nombre: string; ubicacion?: string }) {
+    return this.inventoryService.createAlmacen(data);
+  }
+
+  @Get('proveedores')
+  @RequirePermissions('inventario.ver')
   async findAllProveedores() {
     return this.inventoryService.findAllProveedores();
   }
 
-  // Internal method for WebSocket: handles finding all categorias by calling the service
-  // Flow: Gateway calls this method -> calls inventoryService.findAllCategorias -> returns categorias list
+  @Post('proveedores')
+  @RequirePermissions('inventario.crear')
+  async createProveedor(@Body() data: { nombre: string; contacto?: string; telefono?: string }) {
+    return this.inventoryService.createProveedor(data);
+  }
+
+  @Get('categorias')
+  @RequirePermissions('inventario.ver')
   async findAllCategorias() {
     return this.inventoryService.findAllCategorias();
+  }
+
+  @Post('categorias')
+  @RequirePermissions('inventario.crear')
+  async createCategoria(@Body() data: { nombre: string; descripcion?: string }) {
+    return this.inventoryService.createCategoria(data);
   }
 }

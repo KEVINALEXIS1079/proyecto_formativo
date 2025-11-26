@@ -33,7 +33,7 @@ import { ReportsModule } from '../modules/reports/reports.module';
         password: configService.get<string>('config.database.password'),
         database: configService.get<string>('config.database.name'),
         entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-        synchronize: false, // Use migrations
+        synchronize: true, // Enabled to create schema since tables are missing
         autoLoadEntities: true,
       }),
       inject: [ConfigService],

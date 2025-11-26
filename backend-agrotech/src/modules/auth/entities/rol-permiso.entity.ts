@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
-import { Rol } from './rol.entity';
+import { Rol } from '../../users/entities/rol.entity';
 import { Permiso } from '../../users/entities/permiso.entity';
 
 @Entity('rol_permisos')

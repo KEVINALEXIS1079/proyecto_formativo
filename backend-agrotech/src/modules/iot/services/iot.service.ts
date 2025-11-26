@@ -31,13 +31,13 @@ export class IotService {
   
   // RF32: CRUD de sensores
   async findAllSensors() {
-    return this.sensorRepo.find({ relations: ['tipoSensor', 'lote', 'subLote'] });
+    return this.sensorRepo.find({ relations: ['tipoSensor', 'cultivo'] });
   }
 
   async findSensorById(id: number) {
     const sensor = await this.sensorRepo.findOne({ 
       where: { id }, 
-      relations: ['tipoSensor', 'lote', 'subLote'] 
+      relations: ['tipoSensor', 'cultivo'] 
     });
     if (!sensor) throw new NotFoundException(`Sensor ${id} not found`);
     return sensor;

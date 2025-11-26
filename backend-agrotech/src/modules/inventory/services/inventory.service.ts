@@ -21,23 +21,58 @@ export class InventoryService {
 
   // RF24: Crear insumo con cálculos automáticos
   async createInsumo(data: CreateInsumoDto, usuarioId: number) {
-    // Calcular factor de conversión si no se proporciona
-    const presentacionCantidad = data.presentacionCantidad || 1;
-    const presentacionUnidad = data.presentacionUnidad || data.unidadUso;
-    const factorConversionUso = data.factorConversionUso || presentacionCantidad;
+    // Determinar unidad de uso según tipo de materia
+    let unidadUso = data.unidadUso;
+    if (!unidadUso) {
+      unidadUso = data.tipoMateria === 'solido' ? 'g' : 'cm3';
+    }
+
+    // Calcular factor de conversión automático según tipo de materia y unidad de presentación
+    let factorConversionUso = data.factorConversionUso;
+    if (!factorConversionUso) {
+      const presentacionUnidad = (data.presentacionUnidad || '').toLowerCase();
+      const presentacionCantidad = data.presentacionCantidad || 1;
+
+      if (data.tipoMateria === 'solido') {
+        // Sólidos: convertir a gramos
+        if (presentacionUnidad === 'kg' || presentacionUnidad === 'kilogramo') {
+          factorConversionUso = presentacionCantidad * 1000; // 1 kg = 1000 g
+        } else if (presentacionUnidad === 'g' || presentacionUnidad === 'gramo') {
+          factorConversionUso = presentacionCantidad; // ya está en gramos
+        } else {
+          // Por defecto, asumir que la presentación ya está en gramos
+          factorConversionUso = presentacionCantidad;
+        }
+      } else if (data.tipoMateria === 'liquido') {
+        // Líquidos: convertir a cm³
+        if (presentacionUnidad === 'l' || presentacionUnidad === 'litro') {
+          factorConversionUso = presentacionCantidad * 1000; // 1 L = 1000 cm³
+        } else if (presentacionUnidad === 'ml' || presentacionUnidad === 'mililitro') {
+          factorConversionUso = presentacionCantidad; // 1 ml = 1 cm³
+        } else if (presentacionUnidad === 'cm3' || presentacionUnidad === 'cm³') {
+          factorConversionUso = presentacionCantidad; // ya está en cm³
+        } else {
+          // Por defecto, asumir que la presentación ya está en cm³
+          factorConversionUso = presentacionCantidad;
+        }
+      } else {
+        // Tipo de materia no especificado o desconocido
+        factorConversionUso = data.presentacionCantidad || 1;
+      }
+    }
 
     // Calcular stock y precio en unidad de uso
     const stockPresentacion = data.stockPresentacion || 0;
-    const stockUso = data.stockUso || (stockPresentacion * presentacionCantidad);
-    const precioUnitarioUso = data.precioUnitarioUso || 0;
+    const stockUso = stockPresentacion * factorConversionUso;
+    const precioUnitarioPresentacion = data.precioUnitarioPresentacion || 0;
+    const precioUnitarioUso = precioUnitarioPresentacion / factorConversionUso;
 
     // RF24: Calcular valorInventario
     const valorInventario = stockUso * precioUnitarioUso;
 
     const insumo = this.insumoRepo.create({
       ...data,
-      presentacionCantidad,
-      presentacionUnidad,
+      unidadUso,
       factorConversionUso,
       stockUso,
       stockPresentacion,

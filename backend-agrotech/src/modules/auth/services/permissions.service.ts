@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Rol } from '../entities/rol.entity';
+import { Rol } from '../../users/entities/rol.entity';
 import { Permiso } from '../../users/entities/permiso.entity';
 import { RolPermiso } from '../entities/rol-permiso.entity';
 import { UsuarioPermiso } from '../../users/entities/usuario-permiso.entity';

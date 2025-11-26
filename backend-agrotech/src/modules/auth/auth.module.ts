@@ -11,7 +11,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { Usuario } from '../users/entities/usuario.entity';
 import { EmailCode } from './entities/email-code.entity';
-import { Rol } from './entities/rol.entity';
+import { Rol } from '../users/entities/rol.entity';
 import { Permiso } from '../users/entities/permiso.entity';
 import { RolPermiso } from './entities/rol-permiso.entity';
 import { UsuarioPermiso } from '../users/entities/usuario-permiso.entity';

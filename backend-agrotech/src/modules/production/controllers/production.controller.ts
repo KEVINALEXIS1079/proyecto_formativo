@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, Req, Query } from '@nestjs/common';
 import { ProductionService } from '../services/production.service';
 import { CreateProductoAgroDto } from '../dtos/create-producto-agro.dto';
 import { CreateLoteProduccionDto } from '../dtos/create-lote-produccion.dto';
@@ -14,24 +14,24 @@ export class ProductionController {
 
   // ==================== PRODUCTO AGRO ====================
 
-  // Internal method for WebSocket: handles finding all products by calling the service
-  // Flow: Gateway calls this method -> calls productionService.findAllProductos -> returns product list
+  @Get('productos')
+  @RequirePermissions('produccion.ver')
   async findAllProductos() {
     return this.productionService.findAllProductos();
   }
 
-  // Internal method for WebSocket: handles creating a product by calling the service
-  // Flow: Gateway calls this method -> calls productionService.createProducto -> returns created product
+  @Post('productos')
+  @RequirePermissions('produccion.crear')
   @UsePipes(new ValidationPipe())
-  async createProducto(createProductoDto: CreateProductoAgroDto) {
+  async createProducto(@Body() createProductoDto: CreateProductoAgroDto) {
     return this.productionService.createProducto(createProductoDto);
   }
 
   // ==================== LOTES PRODUCCION ====================
 
-  // Internal method for WebSocket: handles finding all production lots with filters by calling the service
-  // Flow: Gateway calls this method -> calls productionService.findAllLotesProduccion -> returns lot list
-  async findAllLotesProduccion(filters?: { productoAgroId?: number; cultivoId?: number }) {
+  @Get('lotes-produccion')
+  @RequirePermissions('produccion.ver')
+  async findAllLotesProduccion(@Query() filters?: { productoAgroId?: number; cultivoId?: number }) {
     return this.productionService.findAllLotesProduccion(filters);
   }
 
@@ -40,12 +40,6 @@ export class ProductionController {
   @UsePipes(new ValidationPipe())
   async createLoteProduccionHttp(@Body() dto: CreateLoteProduccionDto) {
     return this.productionService.createLoteProduccion(dto);
-  }
-
-  @Get('lotes-produccion')
-  @RequirePermissions('produccion.ver')
-  async findAllLotesProduccionHttp() {
-    return this.productionService.findAllLotesProduccion();
   }
 
   @Get('lotes-produccion/:id')
@@ -69,42 +63,44 @@ export class ProductionController {
 
   // ==================== VENTAS ====================
 
-  // Internal method for WebSocket: handles creating a sale by calling the service
-  // Flow: Gateway calls this method -> calls productionService.createVenta -> returns created sale
+  @Post('ventas')
+  @RequirePermissions('ventas.crear')
   @UsePipes(new ValidationPipe())
-  async createVenta(data: { clienteId?: number; detalles: Array<{ loteProduccionId: number; cantidadKg: number; precioUnitarioKg: number }>; pagos: Array<{ metodoPago: string; monto: number }> }, userId: number) {
+  async createVenta(@Body() data: { clienteId?: number; detalles: Array<{ loteProduccionId: number; cantidadKg: number; precioUnitarioKg: number }>; pagos: Array<{ metodoPago: string; monto: number }> }, @Req() req: any) {
+    const userId = req.user.id;
     return this.productionService.createVenta({ ...data, usuarioId: userId });
   }
 
-  // Internal method for WebSocket: handles finding all sales with filters by calling the service
-  // Flow: Gateway calls this method -> calls productionService.findAllVentas -> returns sale list
-  async findAllVentas(filters?: { clienteId?: number; fechaInicio?: Date; fechaFin?: Date }) {
+  @Get('ventas')
+  @RequirePermissions('ventas.ver')
+  async findAllVentas(@Query() filters?: { clienteId?: number; fechaInicio?: Date; fechaFin?: Date }) {
     return this.productionService.findAllVentas(filters);
   }
 
-  // Internal method for WebSocket: handles finding a sale by ID by calling the service
-  // Flow: Gateway calls this method -> calls productionService.findVentaById -> returns sale
-  async findVentaById(id: number) {
+  @Get('ventas/:id')
+  @RequirePermissions('ventas.ver')
+  async findVentaById(@Param('id', ParseIntPipe) id: number) {
     return this.productionService.findVentaById(id);
   }
 
-  // Internal method for WebSocket: handles canceling a sale by calling the service
-  // Flow: Gateway calls this method -> calls productionService.anularVenta -> returns canceled sale
-  async anularVenta(ventaId: number, userId: number) {
+  @Post('ventas/:id/anular')
+  @RequirePermissions('ventas.anular')
+  async anularVenta(@Param('id', ParseIntPipe) ventaId: number, @Req() req: any) {
+    const userId = req.user.id;
     return this.productionService.anularVenta(ventaId, userId);
   }
 
   // ==================== CLIENTES ====================
 
-  // Internal method for WebSocket: handles finding all clients by calling the service
-  // Flow: Gateway calls this method -> calls productionService.findAllClientes -> returns client list
+  @Get('clientes')
+  @RequirePermissions('ventas.ver')
   async findAllClientes() {
     return this.productionService.findAllClientes();
   }
 
-  // Internal method for WebSocket: handles creating a client by calling the service
-  // Flow: Gateway calls this method -> calls productionService.createCliente -> returns created client
-  async createCliente(data: { nombre: string; identificacion?: string; telefono?: string; correo?: string }) {
+  @Post('clientes')
+  @RequirePermissions('ventas.crear')
+  async createCliente(@Body() data: { nombre: string; identificacion?: string; telefono?: string; correo?: string }) {
     return this.productionService.createCliente(data);
   }
 }

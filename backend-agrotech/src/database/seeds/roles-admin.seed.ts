@@ -1,11 +1,15 @@
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Rol } from '../../modules/auth/entities/rol.entity';
+import { Rol } from '../../modules/users/entities/rol.entity';
 import { Usuario } from '../../modules/users/entities/usuario.entity';
+import { Permiso } from '../../modules/users/entities/permiso.entity';
+import { RolPermiso } from '../../modules/auth/entities/rol-permiso.entity';
 
 export async function seedRolesAndAdmin(dataSource: DataSource) {
   const rolRepo = dataSource.getRepository(Rol);
   const usuarioRepo = dataSource.getRepository(Usuario);
+  const permisoRepo = dataSource.getRepository(Permiso);
+  const rolPermisoRepo = dataSource.getRepository(RolPermiso);
 
   console.log('Ejecutando seed de roles y admin...');
 
@@ -31,6 +35,23 @@ export async function seedRolesAndAdmin(dataSource: DataSource) {
 
   if (rolesCreated === 0) {
     console.log('Roles ya existen, omitiendo...');
+  }
+
+  // Asignar TODOS los permisos al rol Administrador
+  const allPermisos = await permisoRepo.find();
+  if (allPermisos.length > 0) {
+    let permisosAsignados = 0;
+    for (const permiso of allPermisos) {
+      const existing = await rolPermisoRepo.findOne({
+        where: { rolId: 1, permisoId: permiso.id },
+      });
+
+      if (!existing) {
+        await rolPermisoRepo.save({ rolId: 1, permisoId: permiso.id });
+        permisosAsignados++;
+      }
+    }
+    console.log(`Se asignaron ${permisosAsignados} nuevos permisos al Administrador`);
   }
 
   // Crear usuario admin (solo si no existe)
