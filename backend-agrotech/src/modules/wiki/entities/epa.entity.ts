@@ -19,22 +19,22 @@ export class EPA extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   manejoYControl: string;
 
-  @Column('simple-array', { nullable: true })
+  @Column('int', { array: true, nullable: true })
   mesesProbables: number[];
 
-  @Column('simple-array', { nullable: true })
+  @Column('text', { array: true, nullable: true })
   temporadas: string[];
 
   @Column({ type: 'text', nullable: true })
   notasEstacionalidad: string;
 
-  @Column('simple-array', { nullable: true })
+  @Column('text', { array: true, nullable: true })
   fotosSintomas: string[];
 
-  @Column('simple-array', { nullable: true })
+  @Column('text', { array: true, nullable: true })
   fotosGenerales: string[];
 
-  @Column('simple-array', { nullable: true })
+  @Column('text', { array: true, nullable: true })
   tags: string[];
 
   @Column()

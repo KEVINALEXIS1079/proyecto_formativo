@@ -1,4 +1,4 @@
-import { IsNumber, IsNotEmpty, IsDateString, IsOptional } from 'class-validator';
+import { IsNumber, IsNotEmpty, IsDateString, IsOptional, IsString } from 'class-validator';
 
 export class CreateLoteProduccionDto {
   @IsNumber()
@@ -20,4 +20,12 @@ export class CreateLoteProduccionDto {
   @IsDateString()
   @IsOptional()
   fechaVencimiento?: Date;
+
+  @IsNumber()
+  @IsOptional()
+  actividadCosechaId?: number;
+
+  @IsString()
+  @IsOptional()
+  calidad?: string;
 }

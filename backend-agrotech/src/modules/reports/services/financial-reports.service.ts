@@ -7,6 +7,7 @@ import { Actividad } from '../../activities/entities/actividad.entity';
 import { ActividadServicio } from '../../activities/entities/actividad-servicio.entity';
 import { ActividadInsumoUso } from '../../activities/entities/actividad-insumo-uso.entity';
 import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { CsvExportService } from './csv-export.service';
 
 @Injectable()
 export class FinancialReportsService {
@@ -17,6 +18,7 @@ export class FinancialReportsService {
     @InjectRepository(ActividadServicio) private servicioRepo: Repository<ActividadServicio>,
     @InjectRepository(ActividadInsumoUso) private insumoUsoRepo: Repository<ActividadInsumoUso>,
     @InjectRepository(Cultivo) private cultivoRepo: Repository<Cultivo>,
+    private csvService: CsvExportService,
   ) {}
 
   // RF41: Reporte de Ventas
@@ -106,6 +108,18 @@ export class FinancialReportsService {
     }
 
     return query.getRawMany();
+  }
+
+  async getSalesReportCsv(filters: any): Promise<string> {
+    const report = await this.getSalesReport(filters);
+    const data = report.data.map(v => ({
+      id: v.id,
+      fecha: v.fecha,
+      cliente: v.cliente?.nombre || 'Mostrador',
+      total: v.total,
+      estado: v.estado
+    }));
+    return this.csvService.generateCsv(data, ['id', 'fecha', 'cliente', 'total', 'estado']);
   }
 
   // RF43: Rentabilidad por Cultivo

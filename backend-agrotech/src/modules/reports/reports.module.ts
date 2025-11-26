@@ -6,6 +6,7 @@ import { CropReportsService } from './services/crop-reports.service';
 import { CropReportsController } from './controllers/crop-reports.controller';
 import { IotReportsService } from './services/iot-reports.service';
 import { IotReportsController } from './controllers/iot-reports.controller';
+import { CsvExportService } from './services/csv-export.service';
 import { Venta } from '../production/entities/venta.entity';
 import { VentaDetalle } from '../production/entities/venta-detalle.entity';
 import { Actividad } from '../activities/entities/actividad.entity';
@@ -16,9 +17,11 @@ import { MovimientoInsumo } from '../inventory/entities/movimiento-insumo.entity
 import { Cultivo } from '../geo/entities/cultivo.entity';
 import { Sensor } from '../iot/entities/sensor.entity';
 import { SensorLectura } from '../iot/entities/sensor-lectura.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       Venta,
       VentaDetalle,
@@ -33,7 +36,7 @@ import { SensorLectura } from '../iot/entities/sensor-lectura.entity';
     ])
   ],
   controllers: [FinancialReportsController, CropReportsController, IotReportsController],
-  providers: [FinancialReportsService, CropReportsService, IotReportsService],
-  exports: [FinancialReportsService, CropReportsService, IotReportsService]
+  providers: [FinancialReportsService, CropReportsService, IotReportsService, CsvExportService],
+  exports: [FinancialReportsService, CropReportsService, IotReportsService, CsvExportService]
 })
 export class ReportsModule {}

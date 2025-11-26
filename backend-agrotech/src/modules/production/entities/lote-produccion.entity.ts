@@ -21,6 +21,9 @@ export class LoteProduccion extends BaseEntity {
   @Column({ nullable: true })
   actividadCosechaId: number;
 
+  @Column({ default: 'Segunda' }) // Primera, Segunda, Tercera
+  calidad: string;
+
   @Column('float')
   cantidadKg: number;
 

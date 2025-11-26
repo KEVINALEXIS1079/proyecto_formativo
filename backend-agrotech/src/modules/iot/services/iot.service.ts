@@ -104,15 +104,16 @@ export class IotService {
   private async updateSensorEstado(sensor: Sensor, valor: number) {
     const now = new Date();
     sensor.ultimaLectura = now;
-    sensor.estadoConexion = 'conectado';
+    sensor.lastSeenAt = now;
+    sensor.estadoConexion = 'CONECTADO';
     
     // Validar umbrales si están configurados
     if (sensor.umbralMin !== null && valor < sensor.umbralMin) {
-      sensor.estadoConexion = 'alerta_min';
+      sensor.estadoConexion = 'ALERTA_MIN';
     }
     
     if (sensor.umbralMax !== null && valor > sensor.umbralMax) {
-      sensor.estadoConexion = 'alerta_max';
+      sensor.estadoConexion = 'ALERTA_MAX';
     }
     
     await this.sensorRepo.save(sensor);

@@ -12,6 +12,7 @@ import { VerificationService } from '../../../common/services/verification.servi
 import { RegisterDto } from '../dtos/register.dto';
 import { VerifyEmailDto } from '../dtos/verify-email.dto';
 import { RequestResetDto, ResetPasswordDto } from '../dtos/reset-password.dto';
+import { ROLES } from '../../../common/constants/roles.constants';
 
 @Injectable()
 export class AuthService {
@@ -54,7 +55,7 @@ export class AuthService {
       telefono: registerDto.telefono,
       correo: registerDto.correo,
       passwordHash,
-      rolId: 5, // Invitado - esto debe venir de un seed
+      rolId: ROLES.INVITADO,
       estado: 'pendiente_verificacion',
     });
 

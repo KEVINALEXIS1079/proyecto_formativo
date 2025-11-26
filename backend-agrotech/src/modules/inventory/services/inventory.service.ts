@@ -217,10 +217,13 @@ export class InventoryService {
     // Si el movimiento afecta el precio, recalcular precioUnitarioUso
     if (data.tipo === 'INGRESO' || data.tipo === 'INGRESO_COMPRA') {
       // Recalcular precio promedio ponderado si hay nuevo ingreso con costo
+      // Recalcular precio promedio ponderado si hay nuevo ingreso con costo
       if (data.costoUnitarioUso && data.costoUnitarioUso > 0) {
-        const valorAnterior = insumo.stockUso * insumo.precioUnitarioUso;
+        // El stockUso ya fue actualizado arriba, así que restamos la cantidad actual para obtener el anterior
+        const stockAnterior = insumo.stockUso - data.cantidadUso;
+        const valorAnterior = stockAnterior * insumo.precioUnitarioUso;
         const valorNuevo = data.cantidadUso * data.costoUnitarioUso;
-        const stockTotal = insumo.stockUso + data.cantidadUso;
+        const stockTotal = insumo.stockUso; // Ya actualizado
         
         if (stockTotal > 0) {
           insumo.precioUnitarioUso = (valorAnterior + valorNuevo) / stockTotal;

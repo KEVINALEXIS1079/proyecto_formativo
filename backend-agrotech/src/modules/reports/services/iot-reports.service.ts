@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Sensor } from '../../iot/entities/sensor.entity';
 import { SensorLectura } from '../../iot/entities/sensor-lectura.entity';
 import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { CsvExportService } from './csv-export.service';
 
 @Injectable()
 export class IotReportsService {
@@ -11,6 +12,7 @@ export class IotReportsService {
     @InjectRepository(Sensor) private sensorRepo: Repository<Sensor>,
     @InjectRepository(SensorLectura) private lecturaRepo: Repository<SensorLectura>,
     @InjectRepository(Cultivo) private cultivoRepo: Repository<Cultivo>,
+    private csvService: CsvExportService,
   ) {}
 
   // RF44-RF46: Agregaciones de lecturas
@@ -160,5 +162,61 @@ export class IotReportsService {
       alertasActivas: alertas,
       timestamp: new Date()
     };
+  }
+
+
+  // RF50: Comparativa de sensores
+  async getSensorComparison(filters: {
+    tipoSensorId?: number;
+    cultivoId?: number;
+    from?: Date;
+    to?: Date;
+    metric: 'avg' | 'min' | 'max';
+    limit?: number;
+  }) {
+    const metricFunc = filters.metric === 'min' ? 'MIN' : filters.metric === 'max' ? 'MAX' : 'AVG';
+    
+    const query = this.lecturaRepo.createQueryBuilder('lectura')
+      .leftJoin('lectura.sensor', 'sensor')
+      .select('sensor.id', 'sensorId')
+      .addSelect('sensor.nombre', 'nombreSensor')
+      .addSelect(`${metricFunc}(lectura.valor)`, 'value')
+      .groupBy('sensor.id')
+      .addGroupBy('sensor.nombre')
+      .orderBy('value', 'DESC');
+
+    if (filters.limit) {
+      query.limit(filters.limit);
+    }
+
+    if (filters.tipoSensorId) {
+      query.andWhere('sensor.tipoSensorId = :tipoId', { tipoId: filters.tipoSensorId });
+    }
+    if (filters.cultivoId) {
+      query.andWhere('sensor.cultivoId = :cultId', { cultId: filters.cultivoId });
+    }
+    if (filters.from) {
+      query.andWhere('lectura.fecha >= :from', { from: filters.from });
+    }
+    if (filters.to) {
+      query.andWhere('lectura.fecha <= :to', { to: filters.to });
+    }
+
+    return query.getRawMany();
+  }
+
+  async getIotReportCsv(type: 'aggregation' | 'comparison', filters: any): Promise<string> {
+    let data = [];
+    let columns = [];
+
+    if (type === 'aggregation') {
+      data = await this.getSensorAggregations(filters);
+      columns = ['timeBucket', 'avg', 'min', 'max', 'count'];
+    } else {
+      data = await this.getSensorComparison(filters as any);
+      columns = ['sensorId', 'nombreSensor', 'value'];
+    }
+
+    return this.csvService.generateCsv(data, columns);
   }
 }

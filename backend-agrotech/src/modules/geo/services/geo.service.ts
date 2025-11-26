@@ -330,29 +330,30 @@ const existingCultivo = await this.cultivoRepo.findOne({ where });
   // RF11: Verificar si hay solapamiento con otros sublotes
   private async checkOverlaps(loteId: number, geom: any, excludeId?: number): Promise<boolean> {
     try {
-      const sublotes = await this.subLoteRepo.find({ where: { loteId } });
+      let query = `
+        SELECT EXISTS (
+          SELECT 1 
+          FROM sublotes 
+          WHERE "loteId" = $1 
+          AND ST_Overlaps(ST_GeomFromGeoJSON($2), ST_GeomFromGeoJSON(geom::json))
+      `;
       
-      for (const sublote of sublotes) {
-        // Excluir el sublote actual si se está actualizando
-        if (excludeId && sublote.id === excludeId) continue;
-        
-        const result = await this.loteRepo.query(
-          `SELECT ST_Overlaps(
-            ST_GeomFromGeoJSON($1),
-            ST_GeomFromGeoJSON($2)
-          ) as overlaps`,
-          [JSON.stringify(geom), JSON.stringify(sublote.geom)]
-        );
-        
-        if (result[0]?.overlaps === true) {
-          return true;
-        }
+      const params: any[] = [loteId, JSON.stringify(geom)];
+
+      if (excludeId) {
+        query += ` AND id != $3`;
+        params.push(excludeId);
       }
-      
-      return false;
+
+      query += `)`;
+
+      const result = await this.loteRepo.query(query, params);
+      return result[0]?.exists === true;
     } catch (error) {
       console.error('Error checking overlaps:', error);
-      return false;
+      // En caso de error de DB, asumimos que hay solape para prevenir inconsistencias
+      // o lanzamos excepción. Por seguridad, retornamos true (bloqueante).
+      return true;
     }
   }
 }

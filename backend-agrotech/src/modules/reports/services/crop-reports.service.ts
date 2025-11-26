@@ -6,6 +6,7 @@ import { ActividadResponsable } from '../../activities/entities/actividad-respon
 import { ActividadInsumoUso } from '../../activities/entities/actividad-insumo-uso.entity';
 import { MovimientoInsumo } from '../../inventory/entities/movimiento-insumo.entity';
 import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { CsvExportService } from './csv-export.service';
 
 @Injectable()
 export class CropReportsService {
@@ -15,6 +16,7 @@ export class CropReportsService {
     @InjectRepository(ActividadInsumoUso) private insumoUsoRepo: Repository<ActividadInsumoUso>,
     @InjectRepository(MovimientoInsumo) private movimientoRepo: Repository<MovimientoInsumo>,
     @InjectRepository(Cultivo) private cultivoRepo: Repository<Cultivo>,
+    private csvService: CsvExportService,
   ) {}
 
   // RF52: Resumen Histórico del Cultivo
@@ -184,5 +186,98 @@ export class CropReportsService {
       esCoherente: diferencias.length === 0,
       diferencias
     };
+  }
+
+
+  // RF54: Horas invertidas por periodo
+  async getHoursByPeriod(cultivoId: number, granularity: 'day' | 'week' | 'month' = 'week') {
+    const query = this.actividadRepo.createQueryBuilder('actividad')
+      .where('actividad.cultivoId = :cultivoId', { cultivoId })
+      .select('SUM(actividad.horasActividad)', 'totalHoras')
+      .addSelect('COUNT(*)', 'count');
+
+    if (granularity === 'day') {
+      query.addSelect("DATE(actividad.fecha)", 'period').groupBy("DATE(actividad.fecha)");
+    } else if (granularity === 'month') {
+      query.addSelect("TO_CHAR(actividad.fecha, 'YYYY-MM')", 'period').groupBy("TO_CHAR(actividad.fecha, 'YYYY-MM')");
+    } else {
+      query.addSelect("DATE_TRUNC('week', actividad.fecha)", 'period').groupBy("DATE_TRUNC('week', actividad.fecha)");
+    }
+
+    return query.orderBy('period', 'ASC').getRawMany();
+  }
+
+  // RF57: Consumo de insumos por periodo
+  async getInsumosByPeriod(cultivoId: number, granularity: 'day' | 'week' | 'month' = 'week') {
+    const query = this.insumoUsoRepo.createQueryBuilder('uso')
+      .leftJoin('uso.actividad', 'actividad')
+      .where('actividad.cultivoId = :cultivoId', { cultivoId })
+      .select('SUM(uso.costoTotal)', 'costoTotal')
+      .addSelect('SUM(uso.cantidadUso)', 'cantidadTotal');
+
+    if (granularity === 'day') {
+      query.addSelect("DATE(actividad.fecha)", 'period').groupBy("DATE(actividad.fecha)");
+    } else if (granularity === 'month') {
+      query.addSelect("TO_CHAR(actividad.fecha, 'YYYY-MM')", 'period').groupBy("TO_CHAR(actividad.fecha, 'YYYY-MM')");
+    } else {
+      query.addSelect("DATE_TRUNC('week', actividad.fecha)", 'period').groupBy("DATE_TRUNC('week', actividad.fecha)");
+    }
+
+    return query.orderBy('period', 'ASC').getRawMany();
+  }
+
+  // RF58: Detalle de actividades con costos
+  async getActivityDetails(cultivoId: number) {
+    return this.actividadRepo.createQueryBuilder('actividad')
+      .leftJoinAndSelect('actividad.servicios', 'servicios')
+      .leftJoinAndSelect('actividad.insumosUso', 'insumos')
+      .where('actividad.cultivoId = :cultivoId', { cultivoId })
+      .orderBy('actividad.fecha', 'DESC')
+      .getMany()
+      .then(actividades => actividades.map(a => {
+        const costoServicios = a.servicios?.reduce((sum, s) => sum + Number(s.costo), 0) || 0;
+        const costoInsumos = a.insumosUso?.reduce((sum, i) => sum + Number(i.costoTotal), 0) || 0;
+        const costoMO = Number(a.costoManoObra) || 0;
+        return {
+          id: a.id,
+          fecha: a.fecha,
+          tipo: a.tipo,
+          subtipo: a.subtipo,
+          horas: a.horasActividad,
+          costoMO,
+          costoServicios,
+          costoInsumos,
+          costoTotal: costoMO + costoServicios + costoInsumos
+        };
+      }));
+  }
+
+  // RF60: Exportación CSV
+  async getCropHistoryCsv(cultivoId: number, type: 'summary' | 'activities' | 'insumos'): Promise<string> {
+    let data = [];
+    let columns = [];
+
+    if (type === 'activities') {
+      data = await this.getActivityDetails(cultivoId);
+      columns = ['id', 'fecha', 'tipo', 'subtipo', 'horas', 'costoMO', 'costoServicios', 'costoInsumos', 'costoTotal'];
+    } else if (type === 'insumos') {
+      data = await this.getInputStats(cultivoId);
+      columns = ['nombreInsumo', 'unidad', 'cantidadTotal', 'costoTotal', 'numActividades'];
+    } else {
+      // Summary
+      const summary = await this.getCropSummary(cultivoId);
+      data = [{
+        cultivo: summary.cultivo.nombre,
+        actividades: summary.resumen.totalActividades,
+        horas: summary.resumen.totalHoras,
+        costoMO: summary.resumen.costos.manoObra,
+        costoServicios: summary.resumen.costos.servicios,
+        costoInsumos: summary.resumen.costos.insumos,
+        total: summary.resumen.costos.total
+      }];
+      columns = ['cultivo', 'actividades', 'horas', 'costoMO', 'costoServicios', 'costoInsumos', 'total'];
+    }
+
+    return this.csvService.generateCsv(data, columns);
   }
 }
