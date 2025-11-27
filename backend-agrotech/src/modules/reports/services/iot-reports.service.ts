@@ -10,7 +10,8 @@ import { CsvExportService } from './csv-export.service';
 export class IotReportsService {
   constructor(
     @InjectRepository(Sensor) private sensorRepo: Repository<Sensor>,
-    @InjectRepository(SensorLectura) private lecturaRepo: Repository<SensorLectura>,
+    @InjectRepository(SensorLectura)
+    private lecturaRepo: Repository<SensorLectura>,
     @InjectRepository(Cultivo) private cultivoRepo: Repository<Cultivo>,
     private csvService: CsvExportService,
   ) {}
@@ -23,7 +24,8 @@ export class IotReportsService {
     to?: Date;
     interval?: 'hour' | 'day' | 'week';
   }) {
-    const query = this.lecturaRepo.createQueryBuilder('lectura')
+    const query = this.lecturaRepo
+      .createQueryBuilder('lectura')
       .leftJoin('lectura.sensor', 'sensor')
       .select('AVG(lectura.valor)', 'avg')
       .addSelect('MIN(lectura.valor)', 'min')
@@ -32,25 +34,32 @@ export class IotReportsService {
 
     // Intervalo de tiempo para agrupación
     if (filters.interval === 'hour') {
-      query.addSelect("DATE_TRUNC('hour', lectura.fecha)", 'timeBucket')
-           .groupBy("DATE_TRUNC('hour', lectura.fecha)");
+      query
+        .addSelect("DATE_TRUNC('hour', lectura.fecha)", 'time_bucket')
+        .groupBy("DATE_TRUNC('hour', lectura.fecha)");
     } else if (filters.interval === 'week') {
-      query.addSelect("DATE_TRUNC('week', lectura.fecha)", 'timeBucket')
-           .groupBy("DATE_TRUNC('week', lectura.fecha)");
+      query
+        .addSelect("DATE_TRUNC('week', lectura.fecha)", 'time_bucket')
+        .groupBy("DATE_TRUNC('week', lectura.fecha)");
     } else {
       // Default day
-      query.addSelect("DATE(lectura.fecha)", 'timeBucket')
-           .groupBy("DATE(lectura.fecha)");
+      query
+        .addSelect('DATE(lectura.fecha)', 'time_bucket')
+        .groupBy('DATE(lectura.fecha)');
     }
 
-    query.orderBy('timeBucket', 'ASC');
+    query.orderBy('time_bucket', 'ASC');
 
     if (filters.sensorId) {
-      query.andWhere('lectura.sensorId = :sensorId', { sensorId: filters.sensorId });
+      query.andWhere('lectura.sensorId = :sensorId', {
+        sensorId: filters.sensorId,
+      });
     }
 
     if (filters.cultivoId) {
-      query.andWhere('sensor.cultivoId = :cultivoId', { cultivoId: filters.cultivoId });
+      query.andWhere('sensor.cultivoId = :cultivoId', {
+        cultivoId: filters.cultivoId,
+      });
     }
 
     if (filters.from) {
@@ -74,8 +83,9 @@ export class IotReportsService {
     }
 
     const totalLecturas = await this.lecturaRepo.count({ where: { sensorId } });
-    
-    const query = this.lecturaRepo.createQueryBuilder('lectura')
+
+    const query = this.lecturaRepo
+      .createQueryBuilder('lectura')
       .where('lectura.sensorId = :sensorId', { sensorId });
 
     const conditions = [];
@@ -91,14 +101,15 @@ export class IotReportsService {
     }
 
     const fueraDeRango = await query.getCount();
-    const porcentaje = totalLecturas > 0 ? (fueraDeRango / totalLecturas) * 100 : 0;
+    const porcentaje =
+      totalLecturas > 0 ? (fueraDeRango / totalLecturas) * 100 : 0;
 
     return {
       sensorId,
       totalLecturas,
       fueraDeRango,
       porcentaje: parseFloat(porcentaje.toFixed(2)),
-      umbrales: { min: sensor.umbralMin, max: sensor.umbralMax }
+      umbrales: { min: sensor.umbralMin, max: sensor.umbralMax },
     };
   }
 
@@ -106,9 +117,9 @@ export class IotReportsService {
   // Calculado como % de tiempo que el sensor ha estado reportando vs tiempo total esperado
   // Simplificación: Basado en la última vez visto vs ahora
   async getUptimeStats(sensorId: number) {
-    const sensor = await this.sensorRepo.findOne({ 
+    const sensor = await this.sensorRepo.findOne({
       where: { id: sensorId },
-      relations: ['tipoSensor']
+      relations: ['tipoSensor'],
     });
     if (!sensor) throw new NotFoundException('Sensor no encontrado');
 
@@ -118,7 +129,7 @@ export class IotReportsService {
     const now = new Date().getTime();
     const lastSeen = new Date(sensor.lastSeenAt).getTime();
     const diffMinutes = (now - lastSeen) / (1000 * 60);
-    
+
     // TTL esperado (default 5 min)
     const ttl = sensor.tipoSensor?.ttlMinutos || 5;
 
@@ -132,7 +143,7 @@ export class IotReportsService {
       isOnline,
       lastSeenAt: sensor.lastSeenAt,
       minutesSinceLastSeen: Math.round(diffMinutes),
-      ttlExpected: ttl
+      ttlExpected: ttl,
     };
   }
 
@@ -142,17 +153,20 @@ export class IotReportsService {
       where: { sensorId },
       order: { fecha: 'DESC' },
       take: limit,
-      select: ['fecha', 'valor']
+      select: ['fecha', 'valor'],
     });
   }
 
   // RF50: Dashboard General
   async getDashboardStats() {
     const totalSensores = await this.sensorRepo.count();
-    const sensoresActivos = await this.sensorRepo.count({ where: { activo: true } });
-    
+    const sensoresActivos = await this.sensorRepo.count({
+      where: { activo: true },
+    });
+
     // Sensores con alertas (estadoConexion contiene 'alerta')
-    const alertas = await this.sensorRepo.createQueryBuilder('sensor')
+    const alertas = await this.sensorRepo
+      .createQueryBuilder('sensor')
       .where('sensor.estadoConexion LIKE :alerta', { alerta: '%alerta%' })
       .getCount();
 
@@ -160,10 +174,9 @@ export class IotReportsService {
       totalSensores,
       sensoresActivos,
       alertasActivas: alertas,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
-
 
   // RF50: Comparativa de sensores
   async getSensorComparison(filters: {
@@ -174,9 +187,15 @@ export class IotReportsService {
     metric: 'avg' | 'min' | 'max';
     limit?: number;
   }) {
-    const metricFunc = filters.metric === 'min' ? 'MIN' : filters.metric === 'max' ? 'MAX' : 'AVG';
-    
-    const query = this.lecturaRepo.createQueryBuilder('lectura')
+    const metricFunc =
+      filters.metric === 'min'
+        ? 'MIN'
+        : filters.metric === 'max'
+          ? 'MAX'
+          : 'AVG';
+
+    const query = this.lecturaRepo
+      .createQueryBuilder('lectura')
       .leftJoin('lectura.sensor', 'sensor')
       .select('sensor.id', 'sensorId')
       .addSelect('sensor.nombre', 'nombreSensor')
@@ -190,10 +209,14 @@ export class IotReportsService {
     }
 
     if (filters.tipoSensorId) {
-      query.andWhere('sensor.tipoSensorId = :tipoId', { tipoId: filters.tipoSensorId });
+      query.andWhere('sensor.tipoSensorId = :tipoId', {
+        tipoId: filters.tipoSensorId,
+      });
     }
     if (filters.cultivoId) {
-      query.andWhere('sensor.cultivoId = :cultId', { cultId: filters.cultivoId });
+      query.andWhere('sensor.cultivoId = :cultId', {
+        cultId: filters.cultivoId,
+      });
     }
     if (filters.from) {
       query.andWhere('lectura.fecha >= :from', { from: filters.from });
@@ -205,13 +228,16 @@ export class IotReportsService {
     return query.getRawMany();
   }
 
-  async getIotReportCsv(type: 'aggregation' | 'comparison', filters: any): Promise<string> {
+  async getIotReportCsv(
+    type: 'aggregation' | 'comparison',
+    filters: any,
+  ): Promise<string> {
     let data = [];
     let columns = [];
 
     if (type === 'aggregation') {
       data = await this.getSensorAggregations(filters);
-      columns = ['timeBucket', 'avg', 'min', 'max', 'count'];
+      columns = ['time_bucket', 'avg', 'min', 'max', 'count'];
     } else {
       data = await this.getSensorComparison(filters as any);
       columns = ['sensorId', 'nombreSensor', 'value'];

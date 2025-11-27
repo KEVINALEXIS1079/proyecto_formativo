@@ -1,8 +1,19 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, ConnectedSocket } from '@nestjs/websockets';
+import {
+  WebSocketGateway,
+  SubscribeMessage,
+  MessageBody,
+  WebSocketServer,
+  ConnectedSocket,
+} from '@nestjs/websockets';
 import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { IotController } from '../controllers/iot.controller';
-import { IotCreateSensorDoDto, IotRemoveSensorDoDto, IotFindAllLecturasDoDto, IotCreateLecturaDoDto } from '../dtos/iot-do.dto';
+import { IotService } from '../services/iot.service';
+import {
+  IotCreateSensorDoDto,
+  IotRemoveSensorDoDto,
+  IotFindAllLecturasDoDto,
+  IotCreateLecturaDoDto,
+} from '../dtos/iot-do.dto';
 import { WsJwtGuard } from '../../../common/guards/ws-jwt.guard';
 import { WsPermissionsGuard } from '../../../common/guards/ws-permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -14,12 +25,12 @@ export class IotGateway {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly iotController: IotController) {}
+  constructor(private readonly iotService: IotService) {}
 
   @SubscribeMessage('findAllSensors')
   @RequirePermissions('iot.ver')
   async findAllSensors(@ConnectedSocket() client: Socket) {
-    const result = await this.iotController.findAllSensors();
+    const result = await this.iotService.findAllSensors();
     client.emit('findAllSensors.result', result);
     return result;
   }
@@ -32,23 +43,29 @@ export class IotGateway {
     @WsCurrentUser() user: any,
     @ConnectedSocket() client: Socket,
   ) {
-    const result = await this.iotController.createSensor(createSensorDto, user.id);
+    const result = await this.iotService.createSensor(createSensorDto, user.id);
     client.emit('createSensor.result', result);
     return result;
   }
 
   @SubscribeMessage('removeSensor')
   @RequirePermissions('iot.eliminar')
-  async removeSensor(@MessageBody() data: IotRemoveSensorDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.iotController.removeSensor(data);
+  async removeSensor(
+    @MessageBody() data: IotRemoveSensorDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.iotService.removeSensor(data.id);
     client.emit('removeSensor.result', result);
     return result;
   }
 
   @SubscribeMessage('findAllLecturas')
   @RequirePermissions('iot.ver')
-  async findAllLecturas(@MessageBody() data: IotFindAllLecturasDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.iotController.findAllLecturas(data);
+  async findAllLecturas(
+    @MessageBody() data: IotFindAllLecturasDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.iotService.findAllLecturas(data.sensorId);
     client.emit('findAllLecturas.result', result);
     return result;
   }
@@ -56,9 +73,12 @@ export class IotGateway {
   @SubscribeMessage('createLectura')
   @RequirePermissions('iot.crear')
   @UsePipes(new ValidationPipe())
-  async createLectura(@MessageBody() createLecturaDto: IotCreateLecturaDoDto, @ConnectedSocket() client: Socket) {
-    // Pass 'this' (gateway instance) to controller, which passes it to service
-    const result = await this.iotController.createLectura(createLecturaDto, this);
+  async createLectura(
+    @MessageBody() createLecturaDto: IotCreateLecturaDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    // Pass 'this' (gateway instance) directly to service
+    const result = await this.iotService.createLectura(createLecturaDto, this);
     client.emit('createLectura.result', result);
     return result;
   }

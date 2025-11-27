@@ -12,10 +12,15 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
 
-
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Insumo, Almacen, Proveedor, Categoria, MovimientoInsumo]),
+    TypeOrmModule.forFeature([
+      Insumo,
+      Almacen,
+      Proveedor,
+      Categoria,
+      MovimientoInsumo,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -25,7 +30,8 @@ import { AuthModule } from '../auth/auth.module';
     }),
     AuthModule,
   ],
-  providers: [InventoryService, InventoryGateway, InventoryController],
+  controllers: [InventoryController],
+  providers: [InventoryService, InventoryGateway],
   exports: [InventoryService],
 })
 export class InventoryModule {}

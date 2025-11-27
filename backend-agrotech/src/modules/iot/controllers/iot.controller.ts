@@ -1,7 +1,27 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  ParseIntPipe,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { IotService } from '../services/iot.service';
-import { IotCreateSensorDoDto, IotRemoveSensorDoDto, IotFindAllLecturasDoDto, IotCreateLecturaDoDto } from '../dtos/iot-do.dto';
+import {
+  IotCreateSensorDoDto,
+  IotRemoveSensorDoDto,
+  IotFindAllLecturasDoDto,
+  IotCreateLecturaDoDto,
+} from '../dtos/iot-do.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -14,7 +34,9 @@ export class IotController {
   private extractUserId(request: Request | any): number {
     const userId = request?.user?.id ?? request?.user?.userId;
     if (!userId) {
-      throw new UnauthorizedException('No se pudo resolver el usuario autenticado');
+      throw new UnauthorizedException(
+        'No se pudo resolver el usuario autenticado',
+      );
     }
     return userId;
   }
@@ -30,7 +52,10 @@ export class IotController {
   @Post('sensors')
   @RequirePermissions('iot.crear')
   @UsePipes(new ValidationPipe())
-  async createSensorHttp(@Req() req: Request, @Body() dto: IotCreateSensorDoDto) {
+  async createSensorHttp(
+    @Req() req: Request,
+    @Body() dto: IotCreateSensorDoDto,
+  ) {
     const userId = this.extractUserId(req);
     return this.createSensor(dto, userId);
   }
@@ -48,11 +73,51 @@ export class IotController {
     return this.findAllLecturas({ sensorId: sensorIdNum });
   }
 
-  @Post('lecturas')
-  @RequirePermissions('iot.crear')
-  @UsePipes(new ValidationPipe())
   async createLecturaHttp(@Body() dto: IotCreateLecturaDoDto) {
     return this.createLectura(dto, undefined);
+  }
+
+  @Get('sensors/:id')
+  @RequirePermissions('iot.ver')
+  async findOneSensorHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.getSensorById(id);
+  }
+
+  // ==================== TIPO SENSOR ENDPOINTS ====================
+
+  @Get('sensor-types')
+  @RequirePermissions('iot.ver')
+  async findAllTiposSensorHttp() {
+    return this.iotService.findAllTiposSensor();
+  }
+
+  @Post('sensor-types')
+  @RequirePermissions('iot.crear')
+  async createTipoSensorHttp(
+    @Body() data: { nombre: string; unidad: string; descripcion?: string },
+  ) {
+    return this.iotService.createTipoSensor(data);
+  }
+
+  @Get('sensor-types/:id')
+  @RequirePermissions('iot.ver')
+  async findOneTipoSensorHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.iotService.findTipoSensorById(id);
+  }
+
+  @Patch('sensor-types/:id')
+  @RequirePermissions('iot.editar')
+  async updateTipoSensorHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: any,
+  ) {
+    return this.iotService.updateTipoSensor(id, data);
+  }
+
+  @Delete('sensor-types/:id')
+  @RequirePermissions('iot.eliminar')
+  async removeTipoSensorHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.iotService.removeTipoSensor(id);
   }
 
   // ==================== INTERNAL METHODS ====================

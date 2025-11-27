@@ -14,6 +14,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GeoModule } from '../geo/geo.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ProductionModule } from '../production/production.module';
+import { FinanceModule } from '../finance/finance.module';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
@@ -36,6 +37,7 @@ import { AuthModule } from '../auth/auth.module';
     GeoModule,
     InventoryModule,
     ProductionModule,
+    FinanceModule,
     AuthModule,
   ],
   controllers: [ActivitiesController],

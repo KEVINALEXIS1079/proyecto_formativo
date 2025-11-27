@@ -1,4 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, Req, UnauthorizedException, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  ParseIntPipe,
+  Req,
+  UnauthorizedException,
+  Query,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { InventoryService } from '../services/inventory.service';
 import { CreateInsumoDto } from '../dtos/create-insumo.dto';
@@ -15,7 +30,9 @@ export class InventoryController {
   private extractUserId(request: Request | any): number {
     const userId = request?.user?.id ?? request?.user?.userId;
     if (!userId) {
-      throw new UnauthorizedException('No se pudo resolver el usuario autenticado');
+      throw new UnauthorizedException(
+        'No se pudo resolver el usuario autenticado',
+      );
     }
     return userId;
   }
@@ -36,6 +53,67 @@ export class InventoryController {
     return this.findAllInsumos();
   }
 
+  // ==================== MOVIMIENTOS ====================
+
+  @Post('movimientos')
+  @RequirePermissions('inventario.crear')
+  @UsePipes(new ValidationPipe())
+  async createMovimiento(@Body() data: any) {
+    return this.inventoryService.createMovimiento(data);
+  }
+
+  @Get('movimientos')
+  @RequirePermissions('inventario.ver')
+  async findMovimientosByInsumo(
+    @Query('insumoId', ParseIntPipe) insumoId: number,
+  ) {
+    return this.inventoryService.findMovimientosByInsumo(insumoId);
+  }
+
+  // ==================== CATÁLOGOS ====================
+
+  @Get('almacenes')
+  @RequirePermissions('inventario.ver')
+  async findAllAlmacenes() {
+    return this.inventoryService.findAllAlmacenes();
+  }
+
+  @Post('almacenes')
+  @RequirePermissions('inventario.crear')
+  async createAlmacen(@Body() data: { nombre: string; ubicacion?: string }) {
+    return this.inventoryService.createAlmacen(data);
+  }
+
+  @Get('proveedores')
+  @RequirePermissions('inventario.ver')
+  async findAllProveedores() {
+    return this.inventoryService.findAllProveedores();
+  }
+
+  @Post('proveedores')
+  @RequirePermissions('inventario.crear')
+  async createProveedor(
+    @Body() data: { nombre: string; contacto?: string; telefono?: string },
+  ) {
+    return this.inventoryService.createProveedor(data);
+  }
+
+  @Get('categorias')
+  @RequirePermissions('inventario.ver')
+  async findAllCategorias() {
+    return this.inventoryService.findAllCategorias();
+  }
+
+  @Post('categorias')
+  @RequirePermissions('inventario.crear')
+  async createCategoria(
+    @Body() data: { nombre: string; descripcion?: string },
+  ) {
+    return this.inventoryService.createCategoria(data);
+  }
+
+  // ==================== INSUMOS BY ID (must be after specific routes) ====================
+
   @Get(':id')
   @RequirePermissions('inventario.ver')
   async findOneInsumoHttp(@Param('id', ParseIntPipe) id: number) {
@@ -45,7 +123,10 @@ export class InventoryController {
   @Patch(':id')
   @RequirePermissions('inventario.editar')
   @UsePipes(new ValidationPipe())
-  async updateInsumoHttp(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateInsumoDto) {
+  async updateInsumoHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateInsumoDto,
+  ) {
     return this.updateInsumo(id, dto);
   }
 
@@ -87,58 +168,5 @@ export class InventoryController {
   // Flow: Gateway calls this method -> calls inventoryService.removeInsumo -> returns removed insumo
   async removeInsumo(id: number) {
     return this.inventoryService.removeInsumo(id);
-  }
-
-  // ==================== MOVIMIENTOS ====================
-
-  @Post('movimientos')
-  @RequirePermissions('inventario.crear')
-  @UsePipes(new ValidationPipe())
-  async createMovimiento(@Body() data: any) {
-    return this.inventoryService.createMovimiento(data);
-  }
-
-  @Get('movimientos')
-  @RequirePermissions('inventario.ver')
-  async findMovimientosByInsumo(@Query('insumoId', ParseIntPipe) insumoId: number) {
-    return this.inventoryService.findMovimientosByInsumo(insumoId);
-  }
-
-  // ==================== CATÁLOGOS ====================
-
-  @Get('almacenes')
-  @RequirePermissions('inventario.ver')
-  async findAllAlmacenes() {
-    return this.inventoryService.findAllAlmacenes();
-  }
-
-  @Post('almacenes')
-  @RequirePermissions('inventario.crear')
-  async createAlmacen(@Body() data: { nombre: string; ubicacion?: string }) {
-    return this.inventoryService.createAlmacen(data);
-  }
-
-  @Get('proveedores')
-  @RequirePermissions('inventario.ver')
-  async findAllProveedores() {
-    return this.inventoryService.findAllProveedores();
-  }
-
-  @Post('proveedores')
-  @RequirePermissions('inventario.crear')
-  async createProveedor(@Body() data: { nombre: string; contacto?: string; telefono?: string }) {
-    return this.inventoryService.createProveedor(data);
-  }
-
-  @Get('categorias')
-  @RequirePermissions('inventario.ver')
-  async findAllCategorias() {
-    return this.inventoryService.findAllCategorias();
-  }
-
-  @Post('categorias')
-  @RequirePermissions('inventario.crear')
-  async createCategoria(@Body() data: { nombre: string; descripcion?: string }) {
-    return this.inventoryService.createCategoria(data);
   }
 }

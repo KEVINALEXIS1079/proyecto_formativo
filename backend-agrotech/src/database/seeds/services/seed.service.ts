@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { seedRolesAndAdmin } from '../roles-admin.seed';
 import { seedPermisos } from '../permisos.seed';
-import { seedPrueba1 } from '../prueba1.seed';
+import { seedModules } from '../modules.seed';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -39,14 +39,14 @@ export class SeedService implements OnModuleInit {
       const seeds = [
         { name: 'roles-admin', fn: seedRolesAndAdmin },
         { name: 'permisos', fn: seedPermisos },
-        { name: 'prueba1', fn: seedPrueba1 },
+        { name: 'modules', fn: seedModules },
       ];
 
       // Execute seeds individually if not already executed
       for (const seed of seeds) {
         const result = await queryRunner.query(
           `SELECT COUNT(*) as count FROM ${this.SEED_LOG_TABLE} WHERE seed_name = $1`,
-          [seed.name]
+          [seed.name],
         );
         const count = parseInt(result[0].count, 10);
 
@@ -57,12 +57,14 @@ export class SeedService implements OnModuleInit {
           // Log execution
           await queryRunner.query(
             `INSERT INTO ${this.SEED_LOG_TABLE} (seed_name, description) VALUES ($1, $2)`,
-            [seed.name, `Executed seed: ${seed.name}`]
+            [seed.name, `Executed seed: ${seed.name}`],
           );
 
           this.logger.log(`Seed ${seed.name} executed successfully!`);
         } else {
-          this.logger.log(`Seed ${seed.name} has already been executed. Skipping...`);
+          this.logger.log(
+            `Seed ${seed.name} has already been executed. Skipping...`,
+          );
         }
       }
     } catch (error) {

@@ -1,7 +1,8 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Lote } from './lote.entity';
 import { SubLote } from './sublote.entity';
+import {Actividad} from '../../activities/entities/actividad.entity';
 
 @Entity('cultivos')
 export class Cultivo extends BaseEntity {
@@ -40,4 +41,7 @@ export class Cultivo extends BaseEntity {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   fechaCreacion: Date;
+
+  @OneToMany(() => Actividad, (actividad) => actividad.cultivo)
+  actividades: Actividad[];
 }

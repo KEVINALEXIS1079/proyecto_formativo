@@ -10,7 +10,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
 
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([EPA, TipoCultivoWiki, EPA_TipoCultivoWiki]),
@@ -23,6 +22,7 @@ import { AuthModule } from '../auth/auth.module';
     }),
     AuthModule,
   ],
-  providers: [WikiService, WikiGateway, WikiController],
+  controllers: [WikiController],
+  providers: [WikiService, WikiGateway],
 })
 export class WikiModule {}

@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Actividad } from './actividad.entity';
-// import { Insumo } from '../../inventory/entities/insumo.entity'; // Circular dependency, handle carefully
+import { Insumo } from '../../inventory/entities/insumo.entity';
 // import { MovimientoInsumo } from '../../inventory/entities/movimiento-insumo.entity';
 
 @Entity('actividades_insumos_uso')
@@ -27,4 +27,8 @@ export class ActividadInsumoUso extends BaseEntity {
   @ManyToOne(() => Actividad, (actividad) => actividad.insumosUso)
   @JoinColumn({ name: 'actividadId' })
   actividad: Actividad;
+
+  @ManyToOne(() => Insumo)
+  @JoinColumn({ name: 'insumoId' })
+  insumo: Insumo;
 }

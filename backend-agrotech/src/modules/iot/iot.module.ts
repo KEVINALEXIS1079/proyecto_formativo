@@ -10,7 +10,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
 
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([Sensor, SensorLectura, TipoSensor]),
@@ -24,7 +23,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [IotController],
-  providers: [IotService, IotGateway, IotController],
+  providers: [IotService, IotGateway],
   exports: [IotService],
 })
 export class IotModule {}

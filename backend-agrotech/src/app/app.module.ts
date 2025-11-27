@@ -15,6 +15,7 @@ import { ProductionModule } from '../modules/production/production.module';
 import { IotModule } from '../modules/iot/iot.module';
 import { SeedsModule } from '../database/seeds/seeds.module';
 import { ReportsModule } from '../modules/reports/reports.module';
+import { FinanceModule } from '../modules/finance/finance.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ReportsModule } from '../modules/reports/reports.module';
     IotModule,
     SeedsModule,
     ReportsModule,
+    FinanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

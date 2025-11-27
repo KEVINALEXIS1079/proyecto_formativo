@@ -12,32 +12,55 @@ import { IotGateway } from '../gateways/iot.gateway';
 export class IotService {
   constructor(
     @InjectRepository(Sensor) private sensorRepo: Repository<Sensor>,
-    @InjectRepository(SensorLectura) private lecturaRepo: Repository<SensorLectura>,
-    @InjectRepository(TipoSensor) private tipoSensorRepo: Repository<TipoSensor>,
+    @InjectRepository(SensorLectura)
+    private lecturaRepo: Repository<SensorLectura>,
+    @InjectRepository(TipoSensor)
+    private tipoSensorRepo: Repository<TipoSensor>,
   ) {}
 
   // ==================== TIPO SENSOR ====================
-  
+
   async findAllTiposSensor() {
     return this.tipoSensorRepo.find();
   }
 
-  async createTipoSensor(data: { nombre: string; unidad: string; descripcion?: string }) {
+  async createTipoSensor(data: {
+    nombre: string;
+    unidad: string;
+    descripcion?: string;
+  }) {
     const tipo = this.tipoSensorRepo.create(data);
     return this.tipoSensorRepo.save(tipo);
   }
 
+  async findTipoSensorById(id: number) {
+    const tipo = await this.tipoSensorRepo.findOne({ where: { id } });
+    if (!tipo) throw new NotFoundException(`TipoSensor ${id} not found`);
+    return tipo;
+  }
+
+  async updateTipoSensor(id: number, data: any) {
+    const tipo = await this.findTipoSensorById(id);
+    Object.assign(tipo, data);
+    return this.tipoSensorRepo.save(tipo);
+  }
+
+  async removeTipoSensor(id: number) {
+    const tipo = await this.findTipoSensorById(id);
+    return this.tipoSensorRepo.softRemove(tipo);
+  }
+
   // ==================== SENSORES ====================
-  
+
   // RF32: CRUD de sensores
   async findAllSensors() {
     return this.sensorRepo.find({ relations: ['tipoSensor', 'cultivo'] });
   }
 
   async findSensorById(id: number) {
-    const sensor = await this.sensorRepo.findOne({ 
-      where: { id }, 
-      relations: ['tipoSensor', 'cultivo'] 
+    const sensor = await this.sensorRepo.findOne({
+      where: { id },
+      relations: ['tipoSensor', 'cultivo'],
     });
     if (!sensor) throw new NotFoundException(`Sensor ${id} not found`);
     return sensor;
@@ -64,12 +87,12 @@ export class IotService {
   }
 
   // ==================== LECTURAS ====================
-  
+
   async findAllLecturas(sensorId?: number) {
     const where: any = {};
     if (sensorId) where.sensorId = sensorId;
-    
-    return this.lecturaRepo.find({ 
+
+    return this.lecturaRepo.find({
       where,
       relations: ['sensor'],
       order: { fecha: 'DESC' },
@@ -80,23 +103,23 @@ export class IotService {
   // RF33: Ingestar lectura (multi-protocolo: HTTP, MQTT, WS)
   async createLectura(data: CreateSensorLecturaDto, gateway?: IotGateway) {
     const sensor = await this.findSensorById(data.sensorId);
-    
+
     const lectura = this.lecturaRepo.create({
       sensorId: data.sensorId,
       valor: data.valor,
       fecha: new Date(),
     });
-    
+
     const saved = await this.lecturaRepo.save(lectura);
-    
+
     // RF34: Actualizar estado de conexión del sensor
     await this.updateSensorEstado(sensor, data.valor);
-    
+
     // RF34: Emitir evento en tiempo real vía WebSocket
     if (gateway) {
       gateway.emitLectura(saved);
     }
-    
+
     return saved;
   }
 
@@ -106,16 +129,16 @@ export class IotService {
     sensor.ultimaLectura = now;
     sensor.lastSeenAt = now;
     sensor.estadoConexion = 'CONECTADO';
-    
+
     // Validar umbrales si están configurados
     if (sensor.umbralMin !== null && valor < sensor.umbralMin) {
       sensor.estadoConexion = 'ALERTA_MIN';
     }
-    
+
     if (sensor.umbralMax !== null && valor > sensor.umbralMax) {
       sensor.estadoConexion = 'ALERTA_MAX';
     }
-    
+
     await this.sensorRepo.save(sensor);
   }
 
@@ -126,9 +149,11 @@ export class IotService {
     }
 
     // Obtener TTL del tipo de sensor
-    const tipoSensor = sensor.tipoSensor || await this.tipoSensorRepo.findOne({ 
-      where: { id: sensor.tipoSensorId } 
-    });
+    const tipoSensor =
+      sensor.tipoSensor ||
+      (await this.tipoSensorRepo.findOne({
+        where: { id: sensor.tipoSensorId },
+      }));
 
     if (!tipoSensor) {
       return 'DESCONECTADO';
@@ -146,7 +171,7 @@ export class IotService {
   async getSensorStatus(sensorId: number) {
     const sensor = await this.findSensorById(sensorId);
     const estadoConexion = await this.calculateSensorStatus(sensor);
-    
+
     // Actualizar si cambió
     if (sensor.estadoConexion !== estadoConexion) {
       sensor.estadoConexion = estadoConexion;
@@ -167,7 +192,7 @@ export class IotService {
   // RF34: Actualizar estado de todos los sensores (job periódico)
   async updateAllSensorsStatus() {
     const sensores = await this.sensorRepo.find({ relations: ['tipoSensor'] });
-    
+
     for (const sensor of sensores) {
       const nuevoEstado = await this.calculateSensorStatus(sensor);
       if (sensor.estadoConexion !== nuevoEstado) {
@@ -189,7 +214,11 @@ export class IotService {
   }
 
   // Obtener lecturas en rango de fechas
-  async getLecturasByRango(sensorId: number, fechaInicio: Date, fechaFin: Date) {
+  async getLecturasByRango(
+    sensorId: number,
+    fechaInicio: Date,
+    fechaFin: Date,
+  ) {
     return this.lecturaRepo
       .createQueryBuilder('lectura')
       .where('lectura.sensorId = :sensorId', { sensorId })

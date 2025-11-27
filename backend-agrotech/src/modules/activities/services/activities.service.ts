@@ -17,7 +17,9 @@ import { UpdateActivityDto } from '../dtos/update-activity.dto';
 
 import { GeoService } from '../../geo/services/geo.service';
 import { InventoryService } from '../../inventory/services/inventory.service';
+
 import { ProductionService } from '../../production/services/production.service';
+import { FinanceService } from '../../finance/services/finance.service';
 
 @Injectable()
 export class ActivitiesService {
@@ -40,6 +42,7 @@ export class ActivitiesService {
     private geoService: GeoService,
     private inventoryService: InventoryService,
     private productionService: ProductionService,
+    private financeService: FinanceService,
   ) {}
 
   async create(data: CreateActivityDto, usuarioId: number) {
@@ -102,10 +105,25 @@ export class ActivitiesService {
       });
     }
 
+    // Registrar gasto de mano de obra en finanzas
+    if (costoManoObra > 0) {
+      await this.financeService.registrarGastoManoObra({
+        actividadId: saved.id,
+        monto: costoManoObra,
+        descripcion: `Mano de obra para actividad: ${saved.nombre}`,
+        fecha: new Date(data.fecha),
+        usuarioId,
+      });
+    }
+
     return saved;
   }
 
-  async findAll(filters?: { cultivoId?: number; loteId?: number; tipo?: string }) {
+  async findAll(filters?: {
+    cultivoId?: number;
+    loteId?: number;
+    tipo?: string;
+  }) {
     const qb = this.actividadRepo
       .createQueryBuilder('actividad')
       .leftJoinAndSelect('actividad.cultivo', 'cultivo')
@@ -121,8 +139,7 @@ export class ActivitiesService {
     if (filters?.loteId)
       qb.andWhere('actividad.loteId = :l', { l: filters.loteId });
 
-    if (filters?.tipo)
-      qb.andWhere('actividad.tipo = :t', { t: filters.tipo });
+    if (filters?.tipo) qb.andWhere('actividad.tipo = :t', { t: filters.tipo });
 
     return qb.orderBy('actividad.fecha', 'DESC').getMany();
   }
@@ -181,7 +198,20 @@ export class ActivitiesService {
       costo: data.horas * data.precioHora,
     });
 
-    return this.servicioRepo.save(servicio);
+    const savedServicio = await this.servicioRepo.save(servicio);
+
+    // Registrar gasto de servicio en finanzas
+    if (savedServicio.costo > 0) {
+      await this.financeService.registrarGastoServicio({
+        actividadId,
+        monto: savedServicio.costo,
+        descripcion: `Servicio: ${data.nombreServicio}`,
+        fecha: new Date(), // Asumimos fecha actual para el servicio
+        usuarioId: (await this.findOne(actividadId)).creadoPorUsuarioId, // Usamos el creador de la actividad
+      });
+    }
+
+    return savedServicio;
   }
 
   async addEvidencia(
@@ -218,7 +248,21 @@ export class ActivitiesService {
       costoTotal: data.cantidadUso * data.costoUnitarioUso,
     });
 
-    return this.insumoRepo.save(registro);
+    const savedInsumo = await this.insumoRepo.save(registro);
+
+    // Registrar gasto de insumo en finanzas
+    if (savedInsumo.costoTotal > 0) {
+      await this.financeService.registrarGastoInsumo({
+        actividadId,
+        insumoId: data.insumoId,
+        monto: savedInsumo.costoTotal,
+        descripcion: `Consumo de insumo ID ${data.insumoId}`,
+        fecha: new Date(),
+        usuarioId: (await this.findOne(actividadId)).creadoPorUsuarioId,
+      });
+    }
+
+    return savedInsumo;
   }
 
   async calcularCostoTotal(actividadId: number) {

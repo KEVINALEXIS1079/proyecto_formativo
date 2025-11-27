@@ -13,10 +13,13 @@ import { CsvExportService } from './csv-export.service';
 export class FinancialReportsService {
   constructor(
     @InjectRepository(Venta) private ventaRepo: Repository<Venta>,
-    @InjectRepository(VentaDetalle) private ventaDetalleRepo: Repository<VentaDetalle>,
+    @InjectRepository(VentaDetalle)
+    private ventaDetalleRepo: Repository<VentaDetalle>,
     @InjectRepository(Actividad) private actividadRepo: Repository<Actividad>,
-    @InjectRepository(ActividadServicio) private servicioRepo: Repository<ActividadServicio>,
-    @InjectRepository(ActividadInsumoUso) private insumoUsoRepo: Repository<ActividadInsumoUso>,
+    @InjectRepository(ActividadServicio)
+    private servicioRepo: Repository<ActividadServicio>,
+    @InjectRepository(ActividadInsumoUso)
+    private insumoUsoRepo: Repository<ActividadInsumoUso>,
     @InjectRepository(Cultivo) private cultivoRepo: Repository<Cultivo>,
     private csvService: CsvExportService,
   ) {}
@@ -29,7 +32,8 @@ export class FinancialReportsService {
     productoAgroId?: number;
     cultivoId?: number;
   }) {
-    const query = this.ventaRepo.createQueryBuilder('venta')
+    const query = this.ventaRepo
+      .createQueryBuilder('venta')
       .leftJoinAndSelect('venta.cliente', 'cliente')
       .leftJoinAndSelect('venta.detalles', 'detalles')
       .leftJoinAndSelect('detalles.loteProduccion', 'loteProduccion')
@@ -43,35 +47,44 @@ export class FinancialReportsService {
       query.andWhere('venta.fecha <= :to', { to: filters.to });
     }
     if (filters.clienteId) {
-      query.andWhere('venta.clienteId = :clienteId', { clienteId: filters.clienteId });
+      query.andWhere('venta.clienteId = :clienteId', {
+        clienteId: filters.clienteId,
+      });
     }
-    
+
     // Filtros que requieren join con detalles
     if (filters.productoAgroId || filters.cultivoId) {
-      // Nota: Esto puede duplicar ventas si tienen múltiples detalles que coinciden, 
+      // Nota: Esto puede duplicar ventas si tienen múltiples detalles que coinciden,
       // pero TypeORM suele manejarlo al mapear a objetos.
       if (filters.productoAgroId) {
-        query.andWhere('loteProduccion.productoAgroId = :prodId', { prodId: filters.productoAgroId });
+        query.andWhere('loteProduccion.productoAgroId = :prodId', {
+          prodId: filters.productoAgroId,
+        });
       }
       if (filters.cultivoId) {
-        query.andWhere('loteProduccion.cultivoId = :cultId', { cultId: filters.cultivoId });
+        query.andWhere('loteProduccion.cultivoId = :cultId', {
+          cultId: filters.cultivoId,
+        });
       }
     }
 
     const ventas = await query.orderBy('venta.fecha', 'DESC').getMany();
 
     // Calcular totales globales
-    const totals = ventas.reduce((acc, v) => ({
-      subtotal: acc.subtotal + v.subtotal,
-      impuestos: acc.impuestos + v.impuestos,
-      descuento: acc.descuento + v.descuento,
-      total: acc.total + v.total,
-    }), { subtotal: 0, impuestos: 0, descuento: 0, total: 0 });
+    const totals = ventas.reduce(
+      (acc, v) => ({
+        subtotal: acc.subtotal + v.subtotal,
+        impuestos: acc.impuestos + v.impuestos,
+        descuento: acc.descuento + v.descuento,
+        total: acc.total + v.total,
+      }),
+      { subtotal: 0, impuestos: 0, descuento: 0, total: 0 },
+    );
 
     return {
       data: ventas,
       totals,
-      count: ventas.length
+      count: ventas.length,
     };
   }
 
@@ -82,7 +95,8 @@ export class FinancialReportsService {
     to?: Date;
     cultivoId?: number;
   }) {
-    const query = this.ventaDetalleRepo.createQueryBuilder('detalle')
+    const query = this.ventaDetalleRepo
+      .createQueryBuilder('detalle')
       .leftJoin('detalle.venta', 'venta')
       .leftJoin('detalle.loteProduccion', 'lote')
       .select([
@@ -90,10 +104,12 @@ export class FinancialReportsService {
         'AVG(detalle.precioUnitarioKg) as precioPromedio',
         'MIN(detalle.precioUnitarioKg) as precioMin',
         'MAX(detalle.precioUnitarioKg) as precioMax',
-        'SUM(detalle.cantidadKg) as volumenKg'
+        'SUM(detalle.cantidadKg) as volumenKg',
       ])
       .where('venta.estado != :anulada', { anulada: 'anulada' })
-      .andWhere('lote.productoAgroId = :prodId', { prodId: filters.productoAgroId })
+      .andWhere('lote.productoAgroId = :prodId', {
+        prodId: filters.productoAgroId,
+      })
       .groupBy('DATE(venta.fecha)')
       .orderBy('DATE(venta.fecha)', 'ASC');
 
@@ -112,28 +128,37 @@ export class FinancialReportsService {
 
   async getSalesReportCsv(filters: any): Promise<string> {
     const report = await this.getSalesReport(filters);
-    const data = report.data.map(v => ({
+    const data = report.data.map((v) => ({
       id: v.id,
       fecha: v.fecha,
       cliente: v.cliente?.nombre || 'Mostrador',
       total: v.total,
-      estado: v.estado
+      estado: v.estado,
     }));
-    return this.csvService.generateCsv(data, ['id', 'fecha', 'cliente', 'total', 'estado']);
+    return this.csvService.generateCsv(data, [
+      'id',
+      'fecha',
+      'cliente',
+      'total',
+      'estado',
+    ]);
   }
 
   // RF43: Rentabilidad por Cultivo
   async getCropRentability(cultivoId: number) {
-    const cultivo = await this.cultivoRepo.findOne({ where: { id: cultivoId } });
+    const cultivo = await this.cultivoRepo.findOne({
+      where: { id: cultivoId },
+    });
     if (!cultivo) throw new Error('Cultivo no encontrado');
 
     // 1. Ingresos (Ventas asociadas a lotes de producción de este cultivo)
-    const ingresosResult = await this.ventaDetalleRepo.createQueryBuilder('detalle')
+    const ingresosResult = await this.ventaDetalleRepo
+      .createQueryBuilder('detalle')
       .leftJoin('detalle.venta', 'venta')
       .leftJoin('detalle.loteProduccion', 'lote')
       .where('lote.cultivoId = :cultivoId', { cultivoId })
       .andWhere('venta.estado != :anulada', { anulada: 'anulada' })
-      .select('SUM(detalle.subtotal)', 'totalVentas')
+      .select('SUM(detalle.precioTotal)', 'totalVentas')
       .addSelect('SUM(detalle.cantidadKg)', 'totalKgVendidos')
       .getRawOne();
 
@@ -141,16 +166,18 @@ export class FinancialReportsService {
     const kgVendidos = parseFloat(ingresosResult.totalKgVendidos || '0');
 
     // 2. Costos (Actividades)
-    
+
     // Costo Mano de Obra
-    const moResult = await this.actividadRepo.createQueryBuilder('actividad')
+    const moResult = await this.actividadRepo
+      .createQueryBuilder('actividad')
       .where('actividad.cultivoId = :cultivoId', { cultivoId })
       .select('SUM(actividad.costoManoObra)', 'totalMO')
       .getRawOne();
     const costoMO = parseFloat(moResult.totalMO || '0');
 
     // Costo Servicios
-    const servResult = await this.servicioRepo.createQueryBuilder('servicio')
+    const servResult = await this.servicioRepo
+      .createQueryBuilder('servicio')
       .leftJoin('servicio.actividad', 'actividad')
       .where('actividad.cultivoId = :cultivoId', { cultivoId })
       .select('SUM(servicio.costo)', 'totalServicios')
@@ -158,7 +185,8 @@ export class FinancialReportsService {
     const costoServicios = parseFloat(servResult.totalServicios || '0');
 
     // Costo Insumos
-    const insumosResult = await this.insumoUsoRepo.createQueryBuilder('insumoUso')
+    const insumosResult = await this.insumoUsoRepo
+      .createQueryBuilder('insumoUso')
       .leftJoin('insumoUso.actividad', 'actividad')
       .where('actividad.cultivoId = :cultivoId', { cultivoId })
       .select('SUM(insumoUso.costoTotal)', 'totalInsumos')
@@ -174,7 +202,7 @@ export class FinancialReportsService {
       cultivo: {
         id: cultivo.id,
         nombre: cultivo.nombreCultivo,
-        estado: cultivo.estado
+        estado: cultivo.estado,
       },
       ingresos,
       kgVendidos,
@@ -182,13 +210,13 @@ export class FinancialReportsService {
         manoObra: costoMO,
         servicios: costoServicios,
         insumos: costoInsumos,
-        total: costoTotal
+        total: costoTotal,
       },
       rentabilidad: {
         margen,
         margenPorcentaje: parseFloat(margenPorcentaje.toFixed(2)),
-        roi: parseFloat(roi.toFixed(2))
-      }
+        roi: parseFloat(roi.toFixed(2)),
+      },
     };
   }
 }

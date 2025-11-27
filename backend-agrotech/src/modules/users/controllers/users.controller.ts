@@ -141,7 +141,7 @@ export class UsersController implements OnModuleInit {
     return this.sanitizeUser(user);
   }
 
-  @Patch(':id/role')
+  @Patch(':id/rol')
   @RequirePermissions('usuarios.cambiar_rol')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async changeUserRoleHttp(@Param('id', ParseIntPipe) id: number, @Body() dto: ChangeRoleDto) {

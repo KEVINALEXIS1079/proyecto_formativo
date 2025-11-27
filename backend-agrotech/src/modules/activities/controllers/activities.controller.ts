@@ -1,4 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UnauthorizedException, UseGuards, UsePipes, ValidationPipe, ParseIntPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  ParseIntPipe,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { ActivitiesService } from '../services/activities.service';
 import { CreateActivityDto } from '../dtos/create-activity.dto';
@@ -22,7 +36,9 @@ export class ActivitiesController {
   private extractUserId(request: Request | any): number {
     const userId = request?.user?.id ?? request?.user?.userId;
     if (!userId) {
-      throw new UnauthorizedException('No se pudo resolver el usuario autenticado');
+      throw new UnauthorizedException(
+        'No se pudo resolver el usuario autenticado',
+      );
     }
     return userId;
   }
@@ -32,13 +48,16 @@ export class ActivitiesController {
   @Post()
   @RequirePermissions('actividades.crear')
   @UsePipes(new ValidationPipe())
-  async createActivityHttp(@Req() req: Request, @Body() dto: CreateActivityDto) {
+  async createActivityHttp(
+    @Req() req: Request,
+    @Body() dto: CreateActivityDto,
+  ) {
     const userId = this.extractUserId(req);
     const result = await this.create(dto, userId);
-    
+
     // RF63: Emitir evento en tiempo real
     this.activitiesGateway.broadcast('createActivity.result', result);
-    
+
     return result;
   }
 
@@ -57,7 +76,10 @@ export class ActivitiesController {
   @Patch(':id')
   @RequirePermissions('actividades.editar')
   @UsePipes(new ValidationPipe())
-  async updateActivityHttp(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateActivityDto) {
+  async updateActivityHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateActivityDto,
+  ) {
     return this.update(id, dto);
   }
 
@@ -65,6 +87,34 @@ export class ActivitiesController {
   @RequirePermissions('actividades.eliminar')
   async removeActivityHttp(@Param('id', ParseIntPipe) id: number) {
     return this.remove(id);
+  }
+
+  @Post(':id/insumos')
+  @RequirePermissions('actividades.editar')
+  async addInsumoHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body()
+    data: { insumoId: number; cantidadUso: number; costoUnitarioUso: number },
+  ) {
+    return this.activitiesService.consumirInsumo(id, data);
+  }
+
+  @Post(':id/servicios')
+  @RequirePermissions('actividades.editar')
+  async addServicioHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { nombreServicio: string; horas: number; precioHora: number },
+  ) {
+    return this.activitiesService.addServicio(id, data);
+  }
+
+  @Post(':id/evidencias')
+  @RequirePermissions('actividades.editar')
+  async addEvidenciaHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { descripcion: string; imagenes: string[] },
+  ) {
+    return this.activitiesService.addEvidencia(id, data);
   }
 
   // ==================== INTERNAL METHODS ====================

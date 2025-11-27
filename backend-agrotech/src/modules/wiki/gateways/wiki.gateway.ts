@@ -1,7 +1,12 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';
+import {
+  WebSocketGateway,
+  SubscribeMessage,
+  MessageBody,
+  ConnectedSocket,
+} from '@nestjs/websockets';
 import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Socket } from 'socket.io';
-import { WikiController } from '../controllers/wiki.controller';
+import { WikiService } from '../services/wiki.service';
 import {
   WikiCreateDoDto,
   WikiFindAllDoDto,
@@ -17,13 +22,16 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 @WebSocketGateway({ namespace: 'wiki', cors: { origin: '*' } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
 export class WikiGateway {
-  constructor(private readonly wikiController: WikiController) {}
+  constructor(private readonly wikiService: WikiService) {}
 
   @SubscribeMessage('findAllEpas')
   @RequirePermissions('cultivos.ver')
   @UsePipes(new ValidationPipe())
-  async findAll(@MessageBody() filters: WikiFindAllDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.wikiController.findAll(filters);
+  async findAll(
+    @MessageBody() filters: WikiFindAllDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.wikiService.findAll(filters);
     client.emit('findAllEpas.result', result);
     return result;
   }
@@ -31,8 +39,11 @@ export class WikiGateway {
   @SubscribeMessage('findEpaById')
   @RequirePermissions('cultivos.ver')
   @UsePipes(new ValidationPipe())
-  async findOne(@MessageBody() data: WikiFindOneDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.wikiController.findOne(data.id);
+  async findOne(
+    @MessageBody() data: WikiFindOneDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.wikiService.findOne(data.id);
     client.emit('findEpaById.result', result);
     return result;
   }
@@ -40,8 +51,11 @@ export class WikiGateway {
   @SubscribeMessage('createEpa')
   @RequirePermissions('cultivos.crear')
   @UsePipes(new ValidationPipe())
-  async create(@MessageBody() createEpaDto: WikiCreateDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.wikiController.create(createEpaDto);
+  async create(
+    @MessageBody() createEpaDto: WikiCreateDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.wikiService.create(createEpaDto);
     client.emit('createEpa.result', result);
     return result;
   }
@@ -49,8 +63,11 @@ export class WikiGateway {
   @SubscribeMessage('updateEpa')
   @RequirePermissions('cultivos.editar')
   @UsePipes(new ValidationPipe())
-  async update(@MessageBody() payload: WikiUpdateDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.wikiController.update(payload.id, payload.data);
+  async update(
+    @MessageBody() payload: WikiUpdateDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.wikiService.update(payload.id, payload.data);
     client.emit('updateEpa.result', result);
     return result;
   }
@@ -58,8 +75,11 @@ export class WikiGateway {
   @SubscribeMessage('removeEpa')
   @RequirePermissions('cultivos.eliminar')
   @UsePipes(new ValidationPipe())
-  async remove(@MessageBody() data: WikiRemoveDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.wikiController.remove(data.id);
+  async remove(
+    @MessageBody() data: WikiRemoveDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.wikiService.remove(data.id);
     client.emit('removeEpa.result', result);
     return result;
   }
@@ -67,8 +87,11 @@ export class WikiGateway {
   @SubscribeMessage('findAllTiposCultivo')
   @RequirePermissions('cultivos.ver')
   @UsePipes(new ValidationPipe())
-  async findAllTiposCultivo(@MessageBody() data: WikiFindAllTiposCultivoDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.wikiController.findAllTiposCultivo();
+  async findAllTiposCultivo(
+    @MessageBody() data: WikiFindAllTiposCultivoDoDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.wikiService.findAllTiposCultivo();
     client.emit('findAllTiposCultivo.result', result);
     return result;
   }
