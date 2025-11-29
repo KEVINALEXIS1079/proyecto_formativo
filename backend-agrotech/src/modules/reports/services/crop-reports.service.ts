@@ -5,7 +5,7 @@ import { Actividad } from '../../activities/entities/actividad.entity';
 import { ActividadResponsable } from '../../activities/entities/actividad-responsable.entity';
 import { ActividadInsumoUso } from '../../activities/entities/actividad-insumo-uso.entity';
 import { MovimientoInsumo } from '../../inventory/entities/movimiento-insumo.entity';
-import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 import { CsvExportService } from './csv-export.service';
 
 @Injectable()

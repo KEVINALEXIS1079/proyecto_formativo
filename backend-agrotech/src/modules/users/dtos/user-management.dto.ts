@@ -1,4 +1,5 @@
-import { IsString, IsEmail, IsOptional, MinLength, MaxLength, Matches, IsNumberString, IsNumber } from 'class-validator';
+import { IsString, IsEmail, IsOptional, MinLength, MaxLength, Matches, IsNumberString, IsNumber, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateUserByAdminDto {
   @IsString({ message: 'El nombre debe ser un texto válido' })
@@ -21,8 +22,7 @@ export class CreateUserByAdminDto {
 
   @IsOptional()
   @IsString({ message: 'El teléfono debe ser un string válido' })
-  @Matches(/^[0-9+\-\s()]+$/, { message: 'El teléfono solo puede contener números y símbolos +, -, (), espacios' })
-  @MaxLength(20, { message: 'El teléfono no puede exceder 20 caracteres' })
+  @Matches(/^\d{10}$/, { message: 'El teléfono debe contener exactamente 10 dígitos' })
   telefono?: string;
 
   @IsEmail({}, { message: 'Debe proporcionar un correo electrónico válido' })
@@ -57,8 +57,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString({ message: 'El teléfono debe ser un string válido' })
-  @Matches(/^[0-9+\-\s()]+$/, { message: 'El teléfono solo puede contener números y símbolos +, -, (), espacios' })
-  @MaxLength(20, { message: 'El teléfono no puede exceder 20 caracteres' })
+  @Matches(/^\d{10}$/, { message: 'El teléfono debe contener exactamente 10 dígitos' })
   telefono?: string;
 
   @IsOptional()
@@ -127,8 +126,7 @@ export class UpdateUserByAdminDto {
 
   @IsOptional()
   @IsString({ message: 'El teléfono debe ser un string válido' })
-  @Matches(/^[0-9+\-\s()]+$/, { message: 'El teléfono solo puede contener números y símbolos +, -, (), espacios' })
-  @MaxLength(20, { message: 'El teléfono no puede exceder 20 caracteres' })
+  @Matches(/^\d{10}$/, { message: 'El teléfono debe contener exactamente 10 dígitos' })
   telefono?: string;
 
   @IsOptional()
@@ -142,6 +140,21 @@ export class UpdateUserByAdminDto {
   avatarUrl?: string;
 
   @IsOptional()
-  @IsString({ message: 'El estado debe ser un texto válido' })
+  @IsEnum(UserStatus, { message: 'El estado debe ser: activo, inactivo, bloqueado o pendiente_verificacion' })
+  estado?: UserStatus;
+}
+
+export class UserFilterDto {
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  rolId?: number;
+
+  @IsOptional()
+  @IsEnum(UserStatus)
   estado?: UserStatus;
 }

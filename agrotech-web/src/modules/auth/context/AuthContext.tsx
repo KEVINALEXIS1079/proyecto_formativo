@@ -22,14 +22,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Mantener la sesión al recargar
   useEffect(() => {
-    // Limpiar datos corruptos en storage
-    const validKeys = ['recoveryEmail', 'recoveryCode'];
-    cleanCorruptLocalStorage(validKeys);
-    cleanCorruptSessionStorage(validKeys);
+    const checkAuth = async () => {
+      try {
+        // Limpiar datos corruptos en storage
+        const validKeys = ['recoveryEmail', 'recoveryCode'];
+        cleanCorruptLocalStorage(validKeys);
+        cleanCorruptSessionStorage(validKeys);
 
-    // Como usamos cookies httpOnly, no podemos verificar el token desde el cliente
-    // Asumimos autenticado si no hay error en requests
-    setLoading(false);
+        // Verificar sesión obteniendo el perfil
+        const { getMyProfile } = await import('@/modules/profile/api/profile.api');
+        const userProfile = await getMyProfile();
+        
+        setState({
+          isAuthenticated: true,
+          user: {
+            id: userProfile.id,
+            nombre: userProfile.nombre,
+            apellido: userProfile.apellido,
+            correo: userProfile.correo,
+            rol: userProfile.rol?.nombre ?? "Sin rol",
+          },
+          token: null,
+        });
+      } catch (error) {
+        // Si falla (401), asumimos no autenticado
+        setState({
+          isAuthenticated: false,
+          user: null,
+          token: null,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   // --- Manejo de login ---

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sensor } from '../../iot/entities/sensor.entity';
 import { SensorLectura } from '../../iot/entities/sensor-lectura.entity';
-import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 import { CsvExportService } from './csv-export.service';
 
 @Injectable()

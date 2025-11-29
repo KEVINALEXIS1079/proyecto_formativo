@@ -3,7 +3,7 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import { Venta } from './venta.entity';
 import { ProductoAgro } from './producto-agro.entity';
 import { LoteProduccion } from './lote-produccion.entity';
-import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 
 @Entity('ventas_detalles')
 export class VentaDetalle extends BaseEntity {

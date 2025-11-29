@@ -12,8 +12,9 @@ import { UsersFindAllDoDto, UsersFindByIdDoDto, UsersRemoveDoDto } from '../dtos
 import { WsJwtGuard } from '../../../common/guards/ws-jwt.guard';
 import { WsPermissionsGuard } from '../../../common/guards/ws-permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
+import { UserStatus } from '../dtos/user-management.dto';
 
-@WebSocketGateway({ namespace: 'users', cors: { origin: '*' } })
+@WebSocketGateway({ namespace: 'users', cors: { origin: true, credentials: true } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
 export class UsersGateway {
   @WebSocketServer()
@@ -34,7 +35,10 @@ export class UsersGateway {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const users = await this.usersController.findAll(filters);
+      const users = await this.usersController.findAll({
+        ...filters,
+        estado: filters.estado as UserStatus,
+      });
       const sanitized = users.map(user => this.sanitizeUser(user));
       client.emit('users:list', sanitized);
       return sanitized;

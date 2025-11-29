@@ -12,7 +12,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { useOutletContext, useNavigate } from "react-router-dom";
-import type { LayoutContext } from "@/app/layout/ProtecdLayout";
+import type { LayoutContext } from "@/app/layout/ProtectedLayout";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 /* =========================

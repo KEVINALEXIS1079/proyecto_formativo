@@ -88,7 +88,7 @@ export default function SelectInsumosModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside" backdrop="blur">
       <ModalContent>
         <ModalHeader>
           <div className="flex items-center gap-2">

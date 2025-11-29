@@ -1,7 +1,7 @@
 // EditarPageSublote.tsx
 import { useEffect } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
-import type { LayoutContext } from "@/app/layout/ProtecdLayout";
+import type { LayoutContext } from "@/app/layout/ProtectedLayout";
 import EditarSubloteFeature from "../features/EditarSubloteFeature";
 
 export default function EditarPageSublote() {

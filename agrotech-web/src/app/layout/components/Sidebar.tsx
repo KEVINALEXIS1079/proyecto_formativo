@@ -51,9 +51,6 @@ export default function Sidebar({
   const [openReportes, setOpenReportes] = useState(
     location.pathname.startsWith("/reportes")
   );
-  const [openPermisos, setOpenPermisos] = useState(
-    location.pathname.startsWith("/permisos")
-  );
 
   /** Abrir "Cultivos" si la ruta actual pertenece a ese contexto */
   useEffect(() => {
@@ -76,7 +73,6 @@ export default function Sidebar({
     setOpenFinanzas(false);
     setOpenInventario(false);
     setOpenReportes(false);
-    setOpenPermisos(false);
   };
 
   /** Cierra los demás cuando accordion=true */
@@ -92,7 +88,6 @@ export default function Sidebar({
     setOpenFinanzas(except === "finanzas" ? (v) => v : false);
     setOpenInventario(except === "inventario" ? (v) => v : false);
     setOpenReportes(except === "reportes" ? (v) => v : false);
-    setOpenPermisos(except === "permisos" ? (v) => v : false);
   };
 
   return (
@@ -252,25 +247,6 @@ export default function Sidebar({
            ]}
          />
 
-        {/* PERMISOS */}
-        <SidebarItemWithChildren
-          to="/permisos"
-          icon={<ToggleRight className="h-5 w-5" />}
-          label="Permisos"
-          isOpen={openPermisos}
-          onToggle={() => {
-            closeOthers("permisos");
-            setOpenPermisos((v) => !v);
-          }}
-          childrenLinks={[
-            { to: "/lista-permisos", label: "Lista de permisos" },
-            { to: "/crear-permiso", label: "Crear permiso" },
-            { to: "/permisos-asignar-usuario", label: "Asignar permisos usuarios" },
-            { to: "/permisos-asignar-rol", label: "Asignar permisos rol" },
-            { to: "/quitar-permisos-usuario", label: "Quitar permisos usuario" },
-          ]}
-        />
-
         {/* USUARIOS */}
         <SidebarItemWithChildren
           to="/usuarios"
@@ -282,9 +258,7 @@ export default function Sidebar({
             setOpenUsuario((v) => !v);
           }}
           childrenLinks={[
-            { to: "/lista-usuarios", label: "Lista de usuarios" },
-            { to: "/usuario-registrar", label: "Registrar usuario" },
-            { to: "/perfil", label: "Perfil" },
+            { to: "/usuarios", label: "Lista de Usuarios" },
           ]}
         />
       </nav>

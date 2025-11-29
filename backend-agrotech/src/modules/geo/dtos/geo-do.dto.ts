@@ -3,8 +3,7 @@ import { CreateLoteDto } from './create-lote.dto';
 import { UpdateLoteDto } from './update-lote.dto';
 import { CreateSubLoteDto } from './create-sublote.dto';
 import { UpdateSubLoteDto } from './update-sublote.dto';
-import { CreateCultivoDto } from './create-cultivo.dto';
-import { UpdateCultivoDto } from './update-cultivo.dto';
+
 
 export class GeoFindAllLotesDoDto {}
 
@@ -48,41 +47,6 @@ export class GeoUpdateSubLoteDoDto {
 }
 
 export class GeoRemoveSubLoteDoDto {
-  @IsNumber()
-  id: number;
-}
-
-export class GeoFindAllCultivosDoDto {
-  @IsOptional()
-  @IsNumber()
-  loteId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  subLoteId?: number;
-
-  @IsOptional()
-  estado?: string;
-
-  @IsOptional()
-  q?: string;
-}
-
-export class GeoFindCultivoByIdDoDto {
-  @IsNumber()
-  id: number;
-}
-
-export class GeoCreateCultivoDoDto extends CreateCultivoDto {}
-
-export class GeoUpdateCultivoDoDto {
-  @IsNumber()
-  id: number;
-
-  data: UpdateCultivoDto;
-}
-
-export class GeoRemoveCultivoDoDto {
   @IsNumber()
   id: number;
 }

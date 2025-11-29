@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { Input, Button, Card } from "@heroui/react";
 import { Sprout  } from "lucide-react";
-import type { LayoutContext } from "@/app/layout/ProtecdLayout";
+import type { LayoutContext } from "@/app/layout/ProtectedLayout";
 import { createTipoCultivo} from "../api/create";
 import type { TipoCultivoPayload} from "../api/create";
 

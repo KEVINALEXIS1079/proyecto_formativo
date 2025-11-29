@@ -4,8 +4,7 @@ import { CreateLoteDto } from '../dtos/create-lote.dto';
 import { UpdateLoteDto } from '../dtos/update-lote.dto';
 import { CreateSubLoteDto } from '../dtos/create-sublote.dto';
 import { UpdateSubLoteDto } from '../dtos/update-sublote.dto';
-import { CreateCultivoDto } from '../dtos/create-cultivo.dto';
-import { UpdateCultivoDto } from '../dtos/update-cultivo.dto';
+
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -17,39 +16,7 @@ export class GeoController {
 
   // ==================== HTTP ENDPOINTS ====================
 
-  // ==================== CULTIVOS ====================
 
-  @Post('cultivos')
-  @RequirePermissions('cultivos.crear')
-  @UsePipes(new ValidationPipe())
-  async createCultivoHttp(@Body() dto: CreateCultivoDto) {
-    return this.createCultivo(dto);
-  }
-
-  @Get('cultivos')
-  @RequirePermissions('cultivos.ver')
-  async findAllCultivosHttp() {
-    return this.findAllCultivos();
-  }
-
-  @Get('cultivos/:id')
-  @RequirePermissions('cultivos.ver')
-  async findOneCultivoHttp(@Param('id', ParseIntPipe) id: number) {
-    return this.findCultivoById(id);
-  }
-
-  @Patch('cultivos/:id')
-  @RequirePermissions('cultivos.editar')
-  @UsePipes(new ValidationPipe())
-  async updateCultivoHttp(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCultivoDto) {
-    return this.updateCultivo(id, dto);
-  }
-
-  @Delete('cultivos/:id')
-  @RequirePermissions('cultivos.eliminar')
-  async removeCultivoHttp(@Param('id', ParseIntPipe) id: number) {
-    return this.removeCultivo(id);
-  }
 
   // ==================== LOTES ====================
 
@@ -189,37 +156,5 @@ export class GeoController {
     return this.geoService.removeSubLote(id);
   }
 
-  // ==================== CULTIVOS ====================
 
-  // Internal method for WebSocket: handles finding all cultivos with filters by calling the service
-  // Flow: Gateway calls this method -> calls geoService.findAllCultivos -> returns cultivos list
-  async findAllCultivos(filters?: any) {
-    return this.geoService.findAllCultivos(filters);
-  }
-
-  // Internal method for WebSocket: handles finding a cultivo by ID by calling the service
-  // Flow: Gateway calls this method -> calls geoService.findCultivoById -> returns cultivo
-  async findCultivoById(id: number) {
-    return this.geoService.findCultivoById(id);
-  }
-
-  // Internal method for WebSocket: handles creating a cultivo by calling the service
-  // Flow: Gateway calls this method -> calls geoService.createCultivo -> returns created cultivo
-  @UsePipes(new ValidationPipe())
-  async createCultivo(createCultivoDto: CreateCultivoDto) {
-    return this.geoService.createCultivo(createCultivoDto);
-  }
-
-  // Internal method for WebSocket: handles updating a cultivo by calling the service
-  // Flow: Gateway calls this method -> calls geoService.updateCultivo -> returns updated cultivo
-  @UsePipes(new ValidationPipe())
-  async updateCultivo(id: number, data: UpdateCultivoDto) {
-    return this.geoService.updateCultivo(id, data);
-  }
-
-  // Internal method for WebSocket: handles removing a cultivo by calling the service
-  // Flow: Gateway calls this method -> calls geoService.removeCultivo -> returns removed cultivo
-  async removeCultivo(id: number) {
-    return this.geoService.removeCultivo(id);
-  }
 }

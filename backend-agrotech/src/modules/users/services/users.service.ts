@@ -36,7 +36,7 @@ export class UsersService {
       .where('usuario.deletedAt IS NULL');
 
     // Búsqueda de texto en múltiples campos
-    if (filters?.q) {
+    if (filters?.q && filters.q.trim() !== '') {
       queryBuilder.andWhere(
         '(usuario.nombre ILIKE :q OR usuario.apellido ILIKE :q OR usuario.correo ILIKE :q OR usuario.identificacion ILIKE :q)',
         { q: `%${filters.q}%` }
@@ -44,18 +44,20 @@ export class UsersService {
     }
 
     // Filtro por rol
-    if (filters?.rolId) {
-      queryBuilder.andWhere('usuario.rolId = :rolId', { rolId: filters.rolId });
+    if (filters?.rolId !== undefined && filters.rolId !== null) {
+      queryBuilder.andWhere('usuario.rolId = :rolId', { rolId: Number(filters.rolId) });
     }
 
     // Filtro por estado
-    if (filters?.estado) {
-      queryBuilder.andWhere('usuario.estado = :estado', { estado: filters.estado });
+    if (filters?.estado && filters.estado.trim() !== '') {
+      queryBuilder.andWhere('LOWER(usuario.estado) = LOWER(:estado)', { estado: filters.estado });
     }
-
-    return queryBuilder
+    
+    const result = await queryBuilder
       .orderBy('usuario.createdAt', 'DESC')
       .getMany();
+    
+    return result;
   }
 
   async findById(id: number) {
@@ -277,8 +279,15 @@ export class UsersService {
   }
 
   async remove(id: number) {
-    const usuario = await this.findById(id);
-    return this.usuarioRepo.softRemove(usuario);
+    try {
+      const usuario = await this.findById(id);
+      usuario.estado = UserStatus.INACTIVO;
+      // No soft delete, just deactivate
+      return await this.usuarioRepo.save(usuario);
+    } catch (error) {
+      console.error('Error removing user:', error);
+      throw error;
+    }
   }
 
   async restore(id: number) {

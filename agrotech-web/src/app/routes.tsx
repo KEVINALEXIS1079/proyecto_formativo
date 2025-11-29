@@ -5,7 +5,7 @@ import LandingPage from "#/modules/landing/pages/LandingPage";
 import { Login, Register, Recover, Code, ChangePassword } from "@/modules/auth";
 
 // Layout privado
-import ProtectedLayout from "@/app/layout/ProtecdLayout";
+import ProtectedLayout from "@/app/layout/ProtectedLayout";
 
 // Páginas privadas
 import Home from "@/modules/landing/pages/HomePage";
@@ -13,7 +13,7 @@ import Home from "@/modules/landing/pages/HomePage";
 import { ActividadesListPage, ActividadEditPage, ActividadDetailPage } from "@/modules/actividades/pages";
 import ActividadCreatePage from "@/modules/actividades/pages/ActividadCreatePage";
 
-import { Usuarios, CrearPageUsuario, EditarPageUsuario } from "@/modules/usuarios/usuarios/pages/indexPageUsuario";
+import { UsersPage } from "@/modules/users/pages/UsersPage";
 
 import { CultivosListPage, CultivoCreatePage, CultivoEditPage, CultivoDetailPage } from "@/modules/cultivos/pages/indexPageCultivos";
 
@@ -26,10 +26,7 @@ import VentaDetailPage from "@/modules/finanzas/pages/VentaDetailPage";
 
 import { PageReportes, ListaPageReporte, CrearPageReporte, EditarPageReporte, ReporteCultivoPage, ReporteLotePage } from "@/modules/reportes/pages/indexPageReportes";
 
-import {ListaPermisosPage} from "@/modules/permisos/permisos/pages/indexPagePermisos";
-
 import {SensoresLivePage} from "@/modules/iot/Sensor/pages/indexPageIot";
-
 import  TipoSensorPage from "@/modules/iot/TipoSensor/pages/indexPageTipoSensor";
 
 import  CrearPageTipoCultivo  from "@/modules/cultivo/tipoCultivo/pages/crearPage";
@@ -38,7 +35,7 @@ import {CrearPageSublote, ListaPageSublote, EditarPageSublote} from "@/modules/c
 
 import {CrearPageLote, ListaPageLote, EditarPageLote} from "@/modules/cultivo/lote/pages/indexPageLote";
 
-import  PerfilPage  from "@/modules/usuarios/perfil/pages/PerfilPage";
+import { ProfilePage } from "@/modules/profile/pages/ProfilePage";
 
 import InventarioPage from "@/modules/inventario/pages/InventarioPage";
 import CrearInsumoPage from "@/modules/inventario/pages/CrearInsumoPage";
@@ -49,6 +46,7 @@ import ProveedoresPage from "@/modules/inventario/pages/ProveedoresPage";
 import AlmacenesPage from "@/modules/inventario/pages/AlmacenesPage";
 import InsumosEliminadosPage from "@/modules/inventario/pages/InsumosEliminadosPage";
 import HistorialMovimientosPage from "@/modules/inventario/pages/HistorialMovimientosPage";
+
 // Guards
 import { ProtectedRoute } from "@/modules/auth/ui/ProtectedRoute";
 import {
@@ -138,24 +136,16 @@ export default function AppRoutes() {
         {/* Actividades */}
         <Route path="/actividades" element={<ActividadesListPage />} />
         <Route path="/actividades/crear" element={<ActividadCreatePage />} />
-        <Route path="/actividades/editar/:id" element={<ActividadEditPage />} />
         <Route path="/actividades/:id" element={<ActividadDetailPage />} />
+        <Route path="/actividades/:id/editar" element={<ActividadEditPage />} />
 
-        {/* Usuarios */}
-        <Route path="/usuarios" element={<Usuarios />} />
-        <Route path="/usuario-registrar" element={<CrearPageUsuario />} />
-        <Route path="/usuarios/editar/:id" element={<EditarPageUsuario />} />
-
-        {/* Perfil */}
-        <Route path="/perfil" element={<PerfilPage />} />
-        
         {/* Cultivos */}
-        <Route path="/cultivos" element={<CultivosListPage />} />
         <Route path="/cultivos/crear" element={<CultivoCreatePage />} />
         <Route path="/cultivos/editar/:id" element={<CultivoEditPage />} />
         <Route path="/cultivos/detalle/:id" element={<CultivoDetailPage />} />
         <Route path="/tipo-cultivo/crear" element={<CrearPageTipoCultivo />} />
-        {/*lotes */}
+        
+        {/* Lotes */}
         <Route path="/lotes/crear" element={<CrearPageLote />} />
         <Route path="/lotes/listar" element={<ListaPageLote />} />
         <Route path="/lotes/editar/:id_lote" element={< EditarPageLote/>} />
@@ -164,8 +154,6 @@ export default function AppRoutes() {
         <Route path="/sublotes/crear" element={<CrearPageSublote />} />
         <Route path="/sublotes/listar" element={< ListaPageSublote/>} />
         <Route path="/sublotes/editar/:id_sublote" element={< EditarPageSublote/>} />
-
-
 
         {/* Fitosanitario */}
         <Route path="/fitosanitario" element={<EpaListPage />} />
@@ -203,18 +191,15 @@ export default function AppRoutes() {
         <Route path="/reportes/cultivo" element={<ReporteCultivoPage />} />
         <Route path="/reportes/lote" element={<ReporteLotePage />} />
 
-        {/* Permisos */}
-        <Route path="/permisos" element={<ListaPermisosPage />} />
+        {/* Usuarios */}
+        <Route path="/usuarios" element={<UsersPage />} />
 
-          
-
+        {/* Perfil */}
+        <Route path="/perfil" element={<ProfilePage />} />
 
         {/* IoT */}
-
         <Route path="/SensoresLivePage" element={<SensoresLivePage />} />
         <Route path="/TipoSensorPage" element={<TipoSensorPage />} />
-
-
 
       </Route>
       {/* Fallback */}

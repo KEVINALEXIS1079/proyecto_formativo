@@ -7,7 +7,7 @@ import { Usuario } from '../../modules/users/entities/usuario.entity';
 // Geo
 import { Lote } from '../../modules/geo/entities/lote.entity';
 import { SubLote } from '../../modules/geo/entities/sublote.entity';
-import { Cultivo } from '../../modules/geo/entities/cultivo.entity';
+import { Cultivo } from '../../modules/cultivos/entities/cultivo.entity';
 
 // Inventory
 import { Categoria } from '../../modules/inventory/entities/categoria.entity';

@@ -59,7 +59,7 @@ export default function ProtectedHeader({
           </DropdownTrigger>
 
           <DropdownMenu aria-label="Menú de usuario" className="w-[280px]">
-            <DropdownItem key="profile" isReadOnly className="h-auto cursor-default">
+            <DropdownItem key="profile" isReadOnly className="h-auto cursor-default" textValue="Perfil de usuario">
               <UserCard
                 name={loading ? "Cargando..." : user?.name ?? "Usuario"}
                 description={

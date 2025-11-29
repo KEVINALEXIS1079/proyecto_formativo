@@ -19,9 +19,8 @@ export class RegisterDto {
   idFicha?: string;
 
   @IsOptional()
-  @IsString({ message: 'El teléfono debe ser un texto válido' })
-  @Matches(/^[0-9+\-\s()]+$/, { message: 'El teléfono solo puede contener números y símbolos +, -, (), espacios' })
-  @MaxLength(20, { message: 'El teléfono no puede exceder 20 caracteres' })
+  @IsString({ message: 'El teléfono debe ser un string válido' })
+  @Matches(/^\d{10}$/, { message: 'El teléfono debe contener exactamente 10 dígitos' })
   telefono?: string;
 
   @IsEmail({}, { message: 'Debe proporcionar un correo electrónico válido' })

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
-import type { LayoutContext } from "@/app/layout/ProtecdLayout";
+import type { LayoutContext } from "@/app/layout/ProtectedLayout";
 import EditarLoteFeature from "../features/EditarLoteFeature";
 
 export default function EditarPageLote() {

@@ -16,6 +16,7 @@ import { CreateActivityDto } from '../dtos/create-activity.dto';
 import { UpdateActivityDto } from '../dtos/update-activity.dto';
 
 import { GeoService } from '../../geo/services/geo.service';
+import { CultivosService } from '../../cultivos/services/cultivos.service';
 import { InventoryService } from '../../inventory/services/inventory.service';
 
 import { ProductionService } from '../../production/services/production.service';
@@ -40,13 +41,14 @@ export class ActivitiesService {
     private insumoRepo: Repository<ActividadInsumoUso>,
 
     private geoService: GeoService,
+    private cultivosService: CultivosService,
     private inventoryService: InventoryService,
     private productionService: ProductionService,
     private financeService: FinanceService,
   ) {}
 
   async create(data: CreateActivityDto, usuarioId: number) {
-    const cultivo = await this.geoService.findCultivoById(data.cultivoId);
+    const cultivo = await this.cultivosService.findCultivoById(data.cultivoId);
     if (!cultivo) throw new NotFoundException('El cultivo no existe');
 
     if (data.loteId && cultivo.loteId !== data.loteId)
@@ -81,7 +83,7 @@ export class ActivitiesService {
 
     // RF21 Siembra
     if (data.subtipo === 'SIEMBRA') {
-      await this.geoService.updateCultivoFechaSiembra(
+      await this.cultivosService.updateCultivoFechaSiembra(
         data.cultivoId,
         new Date(data.fecha),
       );
@@ -89,7 +91,7 @@ export class ActivitiesService {
 
     // RF22 Finalización
     if (data.subtipo === 'FINALIZACION') {
-      await this.geoService.updateCultivoFechaFinalizacion(
+      await this.cultivosService.updateCultivoFechaFinalizacion(
         data.cultivoId,
         new Date(data.fecha),
       );

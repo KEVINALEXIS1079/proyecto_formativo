@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { PermissionsService } from '../services/permissions.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
@@ -109,4 +109,6 @@ export class PermissionsController {
   ) {
     return this.permissionsService.removePermisoFromUsuario(usuarioId, permisoId);
   }
+
+
 }

@@ -6,7 +6,7 @@ import { VentaDetalle } from '../../production/entities/venta-detalle.entity';
 import { Actividad } from '../../activities/entities/actividad.entity';
 import { ActividadServicio } from '../../activities/entities/actividad-servicio.entity';
 import { ActividadInsumoUso } from '../../activities/entities/actividad-insumo-uso.entity';
-import { Cultivo } from '../../geo/entities/cultivo.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 import { CsvExportService } from './csv-export.service';
 
 @Injectable()

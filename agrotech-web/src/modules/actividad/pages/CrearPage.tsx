@@ -3,7 +3,7 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { Card } from "@heroui/react";
 import { ListChecks } from "lucide-react";
 
-import type { LayoutContext } from "@/app/layout/ProtecdLayout";
+import type { LayoutContext } from "@/app/layout/ProtectedLayout";
 import type { CreateActividadInput } from "../../actividades/model/types";
 import ActividadForm from "../../actividades/ui/ActividadForm";
 import { createActividad } from "../api";

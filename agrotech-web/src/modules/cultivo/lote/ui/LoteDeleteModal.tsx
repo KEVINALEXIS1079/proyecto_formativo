@@ -17,7 +17,7 @@ export default function LoteDeleteModal({
   loading,
 }: Props) {
   return (
-    <Modal isOpen={open} onOpenChange={onOpenChange}>
+    <Modal isOpen={open} onOpenChange={onOpenChange} backdrop="blur">
       <ModalContent>
         <ModalHeader>Eliminar lote</ModalHeader>
         <ModalBody>

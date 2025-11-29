@@ -35,7 +35,7 @@ export default function ConfirmationModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} backdrop="blur">
       <ModalContent>
         <ModalHeader>{title}</ModalHeader>
         <ModalBody>

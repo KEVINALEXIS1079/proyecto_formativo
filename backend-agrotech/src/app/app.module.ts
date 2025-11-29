@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import configuration from '../config/configuration';
 import { validationSchema } from '../config/validation.schema';
 import { AppController } from './app.controller';
@@ -8,6 +10,7 @@ import { AppService } from './app.service';
 import { AuthModule } from '../modules/auth/auth.module';
 import { UsersModule } from '../modules/users/users.module';
 import { GeoModule } from '../modules/geo/geo.module';
+import { CultivosModule } from '../modules/cultivos/cultivos.module';
 import { ActivitiesModule } from '../modules/activities/activities.module';
 import { InventoryModule } from '../modules/inventory/inventory.module';
 import { WikiModule } from '../modules/wiki/wiki.module';
@@ -42,6 +45,7 @@ import { FinanceModule } from '../modules/finance/finance.module';
     AuthModule,
     UsersModule,
     GeoModule,
+    CultivosModule,
     ActivitiesModule,
     InventoryModule,
     WikiModule,
@@ -49,7 +53,12 @@ import { FinanceModule } from '../modules/finance/finance.module';
     IotModule,
     SeedsModule,
     ReportsModule,
+    ReportsModule,
     FinanceModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],

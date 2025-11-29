@@ -14,7 +14,7 @@ import { ActividadServicio } from '../activities/entities/actividad-servicio.ent
 import { ActividadInsumoUso } from '../activities/entities/actividad-insumo-uso.entity';
 import { ActividadResponsable } from '../activities/entities/actividad-responsable.entity';
 import { MovimientoInsumo } from '../inventory/entities/movimiento-insumo.entity';
-import { Cultivo } from '../geo/entities/cultivo.entity';
+import { Cultivo } from '../cultivos/entities/cultivo.entity';
 import { Sensor } from '../iot/entities/sensor.entity';
 import { SensorLectura } from '../iot/entities/sensor-lectura.entity';
 import { AuthModule } from '../auth/auth.module';

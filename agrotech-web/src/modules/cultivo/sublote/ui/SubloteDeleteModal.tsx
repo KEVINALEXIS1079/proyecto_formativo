@@ -16,7 +16,7 @@ export default function SubloteDeleteModal({
   loading,
 }: Props) {
   return (
-    <Modal isOpen={open} onOpenChange={onOpenChange}>
+    <Modal isOpen={open} onOpenChange={onOpenChange} backdrop="blur">
       <ModalContent>
         <ModalHeader>Eliminar sublote</ModalHeader>
         <ModalBody>

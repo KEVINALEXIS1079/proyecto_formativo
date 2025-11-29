@@ -49,6 +49,34 @@ export class PermissionsService {
     return permiso;
   }
 
+  async updatePermiso(id: number, data: { modulo?: string; accion?: string; descripcion?: string }) {
+    const permiso = await this.findPermisoById(id);
+    
+    if (data.modulo && data.accion) {
+      const clave = `${data.modulo}.${data.accion}`;
+      // Check if another permission has this key
+      const existing = await this.permisoRepo.findOne({ where: { clave } });
+      if (existing && existing.id !== id) {
+        throw new BadRequestException(`El permiso ${clave} ya existe`);
+      }
+      permiso.clave = clave;
+    } else if (data.modulo || data.accion) {
+       // If only one part changes, we need to reconstruct the key using the other part from existing
+       const modulo = data.modulo || permiso.modulo;
+       const accion = data.accion || permiso.accion;
+       const clave = `${modulo}.${accion}`;
+       
+       const existing = await this.permisoRepo.findOne({ where: { clave } });
+       if (existing && existing.id !== id) {
+         throw new BadRequestException(`El permiso ${clave} ya existe`);
+       }
+       permiso.clave = clave;
+    }
+
+    Object.assign(permiso, data);
+    return this.permisoRepo.save(permiso);
+  }
+
   // ==================== GESTIÓN DE ROLES ====================
   
   // RF06: Crear rol
@@ -292,5 +320,23 @@ export class PermissionsService {
     await this.redisService.invalidateRolePermissions(rolId);
     
     return { message: `Permisos sincronizados para el rol ${rol.nombre}` };
+  }
+  // Sincronizar permisos de un usuario (reemplazar todos los permisos directos)
+  async syncUserPermissions(usuarioId: number, permisoIds: number[]) {
+    const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
+    if (!usuario) throw new NotFoundException(`Usuario ${usuarioId} not found`);
+    
+    // Eliminar todos los permisos directos actuales
+    await this.usuarioPermisoRepo.delete({ usuarioId });
+    
+    // Asignar los nuevos
+    for (const permisoId of permisoIds) {
+      await this.usuarioPermisoRepo.save({ usuarioId, permisoId });
+    }
+    
+    // Invalidar caché de permisos para este usuario
+    await this.redisService.invalidateUserPermissions(usuarioId);
+    
+    return { message: `Permisos sincronizados para el usuario` };
   }
 }

@@ -27,20 +27,28 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('Usuario no autenticado');
     }
 
-    // Obtener permisos efectivos del usuario
-    const userPermissions = await this.permissionsService.getPermisosEfectivos(user.id);
+    try {
+      // Obtener permisos efectivos del usuario
+      const userPermissions = await this.permissionsService.getPermisosEfectivos(user.id);
 
-    // Verificar si el usuario tiene al menos uno de los permisos requeridos
-    const hasPermission = requiredPermissions.some(permission => 
-      userPermissions.includes(permission)
-    );
-
-    if (!hasPermission) {
-      throw new ForbiddenException(
-        `Permisos insuficientes. Se requiere uno de: ${requiredPermissions.join(', ')}`
+      // Verificar si el usuario tiene al menos uno de los permisos requeridos
+      const hasPermission = requiredPermissions.some(permission => 
+        userPermissions.includes(permission)
       );
-    }
 
-    return true;
+      if (!hasPermission) {
+        throw new ForbiddenException(
+          `Permisos insuficientes. Se requiere uno de: ${requiredPermissions.join(', ')}`
+        );
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in PermissionsGuard:', error);
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw error; // Re-throw to let NestJS handle it (will result in 500 if not HttpException)
+    }
   }
 }

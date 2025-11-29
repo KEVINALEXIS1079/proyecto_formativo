@@ -7,7 +7,7 @@ export function startUsuariosRealtime(qc: QueryClient) {
   if (started) return;
   started = true;
 
-  const socket = connectSocket("/usuarios");
+  const socket = connectSocket("/users");
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["usuarios"] });
 

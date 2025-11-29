@@ -7,7 +7,7 @@ import { Usuario } from '../../modules/users/entities/usuario.entity';
 // Geo
 import { Lote } from '../../modules/geo/entities/lote.entity';
 import { SubLote } from '../../modules/geo/entities/sublote.entity';
-import { Cultivo } from '../../modules/geo/entities/cultivo.entity';
+import { Cultivo } from '../../modules/cultivos/entities/cultivo.entity';
 
 // Inventory
 import { Categoria } from '../../modules/inventory/entities/categoria.entity';
@@ -174,7 +174,10 @@ export async function seedModules(dataSource: DataSource) {
   let usuariosCreados = 0;
   for (const userData of usuariosData) {
     const existing = await usuarioRepo.findOne({
-      where: { correo: userData.correo },
+      where: [
+        { correo: userData.correo },
+        { identificacion: userData.identificacion },
+      ],
     });
     if (!existing) {
       const usuario = usuarioRepo.create(userData);
