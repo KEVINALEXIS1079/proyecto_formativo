@@ -4,7 +4,8 @@ import {
   IsNotEmpty, 
   IsNumber,
   IsEnum,
-  Min
+  Min,
+  ValidateIf
 } from 'class-validator';
 
 export enum ProtocoloSensor {
@@ -56,4 +57,36 @@ export class CreateSensorDto {
   @IsOptional()
   @IsString({ message: 'La descripción debe ser un texto' })
   descripcion?: string;
+
+  @ValidateIf(o => o.protocolo === ProtocoloSensor.HTTP || o.protocolo === ProtocoloSensor.WEBSOCKET)
+  @IsNotEmpty({ message: 'La URL del endpoint es requerida para HTTP/WEBSOCKET' })
+  @IsString()
+  endpointUrl?: string;
+
+  @ValidateIf(o => o.protocolo === ProtocoloSensor.MQTT)
+  @IsNotEmpty({ message: 'El broker MQTT es requerido' })
+  @IsString()
+  mqttBroker?: string;
+
+  @ValidateIf(o => o.protocolo === ProtocoloSensor.MQTT)
+  @IsNotEmpty({ message: 'El puerto MQTT es requerido' })
+  @IsNumber({}, { message: 'El puerto MQTT debe ser un número' })
+  mqttPort?: number;
+
+  @ValidateIf(o => o.protocolo === ProtocoloSensor.MQTT)
+  @IsNotEmpty({ message: 'El tópico MQTT es requerido' })
+  @IsString()
+  mqttTopic?: string;
+
+  @IsOptional()
+  @IsString()
+  mqttUsername?: string;
+
+  @IsOptional()
+  @IsString()
+  mqttPassword?: string;
+
+  @IsOptional()
+  @IsNumber()
+  mqttQos?: number;
 }

@@ -5,7 +5,7 @@ import {
   WebSocketServer,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { IotService } from '../services/iot.service';
 import {
@@ -25,7 +25,10 @@ export class IotGateway {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly iotService: IotService) {}
+  constructor(
+    @Inject(forwardRef(() => IotService))
+    private readonly iotService: IotService,
+  ) {}
 
   @SubscribeMessage('findAllSensors')
   @RequirePermissions('iot.ver')
@@ -45,6 +48,29 @@ export class IotGateway {
   ) {
     const result = await this.iotService.createSensor(createSensorDto, user.id);
     client.emit('createSensor.result', result);
+    return result;
+  }
+
+  @SubscribeMessage('updateSensor')
+  @RequirePermissions('iot.editar')
+  async updateSensor(
+    @MessageBody() data: any, // Using any to accept id + partial dto
+    @ConnectedSocket() client: Socket,
+  ) {
+    const { id, ...updateData } = data;
+    const result = await this.iotService.updateSensor(id, updateData);
+    client.emit('updateSensor.result', result);
+    return result;
+  }
+
+  @SubscribeMessage('toggleSensorStatus')
+  @RequirePermissions('iot.editar')
+  async toggleSensorStatus(
+    @MessageBody() data: { id: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const result = await this.iotService.toggleSensorStatus(data.id);
+    client.emit('toggleSensorStatus.result', result);
     return result;
   }
 

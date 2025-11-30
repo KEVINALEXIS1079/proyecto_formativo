@@ -10,7 +10,7 @@ import type {
   TipoCultivoEpa,
   CreateTipoCultivoEpaInput,
   UpdateTipoCultivoEpaInput,
-} from "../model/types";
+} from "../models/types";
 import { epaService } from "../api/epa.service";
 import { tipoEpaService } from "../api/tipoEpa.service";
 import { tipoCultivoEpaService } from "../api/tipoCultivoEpa.service";

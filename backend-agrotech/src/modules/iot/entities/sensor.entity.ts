@@ -48,8 +48,8 @@ export class Sensor extends BaseEntity {
   @Column({ name: 'estado_conexion', default: 'DESCONECTADO' })
   estadoConexion: string;
 
-  @Column('float', { name: 'ultimo_valor', nullable: true })
-  ultimoValor: number;
+  @Column({ name: 'ultimo_valor', nullable: true })
+  ultimoValor: string;
 
   @Column({ name: 'ultima_medicion', nullable: true })
   ultimaLectura: Date;

@@ -95,7 +95,7 @@ export const RoleListFeature = forwardRef<RoleListRef>((_, ref) => {
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
-        onManagePermissions={handleEdit}
+
       />
 
       {/* Create/Edit Modal */}

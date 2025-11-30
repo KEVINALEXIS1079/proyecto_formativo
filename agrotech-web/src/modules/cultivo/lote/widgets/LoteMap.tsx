@@ -13,6 +13,7 @@ import "leaflet/dist/leaflet.css";
 import MapCallout from "../ui/MapCallout";
 import { useMapCallout, type CalloutKind } from "../hooks/UseMapCallout";
 import L from "leaflet";
+import FitBoundsHandler from "../../../geo/widgets/FitBoundsHandler";
 
 export type Coordenada = { latitud: number; longitud: number };
 export type LoteExistente = { nombre: string; coordenadas: Coordenada[] };
@@ -25,6 +26,7 @@ type Props = {
   mensaje?: string;
   clearMensaje?: () => void;
   mensajeKind?: CalloutKind;
+  isEditing?: boolean;
 };
 
 const DEFAULT_CENTER: [number, number] = [1.8928, -76.091];
@@ -36,10 +38,12 @@ const DraggableMarker = memo(
     c,
     index,
     onDrag,
+    isDraggable = true,
   }: {
     c: Coordenada;
     index: number;
     onDrag: (i: number, lat: number, lng: number) => void;
+    isDraggable?: boolean;
   }) => {
     if (typeof c.latitud !== "number" || typeof c.longitud !== "number" || isNaN(c.latitud) || isNaN(c.longitud)) {
       return null;
@@ -48,13 +52,15 @@ const DraggableMarker = memo(
     return (
       <Marker
         position={[c.latitud, c.longitud]}
-        draggable
+        draggable={isDraggable}
         eventHandlers={{
           drag: (e) => {
+            if (!isDraggable) return;
             const { lat, lng } = e.target.getLatLng();
             if (!isNaN(lat) && !isNaN(lng)) onDrag(index, lat, lng); // Actualización en tiempo real
           },
           dragend: (e) => {
+            if (!isDraggable) return;
             const { lat, lng } = e.target.getLatLng();
             if (!isNaN(lat) && !isNaN(lng)) onDrag(index, lat, lng);
           },
@@ -82,6 +88,7 @@ export default function LoteMap({
   mensaje = "",
   clearMensaje = () => {},
   mensajeKind = "info",
+  isEditing = true,
 }: Props) {
   const mapRef = useRef<L.Map | null>(null);
   const [hoveredLote, setHoveredLote] = useState<LoteExistente | null>(null);
@@ -144,20 +151,22 @@ export default function LoteMap({
 
   const handleAddPoint = useCallback(
     (lat: number, lng: number) => {
+      if (!isEditing) return;
       if (!checkValidPoint(lat, lng)) return;
       setCoordenadas([...coordenadas, { latitud: lat, longitud: lng }]);
     },
-    [coordenadas, setCoordenadas, checkValidPoint]
+    [coordenadas, setCoordenadas, checkValidPoint, isEditing]
   );
 
   const handleDragMarker = useCallback(
     (index: number, lat: number, lng: number) => {
+      if (!isEditing) return;
       if (!checkValidPoint(lat, lng)) return;
       const nuevas = [...coordenadas];
       nuevas[index] = { latitud: lat, longitud: lng };
       setCoordenadas(nuevas);
     },
-    [coordenadas, setCoordenadas, checkValidPoint]
+    [coordenadas, setCoordenadas, checkValidPoint, isEditing]
   );
 
   const MapPicker = () => {
@@ -175,7 +184,8 @@ export default function LoteMap({
     <div className="h-96 rounded-xl overflow-hidden border border-gray-200 relative">
       <MapContainer center={DEFAULT_CENTER} zoom={19} style={{ height: "100%", width: "100%" }} ref={mapRef}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-        <MapPicker />
+        <FitBoundsHandler polygons={[coordenadas.map(c => [c.latitud, c.longitud])]} />
+        {isEditing && <MapPicker />}
 
         {/* Polígono activo */}
         {coordenadas.length > 0 && (
@@ -192,7 +202,7 @@ export default function LoteMap({
               />
             )}
             {coordenadas.map((c, i) => (
-              <DraggableMarker key={i} c={c} index={i} onDrag={handleDragMarker} />
+              <DraggableMarker key={i} c={c} index={i} onDrag={handleDragMarker} isDraggable={isEditing} />
             ))}
           </>
         )}

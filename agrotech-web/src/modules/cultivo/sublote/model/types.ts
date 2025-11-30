@@ -23,6 +23,9 @@ export interface Sublote {
   // Relación con cultivos (si aplica)
   cultivos: any[];
 
+  // Propiedad extendida para mostrar el nombre del lote en la UI
+  loteNombre?: string;
+
   // Control de eliminación lógica
   delete_at: string | null;
 }

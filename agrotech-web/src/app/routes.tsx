@@ -47,6 +47,8 @@ import AlmacenesPage from "@/modules/inventario/pages/AlmacenesPage";
 import InsumosEliminadosPage from "@/modules/inventario/pages/InsumosEliminadosPage";
 import HistorialMovimientosPage from "@/modules/inventario/pages/HistorialMovimientosPage";
 
+import GeoPage from "@/modules/geo/pages/GeoPage";
+
 // Guards
 import { ProtectedRoute } from "@/modules/auth/ui/ProtectedRoute";
 import {
@@ -200,6 +202,9 @@ export default function AppRoutes() {
         {/* IoT */}
         <Route path="/SensoresLivePage" element={<SensoresLivePage />} />
         <Route path="/TipoSensorPage" element={<TipoSensorPage />} />
+
+        {/* Geo */}
+        <Route path="/geo" element={<GeoPage />} />
 
       </Route>
       {/* Fallback */}

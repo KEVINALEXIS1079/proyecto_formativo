@@ -1,11 +1,16 @@
-import { useState } from "react";
+
+import { useState, forwardRef, useImperativeHandle } from "react";
 import { Button, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Input, Textarea } from "@heroui/react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useTipoCultivoEpaList, useCreateTipoCultivoEpa, useUpdateTipoCultivoEpa, useRemoveTipoCultivoEpa } from "../hooks/useFitosanitario";
-import type { TipoCultivoEpa, CreateTipoCultivoEpaInput } from "../model/types";
+import type { TipoCultivoEpa, CreateTipoCultivoEpaInput } from "../models/types";
 
-export default function TipoCultivoEpaFeature() {
+export interface TipoCultivoEpaListRef {
+  openCreateModal: () => void;
+}
+
+const TipoCultivoEpaFeature = forwardRef<TipoCultivoEpaListRef>((_, ref) => {
   const { data: tiposCultivoEpa = [], isLoading } = useTipoCultivoEpaList();
   const createMutation = useCreateTipoCultivoEpa();
   const updateMutation = useUpdateTipoCultivoEpa();
@@ -24,10 +29,12 @@ export default function TipoCultivoEpaFeature() {
     setForm({ nombre: "", descripcion: "" });
   };
 
-  const handleCreate = () => {
-    resetForm();
-    setShowCreateModal(true);
-  };
+  useImperativeHandle(ref, () => ({
+    openCreateModal: () => {
+      resetForm();
+      setShowCreateModal(true);
+    },
+  }));
 
   const handleEdit = (tipo: TipoCultivoEpa) => {
     setForm({
@@ -86,20 +93,8 @@ export default function TipoCultivoEpaFeature() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Tipos Cultivo EPA</h1>
-        <Button
-          color="primary"
-          startContent={<Plus size={16} />}
-          onPress={handleCreate}
-        >
-          Nuevo Tipo Cultivo EPA
-        </Button>
-      </div>
-
       {/* Tabla */}
-      <Table aria-label="Tabla de tipos cultivo EPA" isVirtualized={false}>
+      <Table aria-label="Tabla de tipos cultivo EPA" isVirtualized={false} removeWrapper>
         <TableHeader>
           {columns.map((column) => (
             <TableColumn key={column.key}>{column.label}</TableColumn>
@@ -118,20 +113,21 @@ export default function TipoCultivoEpaFeature() {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    variant="flat"
-                    startContent={<Edit size={14} />}
+                    variant="light"
+                    isIconOnly
+                    className="text-[#17C964]"
                     onPress={() => handleEdit(tipo)}
                   >
-                    Editar
+                    <Edit size={16} />
                   </Button>
                   <Button
                     size="sm"
-                    variant="flat"
+                    variant="light"
+                    isIconOnly
                     color="danger"
-                    startContent={<Trash2 size={14} />}
                     onPress={() => setShowDeleteConfirm(tipo)}
                   >
-                    Eliminar
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               </TableCell>
@@ -150,6 +146,8 @@ export default function TipoCultivoEpaFeature() {
             resetForm();
           }
         }}
+        size="md"
+        backdrop="blur"
       >
         <ModalContent>
           <ModalHeader>
@@ -161,12 +159,14 @@ export default function TipoCultivoEpaFeature() {
               value={form.nombre || ""}
               onChange={(e) => setForm((s) => ({ ...s, nombre: e.target.value }))}
               placeholder="Nombre del tipo cultivo"
+              variant="bordered"
             />
             <Textarea
               label="Descripción (opcional)"
               value={form.descripcion || ""}
               onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
               placeholder="Descripción del tipo cultivo"
+              variant="bordered"
             />
           </ModalBody>
           <ModalFooter>
@@ -223,4 +223,6 @@ export default function TipoCultivoEpaFeature() {
       </Modal>
     </div>
   );
-}
+});
+
+export default TipoCultivoEpaFeature;

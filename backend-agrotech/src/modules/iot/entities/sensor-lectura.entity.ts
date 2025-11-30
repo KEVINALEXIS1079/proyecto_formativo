@@ -7,8 +7,8 @@ export class SensorLectura extends BaseEntity {
   @Column({ name: 'sensor_id' })
   sensorId: number;
 
-  @Column('float')
-  valor: number;
+  @Column({ nullable: true })
+  valor: string;
 
   @Column({ name: 'timestamp', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   fecha: Date;

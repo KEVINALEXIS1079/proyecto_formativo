@@ -1,4 +1,4 @@
-import type { Epa, CreateEpaInput, UpdateEpaInput } from "../model/types";
+import type { Epa, CreateEpaInput, UpdateEpaInput } from "../models/types";
 import { api, connectSocket } from "@/shared/api/client";
 import type { Socket } from "socket.io-client";
 
@@ -29,7 +29,7 @@ class FitosanitarioService {
 
     // Agregar imágenes
     if (payload.imagenes) {
-      payload.imagenes.forEach((file, index) => {
+      payload.imagenes.forEach((file: File) => {
         formData.append('imagenes', file);
       });
     }
@@ -54,7 +54,7 @@ class FitosanitarioService {
 
     // Agregar imágenes
     if (payload.imagenes) {
-      payload.imagenes.forEach((file, index) => {
+      payload.imagenes.forEach((file: File) => {
         formData.append('imagenes', file);
       });
     }
@@ -76,7 +76,7 @@ class FitosanitarioService {
 
   connect(): Socket {
     if (!this.socket || this.socket.disconnected) {
-      this.socket = connectSocket("/fitosanitario");
+      this.socket = connectSocket("/wiki");
     }
     return this.socket;
   }

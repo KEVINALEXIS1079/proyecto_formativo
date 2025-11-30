@@ -1,7 +1,7 @@
 // src/shared/api/client.ts
 import axios, { AxiosError } from "axios";
 import { io, Socket } from "socket.io-client";
-import { getToken, removeToken } from "../../modules/auth/api/cookies";
+import { removeToken } from "../../modules/auth/api/cookies";
 
 // =====================
 // Axios centralizado
@@ -76,7 +76,7 @@ function clearInactivityTimer(socket: Socket) {
  * Conecta al WebSocket con namespace opcional.
  * Ejemplo: const s = connectSocket("/usuarios");
  */
-export function connectSocket(namespace = "/", token?: string): Socket {
+export function connectSocket(namespace = "/"): Socket {
   const baseUrl =
     import.meta.env.VITE_API_URL?.replace("/api/v1", "") ?? "http://localhost:4000";
   const url = `${baseUrl}${namespace}`;

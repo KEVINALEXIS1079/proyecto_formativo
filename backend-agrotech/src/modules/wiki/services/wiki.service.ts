@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EPA } from '../entities/epa.entity';
 import { TipoCultivoWiki } from '../entities/tipo-cultivo-wiki.entity';
+import { TipoEpa } from '../entities/tipo-epa.entity';
 import { CreateEpaDto } from '../dtos/create-epa.dto';
 import { UpdateEpaDto } from '../dtos/update-epa.dto';
 
@@ -17,6 +18,8 @@ export class WikiService {
     private readonly epaRepo: Repository<EPA>,
     @InjectRepository(TipoCultivoWiki)
     private tipoCultivoWikiRepo: Repository<TipoCultivoWiki>,
+    @InjectRepository(TipoEpa)
+    private tipoEpaRepo: Repository<TipoEpa>,
   ) {}
 
   // ==================== EPA ====================
@@ -118,5 +121,42 @@ export class WikiService {
   async createTipoCultivo(data: { nombre: string; descripcion?: string }) {
     const tipo = this.tipoCultivoWikiRepo.create(data);
     return this.tipoCultivoWikiRepo.save(tipo);
+  }
+
+  async updateTipoCultivo(id: number, data: { nombre?: string; descripcion?: string }) {
+    const tipo = await this.tipoCultivoWikiRepo.findOne({ where: { id } });
+    if (!tipo) throw new NotFoundException(`TipoCultivoWiki ${id} not found`);
+    Object.assign(tipo, data);
+    return this.tipoCultivoWikiRepo.save(tipo);
+  }
+
+  async removeTipoCultivo(id: number) {
+    const tipo = await this.tipoCultivoWikiRepo.findOne({ where: { id } });
+    if (!tipo) throw new NotFoundException(`TipoCultivoWiki ${id} not found`);
+    return this.tipoCultivoWikiRepo.remove(tipo);
+  }
+
+  // ==================== TIPO EPA ====================
+
+  async findAllTipoEpa() {
+    return this.tipoEpaRepo.find();
+  }
+
+  async createTipoEpa(data: { nombre: string; descripcion?: string; tipoEpaEnum?: string }) {
+    const tipo = this.tipoEpaRepo.create(data);
+    return this.tipoEpaRepo.save(tipo);
+  }
+
+  async updateTipoEpa(id: number, data: any) {
+    const tipo = await this.tipoEpaRepo.findOne({ where: { id } });
+    if (!tipo) throw new NotFoundException(`TipoEpa ${id} not found`);
+    Object.assign(tipo, data);
+    return this.tipoEpaRepo.save(tipo);
+  }
+
+  async removeTipoEpa(id: number) {
+    const tipo = await this.tipoEpaRepo.findOne({ where: { id } });
+    if (!tipo) throw new NotFoundException(`TipoEpa ${id} not found`);
+    return this.tipoEpaRepo.remove(tipo);
   }
 }

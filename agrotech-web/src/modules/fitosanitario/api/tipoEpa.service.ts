@@ -1,7 +1,7 @@
 // src/modules/fitosanitario/api/tipoEpa.service.ts
 import api from "@/shared/api/client";
-import type { TipoEpa, CreateTipoEpaInput, UpdateTipoEpaInput } from "../model/types";
-import { mapTipoEpaFromBackend, mapCreateTipoEpaInputToBackend, mapUpdateTipoEpaInputToBackend } from "../model/mappers";
+import type { TipoEpa, CreateTipoEpaInput, UpdateTipoEpaInput } from "../models/types";
+import { mapTipoEpaFromBackend, mapCreateTipoEpaInputToBackend, mapUpdateTipoEpaInputToBackend } from "../models/mappers";
 
 const BASE = "/tipo-epa";
 
@@ -36,4 +36,4 @@ export const tipoEpaService = {
 };
 
 // Re-exporta tipos para permitir `import type {...} from "../api/tipoEpa.service"`
-export type { TipoEpa, CreateTipoEpaInput, UpdateTipoEpaInput } from "../model/types";
+export type { TipoEpa, CreateTipoEpaInput, UpdateTipoEpaInput } from "../models/types";

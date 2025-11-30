@@ -38,7 +38,9 @@ export class GeoService {
   }
 
   async findAllLotes() {
-    return this.loteRepo.find();
+    return this.loteRepo.find({
+      relations: ['sublotes'],
+    });
   }
 
   async findLoteById(id: number) {
@@ -70,16 +72,21 @@ export class GeoService {
   
   // RF10: Registro de sublotes con validaciones espaciales
   async createSubLote(data: CreateSubLoteDto) {
+    console.log('📍 Creating sublote with data:', JSON.stringify(data, null, 2));
+    
     const lote = await this.findLoteById(data.loteId);
+    console.log('📍 Found lote:', lote.id, lote.nombre);
     
     // RF10: Validar que el sublote esté contenido en el lote
     const isContained = await this.validateContainment(lote.geom, data.geom);
+    console.log('📍 Is contained:', isContained);
     if (!isContained) {
       throw new BadRequestException('El sublote debe estar completamente dentro del lote');
     }
     
     // RF10: Validar que no haya solape con otros sublotes del mismo lote
     const hasOverlap = await this.checkOverlaps(data.loteId, data.geom);
+    console.log('📍 Has overlap:', hasOverlap);
     if (hasOverlap) {
       throw new BadRequestException('El sublote se solapa con otro sublote existente');
     }
@@ -106,7 +113,10 @@ export class GeoService {
       lote,
     });
     
-    return this.subLoteRepo.save(subLote);
+    console.log('📍 Sublote created successfully');
+    const savedSubLote = await this.subLoteRepo.save(subLote);
+    console.log('📍 Saved sublote:', JSON.stringify(savedSubLote, null, 2));
+    return savedSubLote;
   }
 
   async findAllSubLotes(loteId?: number) {
@@ -218,7 +228,7 @@ export class GeoService {
         SELECT EXISTS (
           SELECT 1 
           FROM sublotes 
-          WHERE "loteId" = $1 
+          WHERE lote_id = $1 
           AND ST_Overlaps(ST_GeomFromGeoJSON($2), ST_GeomFromGeoJSON(geom::json))
       `;
       
@@ -232,12 +242,10 @@ export class GeoService {
       query += `)`;
 
       const result = await this.loteRepo.query(query, params);
-      return result[0]?.exists === true;
+      return result[0]?.exists || false;
     } catch (error) {
       console.error('Error checking overlaps:', error);
-      // En caso de error de DB, asumimos que hay solape para prevenir inconsistencias
-      // o lanzamos excepción. Por seguridad, retornamos true (bloqueante).
-      return true;
+      throw error;
     }
   }
 }

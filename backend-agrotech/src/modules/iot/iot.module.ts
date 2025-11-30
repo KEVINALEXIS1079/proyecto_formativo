@@ -6,13 +6,16 @@ import { IotController } from './controllers/iot.controller';
 import { Sensor } from './entities/sensor.entity';
 import { SensorLectura } from './entities/sensor-lectura.entity';
 import { TipoSensor } from './entities/tipo-sensor.entity';
+import { IotGlobalConfig } from './entities/iot-global-config.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
+import { MqttService } from '../../common/services/mqtt.service';
+import { GeoModule } from '../geo/geo.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Sensor, SensorLectura, TipoSensor]),
+    TypeOrmModule.forFeature([Sensor, SensorLectura, TipoSensor, IotGlobalConfig]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -21,9 +24,10 @@ import { AuthModule } from '../auth/auth.module';
       inject: [ConfigService],
     }),
     AuthModule,
+    GeoModule,
   ],
   controllers: [IotController],
-  providers: [IotService, IotGateway],
+  providers: [IotService, IotGateway, MqttService],
   exports: [IotService],
 })
 export class IotModule {}

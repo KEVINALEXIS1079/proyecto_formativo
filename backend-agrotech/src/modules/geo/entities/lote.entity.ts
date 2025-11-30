@@ -1,5 +1,6 @@
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
+import { SubLote } from './sublote.entity';
 
 @Entity('lotes')
 export class Lote extends BaseEntity {
@@ -23,4 +24,7 @@ export class Lote extends BaseEntity {
 
   @Column({ default: 'activo' })
   estado: string;
+
+  @OneToMany(() => SubLote, subLote => subLote.lote)
+  sublotes: SubLote[];
 }

@@ -1,11 +1,16 @@
-import { useState } from "react";
+
+import { useState, forwardRef, useImperativeHandle } from "react";
 import { Button, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Input, Textarea, Chip } from "@heroui/react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useTipoEpaList, useCreateTipoEpa, useUpdateTipoEpa, useRemoveTipoEpa } from "../hooks/useFitosanitario";
-import type { TipoEpa, CreateTipoEpaInput } from "../model/types";
+import type { TipoEpa, CreateTipoEpaInput } from "../models/types";
 
-export default function TipoEpaFeature() {
+export interface TipoEpaListRef {
+  openCreateModal: () => void;
+}
+
+const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
   const { data: tiposEpa = [], isLoading } = useTipoEpaList();
   const createMutation = useCreateTipoEpa();
   const updateMutation = useUpdateTipoEpa();
@@ -25,10 +30,12 @@ export default function TipoEpaFeature() {
     setForm({ nombre: "", descripcion: "", tipoEpaEnum: "enfermedad" });
   };
 
-  const handleCreate = () => {
-    resetForm();
-    setShowCreateModal(true);
-  };
+  useImperativeHandle(ref, () => ({
+    openCreateModal: () => {
+      resetForm();
+      setShowCreateModal(true);
+    },
+  }));
 
   const handleEdit = (tipo: TipoEpa) => {
     setForm({
@@ -91,20 +98,8 @@ export default function TipoEpaFeature() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Tipos EPA</h1>
-        <Button
-          color="primary"
-          startContent={<Plus size={16} />}
-          onPress={handleCreate}
-        >
-          Nuevo Tipo EPA
-        </Button>
-      </div>
-
       {/* Tabla */}
-      <Table aria-label="Tabla de tipos EPA" isVirtualized={false}>
+      <Table aria-label="Tabla de tipos EPA" isVirtualized={false} removeWrapper>
         <TableHeader>
           {columns.map((column) => (
             <TableColumn key={column.key}>{column.label}</TableColumn>
@@ -132,20 +127,21 @@ export default function TipoEpaFeature() {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    variant="flat"
-                    startContent={<Edit size={14} />}
+                    variant="light"
+                    isIconOnly
+                    className="text-[#17C964]"
                     onPress={() => handleEdit(tipo)}
                   >
-                    Editar
+                    <Edit size={16} />
                   </Button>
                   <Button
                     size="sm"
-                    variant="flat"
+                    variant="light"
+                    isIconOnly
                     color="danger"
-                    startContent={<Trash2 size={14} />}
                     onPress={() => setShowDeleteConfirm(tipo)}
                   >
-                    Eliminar
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               </TableCell>
@@ -164,6 +160,8 @@ export default function TipoEpaFeature() {
             resetForm();
           }
         }}
+        size="md"
+        backdrop="blur"
       >
         <ModalContent>
           <ModalHeader>
@@ -175,12 +173,14 @@ export default function TipoEpaFeature() {
               value={form.nombre || ""}
               onChange={(e) => setForm((s) => ({ ...s, nombre: e.target.value }))}
               placeholder="Nombre del tipo"
+              variant="bordered"
             />
             <Textarea
               label="Descripción"
               value={form.descripcion || ""}
               onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
               placeholder="Descripción del tipo"
+              variant="bordered"
             />
           </ModalBody>
           <ModalFooter>
@@ -237,4 +237,6 @@ export default function TipoEpaFeature() {
       </Modal>
     </div>
   );
-}
+});
+
+export default TipoEpaFeature;

@@ -5,9 +5,8 @@ export class CreateSensorLecturaDto {
   @IsNotEmpty()
   sensorId: number;
 
-  @IsNumber()
   @IsNotEmpty()
-  valor: number;
+  valor: any;
 
   @IsDateString()
   @IsNotEmpty()

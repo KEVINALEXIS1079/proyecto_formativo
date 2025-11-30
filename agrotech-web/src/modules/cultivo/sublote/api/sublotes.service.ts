@@ -8,17 +8,17 @@ class SubloteService {
 
   // CRUD REST con emisión de eventos
   async listSublotes(): Promise<Sublote[]> {
-    const { data } = await api.get("/sublotes");
+    const { data } = await api.get("/geo/sublotes");
     return Array.isArray(data) ? data.map(mapSubloteFromApi) : [];
   }
 
   async getSubloteById(id: number): Promise<Sublote> {
-    const { data } = await api.get(`/sublotes/${id}`);
+    const { data } = await api.get(`/geo/sublotes/${id}`);
     return mapSubloteFromApi(data);
   }
 
   async createSublote(payload: CreateSubloteDTO): Promise<Sublote> {
-    const { data } = await api.post("/sublotes", mapSubloteToApi(payload));
+    const { data } = await api.post("/geo/sublotes", mapSubloteToApi(payload));
     const sublote = mapSubloteFromApi(data);
     // Emitir evento WebSocket para todos los clientes conectados
     this.emit("sublotes:created", sublote);
@@ -26,7 +26,7 @@ class SubloteService {
   }
 
   async updateSublote(id: number, payload: CreateSubloteDTO): Promise<Sublote> {
-    const { data } = await api.patch(`/sublotes/${id}`, mapSubloteToApi(payload));
+    const { data } = await api.patch(`/geo/sublotes/${id}`, mapSubloteToApi(payload));
     const sublote = mapSubloteFromApi(data);
     // Emitir evento WebSocket
     this.emit("sublotes:updated", sublote);
@@ -34,14 +34,14 @@ class SubloteService {
   }
 
   async removeSublote(id: number): Promise<boolean> {
-    await api.delete(`/sublotes/${id}`);
+    await api.delete(`/geo/sublotes/${id}`);
     // Emitir evento WebSocket indicando eliminación
     this.emit("sublotes:removed", { id_sublote_pk: id });
     return true;
   }
 
   async restoreSublote(id: number): Promise<Sublote> {
-    const { data } = await api.patch(`/sublotes/restore/${id}`);
+    const { data } = await api.patch(`/geo/sublotes/restore/${id}`);
     const sublote = mapSubloteFromApi(data);
     this.emit("sublotes:restored", sublote);
     return sublote;
@@ -50,7 +50,7 @@ class SubloteService {
   // WebSocket
   connect(): Socket {
     if (!this.socket || this.socket.disconnected) {
-      this.socket = connectSocket("/sublotes");
+      this.socket = connectSocket("/geo");
     }
     return this.socket;
   }

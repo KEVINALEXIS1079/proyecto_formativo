@@ -11,8 +11,8 @@ import {
   Users,
   ListChecks,
   ChevronRight,
-  ToggleRight,
   Leaf,
+  Map,
 } from "lucide-react";
 
 /** Props opcionales */
@@ -51,6 +51,9 @@ export default function Sidebar({
   const [openReportes, setOpenReportes] = useState(
     location.pathname.startsWith("/reportes")
   );
+  const [openGeo, setOpenGeo] = useState(
+    location.pathname.startsWith("/geo")
+  );
 
   /** Abrir "Cultivos" si la ruta actual pertenece a ese contexto */
   useEffect(() => {
@@ -73,6 +76,7 @@ export default function Sidebar({
     setOpenFinanzas(false);
     setOpenInventario(false);
     setOpenReportes(false);
+    setOpenGeo(false);
   };
 
   /** Cierra los demás cuando accordion=true */
@@ -88,6 +92,7 @@ export default function Sidebar({
     setOpenFinanzas(except === "finanzas" ? (v) => v : false);
     setOpenInventario(except === "inventario" ? (v) => v : false);
     setOpenReportes(except === "reportes" ? (v) => v : false);
+    setOpenGeo(except === "geo" ? (v) => v : false);
   };
 
   return (
@@ -111,6 +116,21 @@ export default function Sidebar({
             setOpenActividad((v) => !v);
           }}
           childrenLinks={[{ to: "/actividades/crear", label: "Registrar actividad" }]}
+        />
+
+        {/* GEO */}
+        <SidebarItemWithChildren
+          to="/geo"
+          icon={<Map className="h-5 w-5" />}
+          label="Georreferenciación"
+          isOpen={openGeo}
+          onToggle={() => {
+            closeOthers("geo");
+            setOpenGeo((v) => !v);
+          }}
+          childrenLinks={[
+            { to: "/geo", label: "Mapa General" }
+          ]}
         />
 
         {/* CULTIVOS */}

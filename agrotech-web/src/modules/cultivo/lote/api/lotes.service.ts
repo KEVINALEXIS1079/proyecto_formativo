@@ -8,34 +8,34 @@ class LoteService {
 
   // CRUD REST
   async listLotes(): Promise<Lote[]> {
-    const { data } = await api.get("/lotes");
+    const { data } = await api.get("/geo/lotes");
     return Array.isArray(data) ? data.map(mapLoteFromApi) : [];
   }
 
   async getLoteById(id: number): Promise<Lote> {
-    const { data } = await api.get(`/lotes/${id}`);
+    const { data } = await api.get(`/geo/lotes/${id}`);
     return mapLoteFromApi(data);
   }
 
   async createLote(payload: CreateLoteDTO): Promise<Lote> {
-    const { data } = await api.post("/lotes", mapLoteToApi(payload));
+    const { data } = await api.post("/geo/lotes", mapLoteToApi(payload));
     return mapLoteFromApi(data);
   }
 
   async updateLote(id: number, payload: CreateLoteDTO): Promise<Lote> {
-    const { data } = await api.patch(`/lotes/${id}`, mapLoteToApi(payload));
+    const { data } = await api.patch(`/geo/lotes/${id}`, mapLoteToApi(payload));
     return mapLoteFromApi(data);
   }
 
   async removeLote(id: number): Promise<boolean> {
-    await api.delete(`/lotes/${id}`);
+    await api.delete(`/geo/lotes/${id}`);
     return true;
   }
 
   // WebSocket
   connect(): Socket {
     if (!this.socket || this.socket.disconnected) {
-      this.socket = connectSocket("/lotes");
+      this.socket = connectSocket("/geo");
     }
     return this.socket;
   }

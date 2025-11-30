@@ -46,7 +46,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'lg', footer }:
       scrollBehavior="inside"
     >
       <ModalContent>
-        {(onClose) => (
+        {(_onClose) => (
           <>
             {title && <ModalHeader className="flex flex-col gap-1">{title}</ModalHeader>}
             <ModalBody className="py-4">

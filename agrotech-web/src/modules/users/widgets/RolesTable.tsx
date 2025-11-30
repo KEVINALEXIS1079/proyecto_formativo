@@ -9,10 +9,9 @@ interface RolesTableProps {
   onView?: (rol: Rol) => void;
   onEdit: (rol: Rol) => void;
   onDelete: (rol: Rol) => void;
-  onManagePermissions: (rol: Rol) => void;
 }
 
-export const RolesTable = ({ roles, isLoading, onView, onEdit, onDelete, onManagePermissions }: RolesTableProps) => {
+export const RolesTable = ({ roles, isLoading, onView, onEdit, onDelete }: RolesTableProps) => {
   if (isLoading) {
     return <div className="p-4 text-center">Cargando roles...</div>;
   }

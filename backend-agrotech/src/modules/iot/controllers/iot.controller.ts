@@ -13,6 +13,7 @@ import {
   ParseIntPipe,
   Req,
   UnauthorizedException,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { IotService } from '../services/iot.service';
@@ -43,6 +44,24 @@ export class IotController {
 
   // ==================== HTTP ENDPOINTS ====================
 
+  @Get('config')
+  @RequirePermissions('iot.ver')
+  async getGlobalConfig() {
+    return this.iotService.getGlobalConfig();
+  }
+
+  @Post('config')
+  @RequirePermissions('iot.editar')
+  async saveGlobalConfig(@Body() body: any) {
+    return this.iotService.saveGlobalConfig(body);
+  }
+
+  @Post('reset-seed')
+  @RequirePermissions('iot.eliminar')
+  async resetAndSeed() {
+    return this.iotService.resetAndSeed();
+  }
+
   @Get('sensors')
   @RequirePermissions('iot.ver')
   async findAllSensorsHttp() {
@@ -58,6 +77,21 @@ export class IotController {
   ) {
     const userId = this.extractUserId(req);
     return this.createSensor(dto, userId);
+  }
+
+  @Patch('sensors/:id')
+  @RequirePermissions('iot.editar')
+  async updateSensorHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: Partial<IotCreateSensorDoDto>,
+  ) {
+    return this.updateSensor(id, dto);
+  }
+
+  @Patch('sensors/:id/toggle')
+  @RequirePermissions('iot.editar')
+  async toggleSensorStatusHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.iotService.toggleSensorStatus(id);
   }
 
   @Delete('sensors/:id')
@@ -81,6 +115,15 @@ export class IotController {
   @RequirePermissions('iot.ver')
   async findOneSensorHttp(@Param('id', ParseIntPipe) id: number) {
     return this.getSensorById(id);
+  }
+
+  @Get('sensors/:id/readings')
+  @RequirePermissions('iot.ver')
+  async getSensorReadingsHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
+  ) {
+    return this.iotService.getUltimasLecturas(id, limit);
   }
 
   // ==================== TIPO SENSOR ENDPOINTS ====================
@@ -142,6 +185,10 @@ export class IotController {
   @UsePipes(new ValidationPipe())
   async createSensor(createSensorDto: IotCreateSensorDoDto, userId: number) {
     return this.iotService.createSensor(createSensorDto, userId);
+  }
+
+  async updateSensor(id: number, data: Partial<IotCreateSensorDoDto>) {
+    return this.iotService.updateSensor(id, data);
   }
 
   // Internal method for WebSocket: handles removing a sensor by calling the service

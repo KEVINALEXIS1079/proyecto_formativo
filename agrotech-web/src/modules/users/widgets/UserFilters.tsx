@@ -86,12 +86,14 @@ export const UserFilters = ({ filters, onChange }: UserFiltersProps) => {
               listbox: "max-h-80 overflow-auto",
             }}
           >
-            <SelectItem key="all" className="text-sm py-2">Todos</SelectItem>
-            {roles.map((rol) => (
-              <SelectItem key={rol.id} className="text-sm py-2">
-                {rol.nombre}
-              </SelectItem>
-            ))}
+            {[
+              <SelectItem key="all" className="text-sm py-2">Todos</SelectItem>,
+              ...roles.map((rol) => (
+                <SelectItem key={rol.id} className="text-sm py-2">
+                  {rol.nombre}
+                </SelectItem>
+              ))
+            ]}
           </Select>
         </div>
 
@@ -117,11 +119,13 @@ export const UserFilters = ({ filters, onChange }: UserFiltersProps) => {
               listbox: "max-h-80 overflow-auto",
             }}
           >
-            <SelectItem key="all" className="text-sm py-2">Todos</SelectItem>
-            <SelectItem key={UserStatus.ACTIVO} className="text-sm py-2">Activo</SelectItem>
-            <SelectItem key={UserStatus.INACTIVO} className="text-sm py-2">Inactivo</SelectItem>
-            <SelectItem key={UserStatus.BLOQUEADO} className="text-sm py-2">Bloqueado</SelectItem>
-            <SelectItem key={UserStatus.PENDIENTE_VERIFICACION} className="text-sm py-2">Pendiente</SelectItem>
+            {[
+              <SelectItem key="all" className="text-sm py-2">Todos</SelectItem>,
+              <SelectItem key={UserStatus.ACTIVO} className="text-sm py-2">Activo</SelectItem>,
+              <SelectItem key={UserStatus.INACTIVO} className="text-sm py-2">Inactivo</SelectItem>,
+              <SelectItem key={UserStatus.BLOQUEADO} className="text-sm py-2">Bloqueado</SelectItem>,
+              <SelectItem key={UserStatus.PENDIENTE_VERIFICACION} className="text-sm py-2">Pendiente</SelectItem>
+            ]}
           </Select>
         </div>
       </div>

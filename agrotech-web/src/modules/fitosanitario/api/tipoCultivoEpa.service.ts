@@ -1,7 +1,7 @@
 // src/modules/fitosanitario/api/tipoCultivoEpa.service.ts
 import api from "@/shared/api/client";
-import type { TipoCultivoEpa, CreateTipoCultivoEpaInput, UpdateTipoCultivoEpaInput } from "../model/types";
-import { mapTipoCultivoEpaFromBackend, mapCreateTipoCultivoEpaInputToBackend, mapUpdateTipoCultivoEpaInputToBackend } from "../model/mappers";
+import type { TipoCultivoEpa, CreateTipoCultivoEpaInput, UpdateTipoCultivoEpaInput } from "../models/types";
+import { mapTipoCultivoEpaFromBackend, mapCreateTipoCultivoEpaInputToBackend, mapUpdateTipoCultivoEpaInputToBackend } from "../models/mappers";
 
 const BASE = "/tipo-cultivo-epa";
 
@@ -36,4 +36,4 @@ export const tipoCultivoEpaService = {
 };
 
 // Re-exporta tipos para permitir `import type {...} from "../api/tipoCultivoEpa.service"`
-export type { TipoCultivoEpa, CreateTipoCultivoEpaInput, UpdateTipoCultivoEpaInput } from "../model/types";
+export type { TipoCultivoEpa, CreateTipoCultivoEpaInput, UpdateTipoCultivoEpaInput } from "../models/types";

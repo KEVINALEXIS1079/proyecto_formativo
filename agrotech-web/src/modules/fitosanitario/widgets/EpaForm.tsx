@@ -1,7 +1,7 @@
- import { Button, Input, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Select, SelectItem, Textarea } from "@heroui/react";
- import { useEffect, useMemo, useState } from "react";
- import { Plus, X } from "lucide-react";
-import type { Epa, TipoEpaLite, TipoCultivoEpaLite, CreateEpaInput } from "../model/types";
+import { Button, Input, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Select, SelectItem, Textarea, Tooltip } from "@heroui/react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, X, Upload, Image as ImageIcon } from "lucide-react";
+import type { Epa, TipoEpaLite, TipoCultivoEpaLite, CreateEpaInput } from "../models/types";
 import { useTipoEpaList, useCreateTipoEpa } from "../hooks/useFitosanitario";
 import { useTipoCultivoEpaList, useCreateTipoCultivoEpa } from "../hooks/useFitosanitario";
 import ImagePreview from "../../iot/TipoSensor/ui/ImagePreview";
@@ -38,7 +38,7 @@ function CreateTipoEpaModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={onClose} size="sm">
+    <Modal isOpen={isOpen} onOpenChange={onClose} size="md" backdrop="blur">
       <ModalContent>
         <ModalHeader>Crear nuevo tipo EPA</ModalHeader>
         <ModalBody className="space-y-3">
@@ -47,12 +47,14 @@ function CreateTipoEpaModal({
             value={form.nombre}
             onChange={(e) => setForm((s) => ({ ...s, nombre: e.target.value }))}
             placeholder="Ej: Enfermedad"
+            variant="bordered"
           />
           <Textarea
             label="Descripción"
             value={form.descripcion}
             onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
             placeholder="Descripción del tipo"
+            variant="bordered"
           />
         </ModalBody>
         <ModalFooter>
@@ -102,7 +104,7 @@ function CreateTipoCultivoEpaModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={onClose} size="sm">
+    <Modal isOpen={isOpen} onOpenChange={onClose} size="md" backdrop="blur">
       <ModalContent>
         <ModalHeader>Crear nuevo tipo cultivo EPA</ModalHeader>
         <ModalBody className="space-y-3">
@@ -111,12 +113,14 @@ function CreateTipoCultivoEpaModal({
             value={form.nombre}
             onChange={(e) => setForm((s) => ({ ...s, nombre: e.target.value }))}
             placeholder="Ej: Café"
+            variant="bordered"
           />
           <Textarea
             label="Descripción (opcional)"
             value={form.descripcion}
             onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
             placeholder="Descripción del cultivo"
+            variant="bordered"
           />
         </ModalBody>
         <ModalFooter>
@@ -225,101 +229,211 @@ export default function EpaForm({
       <Modal
         isOpen={isOpen}
         onOpenChange={(open) => { if (!open) onClose(); }}
-        placement="top-center"
-        size="xl"
+        placement="center"
+        size="3xl"
+        backdrop="blur"
+        scrollBehavior="inside"
+        classNames={{
+          body: "py-6",
+          backdrop: "bg-black/50 backdrop-opacity-40",
+          base: "border border-default-100 shadow-xl dark:bg-zinc-900",
+          header: "border-b border-default-100",
+          footer: "border-t border-default-100",
+        }}
       >
-        <ModalContent className="md:max-w-4xl">
+        <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
-            {epa ? "Editar EPA" : "Crear nuevo EPA"}
+            <h2 className="text-xl font-bold">{epa ? "Editar Fitosanitario" : "Nuevo Registro Fitosanitario"}</h2>
+            <p className="text-sm text-default-500 font-normal">
+              {epa ? "Actualiza la información del registro existente." : "Completa la información para registrar una nueva enfermedad, plaga o arvense."}
+            </p>
           </ModalHeader>
           <ModalBody>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Nombre"
-                value={form.nombre || ""}
-                onChange={(e) => setForm((s) => ({ ...s, nombre: e.target.value }))}
-                placeholder="Nombre del EPA"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Columna Izquierda: Info Básica */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-default-700 flex items-center gap-2">
+                  Información General
+                </h3>
+                
+                <Input
+                  label="Nombre"
+                  value={form.nombre || ""}
+                  onChange={(e) => setForm((s) => ({ ...s, nombre: e.target.value }))}
+                  placeholder="Nombre común"
+                  variant="bordered"
+                  isRequired
+                />
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tipo EPA</label>
-                <div className="flex gap-2">
-                  <Select
-                    selectedKeys={new Set([selectedTipoEpaKey])}
-                    onSelectionChange={(keys) => {
-                      const k = Array.from(keys as Set<string>)[0];
-                      setForm((s) => ({ ...s, tipoEpaId: k ? Number(k) : undefined }));
-                    }}
-                    placeholder="Seleccionar tipo EPA"
-                    className="flex-1"
-                  >
-                    {tiposEpa.map((tipo) => (
-                      <SelectItem key={String(tipo.id)} textValue={tipo.nombre}>
-                        {tipo.nombre}
-                      </SelectItem>
-                    ))}
-                  </Select>
-                  <Button
-                    isIconOnly
-                    variant="flat"
-                    size="sm"
-                    onPress={() => setCreateTipoEpaOpen(true)}
-                  >
-                    <Plus size={16} />
-                  </Button>
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                        <div className="flex gap-2 items-end">
+                        <Select
+                            label="Tipo"
+                            selectedKeys={new Set([selectedTipoEpaKey])}
+                            onSelectionChange={(keys) => {
+                            const k = Array.from(keys as Set<string>)[0];
+                            setForm((s) => ({ ...s, tipoEpaId: k ? Number(k) : undefined }));
+                            }}
+                            placeholder="Seleccionar"
+                            variant="bordered"
+                            isRequired
+                        >
+                            {tiposEpa.map((tipo) => (
+                            <SelectItem key={String(tipo.id)} textValue={tipo.nombre}>
+                                {tipo.nombre}
+                            </SelectItem>
+                            ))}
+                        </Select>
+                        <Tooltip content="Crear nuevo tipo">
+                            <Button
+                                isIconOnly
+                                variant="flat"
+                                className="h-14 w-14 min-w-10"
+                                onPress={() => setCreateTipoEpaOpen(true)}
+                            >
+                                <Plus size={20} />
+                            </Button>
+                        </Tooltip>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                        <div className="flex gap-2 items-end">
+                        <Select
+                            label="Cultivo Afectado"
+                            selectedKeys={new Set([selectedTipoCultivoEpaKey])}
+                            onSelectionChange={(keys) => {
+                            const k = Array.from(keys as Set<string>)[0];
+                            setForm((s) => ({ ...s, tipoCultivoEpaId: k ? Number(k) : undefined }));
+                            }}
+                            placeholder="Seleccionar"
+                            variant="bordered"
+                            isRequired
+                        >
+                            {tiposCultivoEpa.map((tipo) => (
+                            <SelectItem key={String(tipo.id)} textValue={tipo.nombre}>
+                                {tipo.nombre}
+                            </SelectItem>
+                            ))}
+                        </Select>
+                        <Tooltip content="Crear nuevo cultivo">
+                            <Button
+                                isIconOnly
+                                variant="flat"
+                                className="h-14 w-14 min-w-10"
+                                onPress={() => setCreateTipoCultivoEpaOpen(true)}
+                            >
+                                <Plus size={20} />
+                            </Button>
+                        </Tooltip>
+                        </div>
+                    </div>
                 </div>
+
+                <Textarea
+                  label="Descripción"
+                  value={form.descripcion || ""}
+                  onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
+                  placeholder="Descripción general y características principales"
+                  minRows={3}
+                  variant="bordered"
+                  isRequired
+                />
+
+                <Textarea
+                  label="Síntomas"
+                  value={form.sintomas || ""}
+                  onChange={(e) => setForm((s) => ({ ...s, sintomas: e.target.value }))}
+                  placeholder="Signos visibles y síntomas en la planta"
+                  minRows={3}
+                  variant="bordered"
+                />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tipo Cultivo EPA</label>
-                <div className="flex gap-2">
-                  <Select
-                    selectedKeys={new Set([selectedTipoCultivoEpaKey])}
-                    onSelectionChange={(keys) => {
-                      const k = Array.from(keys as Set<string>)[0];
-                      setForm((s) => ({ ...s, tipoCultivoEpaId: k ? Number(k) : undefined }));
-                    }}
-                    placeholder="Seleccionar tipo cultivo"
-                    className="flex-1"
-                  >
-                    {tiposCultivoEpa.map((tipo) => (
-                      <SelectItem key={String(tipo.id)} textValue={tipo.nombre}>
-                        {tipo.nombre}
-                      </SelectItem>
-                    ))}
-                  </Select>
-                  <Button
-                    isIconOnly
-                    variant="flat"
-                    size="sm"
-                    onPress={() => setCreateTipoCultivoEpaOpen(true)}
-                  >
-                    <Plus size={16} />
-                  </Button>
-                </div>
-              </div>
+              {/* Columna Derecha: Detalles y Multimedia */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-default-700 flex items-center gap-2">
+                    Detalles y Multimedia
+                </h3>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Imágenes</label>
+                <Textarea
+                  label="Manejo y Control"
+                  value={form.manejoControl || ""}
+                  onChange={(e) => setForm((s) => ({ ...s, manejoControl: e.target.value }))}
+                  placeholder="Métodos de prevención y tratamiento"
+                  minRows={3}
+                  variant="bordered"
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+                    <Select
+                    label="Meses de Riesgo"
+                    selectionMode="multiple"
+                    selectedKeys={selectedMesesKeys}
+                    onSelectionChange={(keys) => {
+                        const selected = Array.from(keys as Set<string>);
+                        setForm((s) => ({ ...s, mesesRiesgo: selected.join(',') }));
+                    }}
+                    placeholder="Seleccionar meses"
+                    variant="bordered"
+                    >
+                    {mesesOptions.map((mes) => (
+                        <SelectItem key={mes.key} textValue={mes.label}>
+                        {mes.label}
+                        </SelectItem>
+                    ))}
+                    </Select>
+
+                    <Input
+                    label="Temporada"
+                    value={form.temporadaText || ""}
+                    onChange={(e) => setForm((s) => ({ ...s, temporadaText: e.target.value }))}
+                    placeholder="Ej: Época de lluvias"
+                    variant="bordered"
+                    />
+                </div>
+
+                {/* Zona de carga de imágenes mejorada */}
                 <div className="space-y-2">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      setForm((s) => ({ ...s, imagenes: files }));
-                    }}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  {form.imagenes && form.imagenes.length > 0 && (
-                    <div className="flex gap-2 flex-wrap">
-                      {form.imagenes.map((file, index) => (
-                        <div key={index} className="relative">
+                  <label className="text-sm font-medium text-default-700">Imágenes de referencia</label>
+                  <div className="border-2 border-dashed border-default-300 rounded-xl p-4 hover:bg-default-50 transition-colors text-center cursor-pointer relative">
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setForm((s) => ({ ...s, imagenes: [...(s.imagenes || []), ...files] }));
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="flex flex-col items-center justify-center gap-2 text-default-500">
+                        <Upload size={24} />
+                        <span className="text-sm">Arrastra imágenes o haz clic para subir</span>
+                    </div>
+                  </div>
+                  
+                  {/* Previsualización de imágenes */}
+                  {(form.imagenes?.length || 0) > 0 || (form.imagenesUrls?.length || 0) > 0 ? (
+                    <div className="flex gap-2 overflow-x-auto py-2 pb-1">
+                      {/* Imágenes existentes */}
+                      {form.imagenesUrls?.map((url, index) => (
+                        <div key={`url-${index}`} className="relative flex-shrink-0 group">
+                            <ImagePreview src={url} size={80} />
+                            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* Aquí se podría agregar botón para eliminar imagen existente si el backend lo soporta */}
+                            </div>
+                        </div>
+                      ))}
+                      
+                      {/* Nuevas imágenes */}
+                      {form.imagenes?.map((file, index) => (
+                        <div key={`file-${index}`} className="relative flex-shrink-0 w-20 h-20 group">
                           <img
                             src={URL.createObjectURL(file)}
-                            alt={`Vista previa ${index + 1}`}
-                            className="w-20 h-20 object-cover rounded border"
+                            alt={`New ${index}`}
+                            className="w-full h-full object-cover rounded-lg border border-default-200"
                           />
                           <button
                             type="button"
@@ -329,87 +443,31 @@ export default function EpaForm({
                                 imagenes: s.imagenes?.filter((_, i) => i !== index) || []
                               }));
                             }}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                            className="absolute -top-2 -right-2 bg-danger text-white rounded-full p-1 shadow-md hover:bg-danger-600 transition-colors z-20"
                           >
                             <X size={12} />
                           </button>
                         </div>
                       ))}
                     </div>
-                  )}
-                  {form.imagenesUrls && form.imagenesUrls.length > 0 && (
-                    <div className="flex justify-center gap-2 flex-wrap">
-                      <p className="text-sm text-gray-600">Imágenes existentes:</p>
-                      {form.imagenesUrls.map((url, index) => (
-                        <ImagePreview key={`existing-${index}`} src={url} size={100} />
-                      ))}
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
-
-              <Textarea
-                label="Descripción"
-                value={form.descripcion || ""}
-                onChange={(e) => setForm((s) => ({ ...s, descripcion: e.target.value }))}
-                placeholder="Descripción del EPA"
-                minRows={3}
-              />
-
-              <Textarea
-                label="Síntomas"
-                value={form.sintomas || ""}
-                onChange={(e) => setForm((s) => ({ ...s, sintomas: e.target.value }))}
-                placeholder="Síntomas del EPA"
-                minRows={3}
-              />
-
-              <Textarea
-                label="Manejo/Control"
-                value={form.manejoControl || ""}
-                onChange={(e) => setForm((s) => ({ ...s, manejoControl: e.target.value }))}
-                placeholder="Métodos de manejo y control"
-                minRows={3}
-              />
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Meses de riesgo</label>
-                <Select
-                  selectionMode="multiple"
-                  selectedKeys={selectedMesesKeys}
-                  onSelectionChange={(keys) => {
-                    const selected = Array.from(keys as Set<string>);
-                    setForm((s) => ({ ...s, mesesRiesgo: selected.join(',') }));
-                  }}
-                  placeholder="Seleccionar meses"
-                >
-                  {mesesOptions.map((mes) => (
-                    <SelectItem key={mes.key} textValue={mes.label}>
-                      {mes.label}
-                    </SelectItem>
-                  ))}
-                </Select>
-              </div>
-
-              <Input
-                label="Temporada"
-                value={form.temporadaText || ""}
-                onChange={(e) => setForm((s) => ({ ...s, temporadaText: e.target.value }))}
-                placeholder="Ej: Todo el año, Primavera, etc."
-              />
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button variant="flat" onPress={onClose}>Cancelar</Button>
+            <Button variant="light" onPress={onClose}>Cancelar</Button>
             <Button
               color="primary"
               isDisabled={!canSubmit}
+              isLoading={false} // Se podría pasar prop isLoading si se desea
               onPress={() => {
                 if (!canSubmit) return;
                 onSubmit(form as CreateEpaInput);
               }}
+              className="px-6 font-medium"
             >
-              {epa ? "Guardar cambios" : "Crear EPA"}
+              {epa ? "Guardar Cambios" : "Crear Registro"}
             </Button>
           </ModalFooter>
         </ModalContent>

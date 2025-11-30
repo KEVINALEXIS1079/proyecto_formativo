@@ -1016,27 +1016,27 @@ export async function seedModules(dataSource: DataSource) {
   const lecturasData = [
     {
       sensorId: sensorIds[0],
-      valor: 25.5,
+      valor: '25.5',
       fecha: new Date('2024-11-20T08:00:00'),
     },
     {
       sensorId: sensorIds[0],
-      valor: 26.0,
+      valor: '26.0',
       fecha: new Date('2024-11-20T12:00:00'),
     },
     {
       sensorId: sensorIds[1],
-      valor: 65.0,
+      valor: '65.0',
       fecha: new Date('2024-11-20T08:00:00'),
     },
     {
       sensorId: sensorIds[1],
-      valor: 70.0,
+      valor: '70.0',
       fecha: new Date('2024-11-20T12:00:00'),
     },
     {
       sensorId: sensorIds[2],
-      valor: 24.0,
+      valor: '24.0',
       fecha: new Date('2024-11-20T08:00:00'),
     },
   ];

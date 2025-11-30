@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { listUsuarios } from "../../usuarios/usuarios/api/usuario.service";
+import { getUsers } from "../../users/api/users.api";
 import { listInsumos } from "../../inventario/api/insumos.service";
 import { listCategoriasInsumo } from "../../inventario/api/categorias-insumo.service";
 import { listLotes, getSublotes } from "../../cultivos/api/lotes.service";
@@ -29,7 +29,7 @@ export function useUsuariosList({
 } = {}) {
   return useQuery({
     queryKey: QK_RELATED.USUARIOS(q, page, limit),
-    queryFn: () => listUsuarios({ q, page, limit }),
+    queryFn: () => getUsers({ q, page, limit }),
     staleTime: 30_000,
   });
 }

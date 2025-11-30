@@ -80,6 +80,21 @@ export class IotReportsController {
     return this.iotService.getUptimeStats(id);
   }
 
+  @Get('summary')
+  @RequirePermissions('iot.ver')
+  async getSummaryReport(@Query() query: any) {
+    if (!query.tipoSensorId || !query.from || !query.to) {
+      throw new Error('tipoSensorId, from, and to are required');
+    }
+    
+    return this.iotService.getSummaryReport({
+      tipoSensorId: +query.tipoSensorId,
+      cultivoId: query.cultivoId ? +query.cultivoId : undefined,
+      from: new Date(query.from),
+      to: new Date(query.to),
+    });
+  }
+
   @Get('sensors/:id/sparkline')
   @RequirePermissions('iot.ver')
   async getSparkline(

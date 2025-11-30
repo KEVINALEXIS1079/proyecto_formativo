@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import EpaForm from "../widgets/EpaForm";
 import { useCreateEpa } from "../hooks/useFitosanitario";
-import type { CreateEpaInput } from "../model/types";
+import type { CreateEpaInput } from "../models/types";
 
 export default function EpaCreateFeature() {
   const navigate = useNavigate();

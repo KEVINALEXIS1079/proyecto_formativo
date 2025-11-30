@@ -12,6 +12,7 @@ import {
 import { getAreaOfPolygon, getDistance, isPointInPolygon } from "geolib";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import FitBoundsHandler from "../../../geo/widgets/FitBoundsHandler";
 
 import MapCallout from "../ui/SubloteMapCallout";
 import { useMapCallout, type CalloutKind } from "../../lote/hooks/UseMapCallout";
@@ -48,6 +49,7 @@ type Props = {
   mensaje?: string;
   clearMensaje?: () => void;
   mensajeKind?: CalloutKind;
+  isEditing?: boolean;
 };
 
 const DEFAULT_CENTER: [number, number] = [1.8928, -76.091];
@@ -59,23 +61,27 @@ const DraggableMarker = memo(
     c,
     index,
     onDrag,
+    draggable,
   }: {
     c: CoordenadaSublote;
     index: number;
     onDrag: (i: number, lat: number, lng: number) => void;
+    draggable: boolean;
   }) => {
     if (isNaN(c.latitud_sublote) || isNaN(c.longitud_sublote)) return null;
 
     return (
       <Marker
         position={[c.latitud_sublote, c.longitud_sublote]}
-        draggable
+        draggable={draggable}
         eventHandlers={{
           drag: (e) => {
+            if (!draggable) return;
             const { lat, lng } = e.target.getLatLng();
             if (!isNaN(lat) && !isNaN(lng)) onDrag(index, lat, lng);
           },
           dragend: (e) => {
+            if (!draggable) return;
             const { lat, lng } = e.target.getLatLng();
             if (!isNaN(lat) && !isNaN(lng)) onDrag(index, lat, lng);
           },
@@ -106,6 +112,7 @@ export default function SubloteMap({
   mensaje = "",
   clearMensaje = () => {},
   mensajeKind = "info",
+  isEditing = true,
 }: Props) {
   const mapRef = useRef<L.Map | null>(null);
   const [hoveredLote, setHoveredLote] = useState<Lote | null>(null);
@@ -195,18 +202,21 @@ export default function SubloteMap({
 
   const handleDragMarker = useCallback(
     (index: number, lat: number, lng: number) => {
+      if (!isEditing) return;
       if (!checkValidPoint(lat, lng)) return;
       const nuevas = [...coordenadas];
       nuevas[index] = { latitud_sublote: lat, longitud_sublote: lng };
       setCoordenadas(nuevas);
     },
-    [coordenadas, setCoordenadas, checkValidPoint]
+    [coordenadas, setCoordenadas, checkValidPoint, isEditing]
   );
 
   const MapPicker = () => {
     useMapEvents({
       click(e) {
-        handleAddPoint(e.latlng.lat, e.latlng.lng);
+        if (isEditing) {
+            handleAddPoint(e.latlng.lat, e.latlng.lng);
+        }
       },
     });
     return null;
@@ -218,6 +228,7 @@ export default function SubloteMap({
     <div className="h-96 rounded-xl overflow-hidden border border-gray-200 relative">
       <MapContainer center={DEFAULT_CENTER} zoom={19} style={{ height: "100%", width: "100%" }} ref={mapRef}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
+        <FitBoundsHandler polygons={[coordenadas.map(c => [c.latitud_sublote, c.longitud_sublote])]} />
         <MapPicker />
 
         {/* Sublote en edición */}
@@ -235,7 +246,7 @@ export default function SubloteMap({
               />
             )}
             {coordenadas.map((c, i) => (
-              <DraggableMarker key={i} c={c} index={i} onDrag={handleDragMarker} />
+              <DraggableMarker key={i} c={c} index={i} onDrag={handleDragMarker} draggable={isEditing} />
             ))}
           </>
         )}

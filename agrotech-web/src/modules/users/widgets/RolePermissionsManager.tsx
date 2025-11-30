@@ -39,9 +39,9 @@ export const RolePermissionsManager = ({ rol, readOnly = false, onClose }: RoleP
   const handleSave = async () => {
     if (readOnly) return;
     try {
-      console.log('Syncing role permissions:', { rolId: rol.id, permisoIds: selectedPermisos });
+      console.log('Syncing role permissions:', { rolId: rol.id, type: typeof rol.id, permisoIds: selectedPermisos });
       // Sync permissions
-      await syncMutation.mutateAsync({ rolId: rol.id, permisoIds: selectedPermisos });
+      await syncMutation.mutateAsync({ rolId: Number(rol.id), permisoIds: selectedPermisos });
       
       onClose();
     } catch (error) {

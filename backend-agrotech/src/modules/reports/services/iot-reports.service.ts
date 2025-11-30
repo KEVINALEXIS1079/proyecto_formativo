@@ -27,9 +27,9 @@ export class IotReportsService {
     const query = this.lecturaRepo
       .createQueryBuilder('lectura')
       .leftJoin('lectura.sensor', 'sensor')
-      .select('AVG(lectura.valor)', 'avg')
-      .addSelect('MIN(lectura.valor)', 'min')
-      .addSelect('MAX(lectura.valor)', 'max')
+      .select('AVG(CAST(lectura.valor AS DECIMAL))', 'avg')
+      .addSelect('MIN(CAST(lectura.valor AS DECIMAL))', 'min')
+      .addSelect('MAX(CAST(lectura.valor AS DECIMAL))', 'max')
       .addSelect('COUNT(*)', 'count');
 
     // Intervalo de tiempo para agrupación
@@ -199,7 +199,7 @@ export class IotReportsService {
       .leftJoin('lectura.sensor', 'sensor')
       .select('sensor.id', 'sensorId')
       .addSelect('sensor.nombre', 'nombreSensor')
-      .addSelect(`${metricFunc}(lectura.valor)`, 'value')
+      .addSelect(`${metricFunc}(CAST(lectura.valor AS DECIMAL))`, 'value')
       .groupBy('sensor.id')
       .addGroupBy('sensor.nombre')
       .orderBy('value', 'DESC');
@@ -226,6 +226,100 @@ export class IotReportsService {
     }
 
     return query.getRawMany();
+  }
+
+  // Resumen de lecturas por periodo (promedio, max, min con fechas)
+  async getSummaryReport(filters: {
+    tipoSensorId: number;
+    cultivoId?: number;
+    from: Date;
+    to: Date;
+  }) {
+    // Build base query
+    const query = this.lecturaRepo
+      .createQueryBuilder('lectura')
+      .leftJoin('lectura.sensor', 'sensor')
+      .leftJoin('sensor.tipoSensor', 'tipo')
+      .where('sensor.tipoSensorId = :tipoId', { tipoId: filters.tipoSensorId })
+      .andWhere('lectura.timestamp >= :from', { from: filters.from })
+      .andWhere('lectura.timestamp <= :to', { to: filters.to });
+
+    // Filter by cultivo if provided
+    if (filters.cultivoId) {
+      query.andWhere('sensor.cultivoId = :cultivoId', { cultivoId: filters.cultivoId });
+    }
+
+    // Get aggregate statistics
+    const stats = await this.lecturaRepo
+      .createQueryBuilder('lectura')
+      .leftJoin('lectura.sensor', 'sensor')
+      .select('AVG(CAST(lectura.valor AS DECIMAL))', 'promedio')
+      .addSelect('COUNT(*)', 'totalLecturas')
+      .where('sensor.tipoSensorId = :tipoId', { tipoId: filters.tipoSensorId })
+      .andWhere('lectura.timestamp >= :from', { from: filters.from })
+      .andWhere('lectura.timestamp <= :to', { to: filters.to })
+      .andWhere(filters.cultivoId ? 'sensor.cultivoId = :cultivoId' : '1=1', filters.cultivoId ? { cultivoId: filters.cultivoId } : {})
+      .getRawOne();
+
+    // Get max reading with details
+    const maxReading = await this.lecturaRepo
+      .createQueryBuilder('lectura')
+      .leftJoin('lectura.sensor', 'sensor')
+      .select('lectura.valor', 'valor')
+      .addSelect('lectura.timestamp', 'fecha')
+      .addSelect('sensor.nombre', 'sensorNombre')
+      .where('sensor.tipoSensorId = :tipoId', { tipoId: filters.tipoSensorId })
+      .andWhere('lectura.timestamp >= :from', { from: filters.from })
+      .andWhere('lectura.timestamp <= :to', { to: filters.to })
+      .andWhere(filters.cultivoId ? 'sensor.cultivoId = :cultivoId' : '1=1', filters.cultivoId ? { cultivoId: filters.cultivoId } : {})
+      .orderBy('CAST(lectura.valor AS DECIMAL)', 'DESC')
+      .limit(1)
+      .getRawOne();
+
+    // Get min reading with details
+    const minReading = await this.lecturaRepo
+      .createQueryBuilder('lectura')
+      .leftJoin('lectura.sensor', 'sensor')
+      .select('lectura.valor', 'valor')
+      .addSelect('lectura.timestamp', 'fecha')
+      .addSelect('sensor.nombre', 'sensorNombre')
+      .where('sensor.tipoSensorId = :tipoId', { tipoId: filters.tipoSensorId })
+      .andWhere('lectura.timestamp >= :from', { from: filters.from })
+      .andWhere('lectura.timestamp <= :to', { to: filters.to })
+      .andWhere(filters.cultivoId ? 'sensor.cultivoId = :cultivoId' : '1=1', filters.cultivoId ? { cultivoId: filters.cultivoId } : {})
+      .orderBy('CAST(lectura.valor AS DECIMAL)', 'ASC')
+      .limit(1)
+      .getRawOne();
+
+    // Get tipo sensor info
+    const tipoSensor = await this.sensorRepo
+      .createQueryBuilder('sensor')
+      .leftJoin('sensor.tipoSensor', 'tipo')
+      .select('tipo.nombre', 'nombre')
+      .addSelect('tipo.unidad', 'unidad')
+      .where('sensor.tipoSensorId = :tipoId', { tipoId: filters.tipoSensorId })
+      .getRawOne();
+
+    return {
+      periodo: {
+        desde: filters.from,
+        hasta: filters.to,
+      },
+      tipoSensor: tipoSensor?.nombre || 'Desconocido',
+      unidad: tipoSensor?.unidad || 'N/A',
+      promedio: stats?.promedio ? parseFloat(parseFloat(stats.promedio).toFixed(2)) : 0,
+      totalLecturas: parseInt(stats?.totalLecturas || '0'),
+      lecturaMaxima: maxReading ? {
+        valor: parseFloat(maxReading.valor),
+        fecha: maxReading.fecha,
+        sensor: maxReading.sensorNombre,
+      } : null,
+      lecturaMinima: minReading ? {
+        valor: parseFloat(minReading.valor),
+        fecha: minReading.fecha,
+        sensor: minReading.sensorNombre,
+      } : null,
+    };
   }
 
   async getIotReportCsv(

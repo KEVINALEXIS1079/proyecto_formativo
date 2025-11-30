@@ -20,3 +20,13 @@ export class IotFindAllLecturasDoDto {
 }
 
 export class IotCreateLecturaDoDto extends CreateSensorLecturaDto {}
+
+export class IotUpdateSensorDoDto extends CreateSensorDto {
+  @IsNumber()
+  id: number;
+}
+
+export class IotToggleSensorDoDto {
+  @IsNumber()
+  id: number;
+}
