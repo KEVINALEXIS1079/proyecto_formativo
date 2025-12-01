@@ -10,6 +10,7 @@ export function ProfilePage() {
   const { profile, isLoading, isSaving, previewUrl, handleAvatarPick, save } = useProfile();
   const [edit, setEdit] = useState<UpdateProfileInput>({});
   const [isEditMode, setIsEditMode] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   // We need to manage the avatar file state here to pass it to save
   const [avatarFile, setAvatarFile] = useState<File | undefined>(undefined);
@@ -20,9 +21,15 @@ export function ProfilePage() {
   };
 
   const handleSave = async () => {
-    await save({ ...edit, avatar: avatarFile });
-    setIsEditMode(false);
-    setAvatarFile(undefined);
+    try {
+      setErrorMessage("");
+      await save({ ...edit, avatar: avatarFile });
+      setIsEditMode(false);
+      setAvatarFile(undefined);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || "Error al guardar el perfil";
+      setErrorMessage(Array.isArray(message) ? message.join(", ") : message);
+    }
   };
 
   const handleEdit = () => {
@@ -35,6 +42,7 @@ export function ProfilePage() {
     }
     setIsEditMode(false);
     setAvatarFile(undefined);
+    setErrorMessage("");
     if (previewUrl) {
       // Clear preview
       handleAvatarPick(null as any);
@@ -92,6 +100,7 @@ export function ProfilePage() {
         onCancel={handleCancel}
         isSaving={isSaving}
         isEditMode={isEditMode}
+        errorMessage={errorMessage}
       />
     </div>
   );

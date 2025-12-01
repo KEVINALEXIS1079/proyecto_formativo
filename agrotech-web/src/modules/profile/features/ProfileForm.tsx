@@ -9,12 +9,15 @@ interface ProfileFormProps {
   onCancel?: () => void;
   isSaving: boolean;
   isEditMode?: boolean;
+  errorMessage?: string;
 }
 
-export function ProfileForm({ values, onChange, onSave, onCancel, isSaving, isEditMode = true }: ProfileFormProps) {
+export function ProfileForm({ values, onChange, onSave, onCancel, isSaving, isEditMode = true, errorMessage }: ProfileFormProps) {
   const handleChange = (key: keyof UpdateProfileInput, value: string) => {
     onChange({ ...values, [key]: value });
   };
+
+  const isPhoneValid = !values.telefono || values.telefono.length === 10;
 
   return (
     <Card>
@@ -59,6 +62,9 @@ export function ProfileForm({ values, onChange, onSave, onCancel, isSaving, isEd
           onValueChange={(v) => handleChange('telefono', v)}
           isDisabled={!isEditMode}
           maxLength={10}
+          isInvalid={isEditMode && !isPhoneValid}
+          errorMessage={!isPhoneValid ? "El teléfono debe tener exactamente 10 dígitos" : ""}
+          description={isEditMode ? "Debe contener exactamente 10 dígitos" : ""}
         />
         <Input
           label="ID Ficha"
@@ -67,6 +73,12 @@ export function ProfileForm({ values, onChange, onSave, onCancel, isSaving, isEd
           isDisabled={!isEditMode}
         />
       </CardBody>
+
+      {errorMessage && !errorMessage.includes("teléfono") && !errorMessage.includes("dígitos") && (
+        <div className="px-6 py-3 bg-danger-50 dark:bg-danger-900/20 border-t border-danger-200 dark:border-danger-800">
+          <p className="text-sm text-danger-600 dark:text-danger-400">{errorMessage}</p>
+        </div>
+      )}
 
       {isEditMode && (
         <CardFooter className="justify-end gap-2">
