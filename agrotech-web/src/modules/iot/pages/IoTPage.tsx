@@ -52,6 +52,18 @@ const IoTPage: React.FC = () => {
     return <div className="flex justify-center items-center h-screen">Cargando módulo IoT...</div>;
   }
 
+  const handleDeleteSensor = async (id: number) => {
+    try {
+      if (!window.confirm('¿Estás seguro de eliminar este sensor? Esta acción también borrará su historial de lecturas.')) return;
+      await IoTApi.deleteSensor(id);
+      toast.success('Sensor eliminado correctamente');
+      refreshSensors();
+    } catch (error) {
+      console.error('Error removing sensor:', error);
+      toast.error('Error al eliminar sensor');
+    }
+  };
+
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       {/* Header Section */}
@@ -90,7 +102,7 @@ const IoTPage: React.FC = () => {
       {/* Main Content */}
       <Surface className="overflow-hidden p-0">
         <div className="p-4 md:p-6">
-          <Outlet context={{ sensors, refreshSensors, onToggleSensor: handleToggleSensor, onEditSensor: handleEditSensor }} />
+          <Outlet context={{ sensors, refreshSensors, onToggleSensor: handleToggleSensor, onEditSensor: handleEditSensor, onDeleteSensor: handleDeleteSensor }} />
         </div>
       </Surface>
 

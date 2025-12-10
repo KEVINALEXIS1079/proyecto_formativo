@@ -1,11 +1,11 @@
 import { Button, Input, Card, CardBody } from "@heroui/react";
 import type { Control } from "react-hook-form";
 import { useFieldArray, Controller } from "react-hook-form";
-import type { CreateActividadPayload } from "../models/types";
+import type { ActividadFormData } from "../models/schemas";
 import { Plus, Trash2 } from "lucide-react";
 
 interface ServiciosSectionProps {
-  control: Control<CreateActividadPayload>;
+  control: Control<ActividadFormData>;
 }
 
 export default function ServiciosSection({ control }: ServiciosSectionProps) {

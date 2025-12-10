@@ -15,13 +15,24 @@ import {
 } from "@heroui/react";
 import type { Control } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
-import type { CreateActividadPayload } from "../models/types";
+import type { ActividadFormData } from "../models/schemas";
 import { Plus, Trash2, Info, CheckCircle } from "lucide-react";
 import { useState, useMemo } from "react";
 
+interface InsumoOption {
+  id: number;
+  nombre: string;
+  stockUso: number;
+  unidadUso: string;
+  precioUnitarioUso: number;
+  almacen?: any;
+  stockPresentacion?: number;
+  presentacionUnidad?: string;
+}
+
 interface InsumosSectionProps {
-  control: Control<CreateActividadPayload>;
-  insumos: any[]; // Replace with proper Insumo type
+  control: Control<ActividadFormData>;
+  insumos: InsumoOption[];
   isReservationMode?: boolean;
 }
 

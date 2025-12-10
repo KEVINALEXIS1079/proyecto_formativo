@@ -11,10 +11,17 @@ export default function AuthRecoverForm({
   loading?: boolean;
 }) {
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    e.stopPropagation(); // ← CLAVE: evita doble submit interno de HeroUI
+    e.stopPropagation();
+    
+    if (!email.endsWith("@gmail.com")) {
+      setError("Solo se permiten correos @gmail.com");
+      return;
+    }
+    setError("");
     onSubmit({ email });
   }
 
@@ -24,9 +31,12 @@ export default function AuthRecoverForm({
         label="Correo electrónico"
         type="email"
         value={email}
-        onValueChange={setEmail}
+        onValueChange={(v) => { setEmail(v.toLowerCase()); setError(""); }}
         radius="lg"
         required
+        placeholder="usuario@gmail.com"
+        isInvalid={!!error}
+        errorMessage={error}
       />
 
       <Button

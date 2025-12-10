@@ -48,9 +48,9 @@ export default function RegisterPage() {
     };
 
     try {
-      const result = await mutateAsync(request);
+      await mutateAsync(request);
       setRegisteredEmail(request.correo);
-      setMsg("Usuario registrado con éxito. Revisa tu email para el código de verificación.");
+      setMsg("Registro iniciado. Hemos enviado un código a tu correo para verificar tu cuenta.");
       setGoLogin(true);   // ← éxito: al cerrar modal, navegamos a /code
       setOpen(true);
     } catch (e: any) {

@@ -23,9 +23,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Mantener la sesión al recargar
   useEffect(() => {
     const checkAuth = async () => {
+      // Optimización: Si no hay "marca" de sesión, asumimos deslogueado para evitar 401 en consola
+      const hasSession = localStorage.getItem('agrotech_session');
+      if (!hasSession) {
+        setLoading(false);
+        return;
+      }
+
       try {
         // Limpiar datos corruptos en storage
-        const validKeys = ['recoveryEmail', 'recoveryCode'];
+        const validKeys = ['recoveryEmail', 'recoveryCode', 'agrotech_session']; // Preserve session flag
         cleanCorruptLocalStorage(validKeys);
         cleanCorruptSessionStorage(validKeys);
 
@@ -45,7 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           token: null,
         });
       } catch (error) {
-        // Si falla (401), asumimos no autenticado
+        // Si falla (401), asumimos no autenticado y limpiamos marca
+        localStorage.removeItem('agrotech_session');
         setState({
           isAuthenticated: false,
           user: null,
@@ -62,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // --- Manejo de login ---
   const handleLogin = async (request: LoginRequest) => {
     const response = await login(request);
+    localStorage.setItem('agrotech_session', 'true'); // Marcar sesión activa
     setState({
       isAuthenticated: true,
       user: response.user,
@@ -72,6 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // --- Manejo de logout ---
   const handleLogout = async () => {
     await logout();
+    localStorage.removeItem('agrotech_session'); // Eliminar marca
     setState({
       isAuthenticated: false,
       user: null,

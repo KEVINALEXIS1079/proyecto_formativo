@@ -84,9 +84,9 @@ export const IoTApi = {
   },
 
   // Sensors
-  getSensors: async (): Promise<Sensor[]> => {
+  getSensors: async (params?: { loteId?: number; subLoteId?: number }): Promise<Sensor[]> => {
     try {
-      const response = await api.get('/iot/sensors');
+      const response = await api.get('/iot/sensors', { params });
       return response.data;
     } catch (error: any) {
       console.error('Error fetching sensors:', error);
@@ -160,6 +160,35 @@ export const IoTApi = {
     } catch (error: any) {
       console.error(`Error fetching sensor readings for ${sensorId}:`, error);
       throw new Error(`Failed to fetch sensor readings: ${error.message || 'Unknown error'}`);
+    }
+  },
+
+  getAggregatedReadings: async (
+    sensorId: number,
+    params: { from: string; to: string; interval: 'hour' | 'day' | 'week' }
+  ): Promise<{ fecha: string; promedio: number; min: number; max: number }[]> => {
+    try {
+      const response = await api.get(`/iot/sensors/${sensorId}/aggregated`, { params });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error fetching aggregated readings for ${sensorId}:`, error);
+      throw new Error(`Failed to fetch aggregated readings: ${error.message || 'Unknown error'}`);
+    }
+  },
+
+  getBulkAggregatedReadings: async (
+    sensorIds: number[],
+    params: { from: string; to: string; interval: 'hour' | 'day' | 'week' }
+  ): Promise<Record<number, any[]>> => {
+    try {
+      const response = await api.post('/iot/readings/bulk', {
+        sensorIds,
+        ...params
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching bulk readings:', error);
+      throw new Error(`Failed to fetch bulk readings: ${error.message || 'Unknown error'}`);
     }
   },
 
@@ -321,6 +350,16 @@ export const IoTApi = {
     } catch (error: any) {
       console.error('Error fetching alerts:', error);
       throw new Error(`Failed to fetch alerts: ${error.message || 'Unknown error'}`);
+    }
+  },
+
+  getAlertContext: async (alertId: number): Promise<{ alert: any; context: SensorLectura[] }> => {
+    try {
+      const response = await api.get(`/iot/alerts/${alertId}/context`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error fetching alert context for ${alertId}:`, error);
+      throw new Error(`Failed to fetch alert context: ${error.message || 'Unknown error'}`);
     }
   },
 };

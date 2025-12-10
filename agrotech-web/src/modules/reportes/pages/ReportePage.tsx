@@ -39,6 +39,7 @@ import { useCultivosList } from '../../cultivos/hooks/useCultivos';
 import { useReporteCompleto } from '../hooks/useReportes';
 import { exportToXLSX } from '@/shared/utils/exportUtils';
 import { FormatPreview } from '../ui/components/FormatPreview';
+import { convertChartToImageFallback } from '../utils/chartToImage';
 
 export default function ReportePage() {
     const [cultivoId, setCultivoId] = useState<number | undefined>();
@@ -94,109 +95,38 @@ export default function ReportePage() {
         // Fetch IoT data if needed for preview
         if (selectedSections.includes('monitoreo') && cultivoId) {
             const selectedCultivo = cultivos.find(c => c.id === cultivoId);
-            const loteId = selectedCultivo?.idLote || (selectedCultivo as any)?.loteId;
+            // Robust lookup for loteId
+            const loteId = selectedCultivo?.idLote 
+                        || (selectedCultivo as any)?.loteId 
+                        || selectedCultivo?.lote?.id
+                        || selectedCultivo?.sublote?.idLote;
+
+            console.log("Report Preview - Selected Cultivo:", selectedCultivo);
+            console.log("Report Preview - Resolved Lote ID:", loteId);
 
             if (loteId) {
                 try {
+                    console.log("Fetching IoT Data for Lote:", loteId);
                     const iotData = await IoTApi.getGeneralReport({
                         loteId: loteId,
                         startDate: effectiveStartDate,
                         endDate: effectiveEndDate
                     });
+                    console.log("IoT Data Received:", iotData);
                     setPreviewIotData(iotData);
                 } catch (e) {
                     console.error("Error fetching IoT for preview", e);
                     setPreviewIotData(null);
                 }
             } else {
-                console.warn("Selected crop has no assigned Lote ID.");
+                console.warn("Selected crop has no assigned Lote ID. IoT report skipped.");
+                setPreviewIotData(null);
             }
         } else {
             setPreviewIotData(null);
         }
 
         setIsPreviewOpen(true);
-    };
-
-    // Helper function to create chart image for PDF
-    const createChartImage = async (chartData: any[]): Promise<string | null> => {
-        return new Promise((resolve) => {
-            try {
-                // Create a temporary container for the chart
-                const container = document.createElement('div');
-                container.style.width = '600px';
-                container.style.height = '300px';
-                container.style.position = 'absolute';
-                container.style.left = '-9999px';
-                document.body.appendChild(container);
-
-                // Create canvas
-                const canvas = document.createElement('canvas');
-                canvas.width = 600;
-                canvas.height = 300;
-                const ctx = canvas.getContext('2d');
-
-                if (!ctx) {
-                    document.body.removeChild(container);
-                    resolve(null);
-                    return;
-                }
-
-                // Draw white background
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Draw grid
-                ctx.strokeStyle = '#e5e7eb';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < 6; i++) {
-                    const y = (canvas.height / 5) * i;
-                    ctx.beginPath();
-                    ctx.moveTo(50, y);
-                    ctx.lineTo(canvas.width - 20, y);
-                    ctx.stroke();
-                }
-
-                // Find min and max values
-                const values = chartData.map((d: any) => parseFloat(d.valor) || 0);
-                const minVal = Math.min(...values);
-                const maxVal = Math.max(...values);
-                const range = maxVal - minVal || 1;
-
-                // Draw line chart
-                ctx.strokeStyle = '#0ea5e9';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-
-                chartData.forEach((point: any, index: number) => {
-                    const x = 50 + ((canvas.width - 70) / (chartData.length - 1 || 1)) * index;
-                    const normalizedValue = ((parseFloat(point.valor) || 0) - minVal) / range;
-                    const y = canvas.height - 40 - (normalizedValue * (canvas.height - 60));
-
-                    if (index === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                });
-
-                ctx.stroke();
-
-                // Draw title
-                ctx.fillStyle = '#374151';
-                ctx.font = 'bold 14px Arial';
-                ctx.fillText('Tendencia de Sensores (Ultimas 24h)', 50, 20);
-
-                // Cleanup
-                document.body.removeChild(container);
-
-                // Convert to image
-                resolve(canvas.toDataURL('image/png'));
-            } catch (error) {
-                console.error('Error creating chart:', error);
-                resolve(null);
-            }
-        });
     };
 
     const handleConfirmExport = async () => {
@@ -595,13 +525,14 @@ export default function ReportePage() {
                 yPosition = (doc as any).lastAutoTable.finalY + 10;
             }
 
-            // MONITOREO IOT
+            // MONITOREO IOT - ENHANCED VERSION
             if (selectedSections.includes('monitoreo') && previewIotData) {
                 if (yPosition > 200) {
                     doc.addPage();
                     yPosition = 20;
                 }
 
+                // Title
                 doc.setFontSize(14);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(34, 197, 94);
@@ -612,82 +543,126 @@ export default function ReportePage() {
                 doc.line(14, yPosition, 55, yPosition);
                 yPosition += 10;
 
-                // IoT Summary cards (matching preview)
-                const iotCardWidth = 58;
-                const iotCardHeight = 20;
-                const iotCardSpacing = 5;
-                const iotStartX = 14;
+                // Lot Name (if available)
+                const selectedCultivo = cultivos.find((c) => c.id === cultivoId);
+                const loteNombre = (selectedCultivo as any)?.lote?.nombre || 
+                                  (selectedCultivo as any)?.sublote?.lote?.nombre || 
+                                  'N/A';
+                
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0);
+                doc.text(`Lote: ${loteNombre}`, 14, yPosition);
+                yPosition += 8;
 
-                // Card 1: Total Sensores (Gray background)
-                doc.setFillColor(249, 250, 251); // Light gray
-                doc.roundedRect(iotStartX, yPosition, iotCardWidth, iotCardHeight, 2, 2, 'F');
+                // SUMMARY CARDS
+                const cardWidth = 58;
+                const cardHeight = 20;
+                const cardSpacing = 5;
+                const startX = 14;
+
+                // Card 1: Total Sensores
+                doc.setFillColor(249, 250, 251);
+                doc.roundedRect(startX, yPosition, cardWidth, cardHeight, 2, 2, 'F');
                 doc.setDrawColor(229, 231, 235);
-                doc.roundedRect(iotStartX, yPosition, iotCardWidth, iotCardHeight, 2, 2, 'S');
-
+                doc.roundedRect(startX, yPosition, cardWidth, cardHeight, 2, 2, 'S');
                 doc.setFontSize(8);
                 doc.setTextColor(100, 100, 100);
-                doc.text('Total Sensores', iotStartX + iotCardWidth / 2, yPosition + 7, { align: 'center' });
+                doc.text('Total Sensores', startX + cardWidth / 2, yPosition + 7, { align: 'center' });
                 doc.setFontSize(16);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(0, 0, 0);
-                doc.text((previewIotData.totalSensors?.toString() || '0'), iotStartX + iotCardWidth / 2, yPosition + 15, { align: 'center' });
+                doc.text((previewIotData.totalSensors?.toString() || '0'), startX + cardWidth / 2, yPosition + 15, { align: 'center' });
 
-                // Card 2: Conectados (Green background)
-                const iotCard2X = iotStartX + iotCardWidth + iotCardSpacing;
-                doc.setFillColor(220, 252, 231); // Light green
-                doc.roundedRect(iotCard2X, yPosition, iotCardWidth, iotCardHeight, 2, 2, 'F');
+                // Card 2: Conectados
+                const card2X = startX + cardWidth + cardSpacing;
+                doc.setFillColor(220, 252, 231);
+                doc.roundedRect(card2X, yPosition, cardWidth, cardHeight, 2, 2, 'F');
                 doc.setDrawColor(187, 247, 208);
-                doc.roundedRect(iotCard2X, yPosition, iotCardWidth, iotCardHeight, 2, 2, 'S');
-
+                doc.roundedRect(card2X, yPosition, cardWidth, cardHeight, 2, 2, 'S');
                 doc.setFontSize(8);
                 doc.setFont('helvetica', 'normal');
-                doc.setTextColor(21, 128, 61); // Dark green
-                doc.text('Conectados', iotCard2X + iotCardWidth / 2, yPosition + 7, { align: 'center' });
+                doc.setTextColor(21, 128, 61);
+                doc.text('Conectados', card2X + cardWidth / 2, yPosition + 7, { align: 'center' });
                 doc.setFontSize(16);
                 doc.setFont('helvetica', 'bold');
-                doc.text((previewIotData.estados?.conectados?.toString() || '0'), iotCard2X + iotCardWidth / 2, yPosition + 15, { align: 'center' });
+                doc.text((previewIotData.estados?.conectados?.toString() || '0'), card2X + cardWidth / 2, yPosition + 15, { align: 'center' });
 
-                // Card 3: Alertas Activas (Red background)
-                const iotCard3X = iotCard2X + iotCardWidth + iotCardSpacing;
-                doc.setFillColor(254, 226, 226); // Light red
-                doc.roundedRect(iotCard3X, yPosition, iotCardWidth, iotCardHeight, 2, 2, 'F');
+                // Card 3: Alertas Activas
+                const card3X = card2X + cardWidth + cardSpacing;
+                doc.setFillColor(254, 226, 226);
+                doc.roundedRect(card3X, yPosition, cardWidth, cardHeight, 2, 2, 'F');
                 doc.setDrawColor(254, 202, 202);
-                doc.roundedRect(iotCard3X, yPosition, iotCardWidth, iotCardHeight, 2, 2, 'S');
-
+                doc.roundedRect(card3X, yPosition, cardWidth, cardHeight, 2, 2, 'S');
                 doc.setFontSize(8);
                 doc.setFont('helvetica', 'normal');
-                doc.setTextColor(185, 28, 28); // Dark red
-                doc.text('Alertas Activas', iotCard3X + iotCardWidth / 2, yPosition + 7, { align: 'center' });
+                doc.setTextColor(185, 28, 28);
+                doc.text('Alertas Activas', card3X + cardWidth / 2, yPosition + 7, { align: 'center' });
                 doc.setFontSize(16);
                 doc.setFont('helvetica', 'bold');
-                doc.text((previewIotData.alertasActivas?.toString() || '0'), iotCard3X + iotCardWidth / 2, yPosition + 15, { align: 'center' });
+                doc.text((previewIotData.alertasActivas?.toString() || '0'), card3X + cardWidth / 2, yPosition + 15, { align: 'center' });
 
-                yPosition += iotCardHeight + 10;
+                yPosition += cardHeight + 10;
 
-                // Add IoT trend chart if data is available
-                if (previewIotData.chartData && previewIotData.chartData.length > 0) {
-                    if (yPosition > 180) {
+                // 1. PROTOCOLOS UTILIZADOS
+                if (previewIotData.protocolos) {
+                    if (yPosition > 240) {
                         doc.addPage();
                         yPosition = 20;
                     }
 
-                    try {
-                        const chartImage = await createChartImage(previewIotData.chartData);
-                        if (chartImage) {
-                            // Add chart image to PDF
-                            const chartWidth = 170;
-                            const chartHeight = 85;
-                            doc.addImage(chartImage, 'PNG', 14, yPosition, chartWidth, chartHeight);
-                            yPosition += chartHeight + 10;
-                        }
-                    } catch (error) {
-                        console.error('Error adding chart to PDF:', error);
-                    }
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(0, 0, 0);
+                    doc.text('Protocolos de Comunicación', 14, yPosition);
+                    yPosition += 6;
+
+                    autoTable(doc, {
+                        startY: yPosition,
+                        head: [['Protocolo', 'Cantidad', 'Estado']],
+                        body: [
+                            ['MQTT', previewIotData.protocolos.mqtt.toString(), 'Activo'],
+                            ['HTTP', previewIotData.protocolos.http.toString(), 'Activo'],
+                            ['Otros', previewIotData.protocolos.otros.toString(), 'Activo'],
+                        ],
+                        theme: 'grid',
+                        headStyles: { fillColor: [99, 102, 241], fontSize: 10 },
+                        styles: { fontSize: 9 },
+                    });
+                    yPosition = (doc as any).lastAutoTable.finalY + 10;
                 }
 
+                // 2. CONFIGURACIÓN MQTT
+                if (previewIotData.configuracionMqtt) {
+                    if (yPosition > 240) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
 
-                // Averages table (matching preview structure)
-                if (previewIotData.promedios && previewIotData.promedios.length > 0) {
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Configuración MQTT', 14, yPosition);
+                    yPosition += 6;
+
+                    autoTable(doc, {
+                        startY: yPosition,
+                        body: [
+                            ['Broker', previewIotData.configuracionMqtt.broker],
+                            ['Topic Prefix', previewIotData.configuracionMqtt.topicPrefix],
+                            ['Sensores Conectados', previewIotData.configuracionMqtt.sensoresConectados.toString()],
+                        ],
+                        theme: 'plain',
+                        styles: { fontSize: 9 },
+                        columnStyles: {
+                            0: { fontStyle: 'bold', cellWidth: 60 },
+                            1: { cellWidth: 'auto' },
+                        },
+                    });
+                    yPosition = (doc as any).lastAutoTable.finalY + 10;
+                }
+
+                // 3. ESTADÍSTICAS DETALLADAS POR SENSOR
+                if (previewIotData.sensoresDetalle && previewIotData.sensoresDetalle.length > 0) {
                     if (yPosition > 220) {
                         doc.addPage();
                         yPosition = 20;
@@ -695,41 +670,163 @@ export default function ReportePage() {
 
                     doc.setFontSize(12);
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Promedios de Sensores', 14, yPosition);
+                    doc.text('Estadísticas Detalladas por Sensor', 14, yPosition);
                     yPosition += 6;
 
-                    const promediosData = previewIotData.promedios.map((p: any) => [
-                        p.label || 'N/A',
-                        p.value?.toString() || '0',
-                        previewIotData.minGlobal?.toString() || '0',
-                        previewIotData.maxGlobal?.toString() || '0',
-                        p.unit || '',
+                    const sensoresData = previewIotData.sensoresDetalle.map((s: any) => [
+                        s.nombre,
+                        s.protocolo,
+                        `${s.estadisticas.promedio.toFixed(2)} ${s.unidad}`,
+                        s.estadisticas.minimo.fecha ? 
+                            `${s.estadisticas.minimo.valor.toFixed(2)} (${new Date(s.estadisticas.minimo.fecha).toLocaleDateString('es-CO')})` :
+                            'N/A',
+                        s.estadisticas.maximo.fecha ?
+                            `${s.estadisticas.maximo.valor.toFixed(2)} (${new Date(s.estadisticas.maximo.fecha).toLocaleDateString('es-CO')})` :
+                            'N/A',
+                        s.estadisticas.ultimaLectura.fecha ?
+                            `${s.estadisticas.ultimaLectura.valor.toFixed(2)} ${s.unidad}` :
+                            'N/A',
                     ]);
 
                     autoTable(doc, {
                         startY: yPosition,
-                        head: [['Sensor', 'Promedio', 'Min', 'Max', 'Unidad']],
-                        body: promediosData,
+                        head: [['Sensor', 'Protocolo', 'Promedio', 'Mínimo (Fecha)', 'Máximo (Fecha)', 'Última Lectura']],
+                        body: sensoresData,
                         theme: 'striped',
-                        headStyles: { fillColor: [99, 102, 241], fontSize: 10, fontStyle: 'bold' },
-                        styles: { fontSize: 9 },
+                        headStyles: { fillColor: [99, 102, 241], fontSize: 8 },
+                        styles: { fontSize: 7 },
                         columnStyles: {
-                            0: { fontStyle: 'bold' },
-                            1: { halign: 'right' },
-                            2: { halign: 'right' },
-                            3: { halign: 'right' },
-                            4: { halign: 'center' }
-                        }
+                            0: { cellWidth: 30 },
+                            1: { cellWidth: 20 },
+                            2: { cellWidth: 25 },
+                            3: { cellWidth: 35 },
+                            4: { cellWidth: 35 },
+                            5: { cellWidth: 30 },
+                        },
                     });
-
-                    yPosition = (doc as any).lastAutoTable.finalY + 5;
+                    yPosition = (doc as any).lastAutoTable.finalY + 10;
                 }
 
-                // IoT Note
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(100, 100, 100);
-                doc.text('Nota: Los datos IoT representan el monitoreo en tiempo real del cultivo.', 14, yPosition);
+                // 4. GRÁFICAS DE TENDENCIAS POR SENSOR
+                if (previewIotData.sensoresDetalle && previewIotData.sensoresDetalle.length > 0) {
+                    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+                    console.log('=== INICIANDO GENERACIÓN DE GRÁFICAS ===');
+                    console.log('Total sensores:', previewIotData.sensoresDetalle.length);
+
+                    for (let i = 0; i < previewIotData.sensoresDetalle.length; i++) {
+                        const sensor = previewIotData.sensoresDetalle[i];
+                        console.log(`\n--- Sensor ${i + 1}: ${sensor.nombre} ---`);
+                        console.log('Tiene tendencia:', !!sensor.tendencia);
+                        console.log('Longitud tendencia:', sensor.tendencia?.length || 0);
+
+                        if (sensor.tendencia && sensor.tendencia.length > 0) {
+                            console.log('Primeros 3 puntos de tendencia:', sensor.tendencia.slice(0, 3));
+
+                            if (yPosition > 170) {
+                                doc.addPage();
+                                yPosition = 20;
+                            }
+
+                            doc.setFontSize(11);
+                            doc.setFont('helvetica', 'bold');
+                            doc.setTextColor(0, 0, 0);
+                            doc.text(`Tendencia: ${sensor.nombre}`, 14, yPosition);
+                            yPosition += 6;
+
+                            try {
+                                console.log(`Llamando a convertChartToImageFallback para ${sensor.nombre}...`);
+                                
+                                const chartImage = await convertChartToImageFallback(sensor.tendencia, {
+                                    title: sensor.nombre,
+                                    unit: sensor.unidad,
+                                    color: colors[i % colors.length],
+                                    width: 800,
+                                    height: 400,
+                                });
+
+                                console.log(`Resultado de conversión:`, chartImage ? 'ÉXITO (imagen generada)' : 'FALLO (null)');
+
+                                if (chartImage) {
+                                    console.log(`Agregando imagen al PDF (180x90mm)`);
+                                    doc.addImage(chartImage, 'PNG', 14, yPosition, 180, 90);
+                                    yPosition += 95;
+                                } else {
+                                    console.warn(`No se pudo generar gráfica para ${sensor.nombre} - convertChartToImageFallback retornó null`);
+                                    doc.setFontSize(9);
+                                    doc.setTextColor(150, 150, 150);
+                                    doc.text('(Grafica no disponible - error en generacion)', 14, yPosition);
+                                    yPosition += 10;
+                                }
+                            } catch (error) {
+                                console.error(`ERROR al generar gráfica para ${sensor.nombre}:`, error);
+                                console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
+                                doc.setFontSize(9);
+                                doc.setTextColor(150, 150, 150);
+                                doc.text('(Error al generar grafica)', 14, yPosition);
+                                yPosition += 10;
+                            }
+                        } else {
+                            console.log(`Sensor ${sensor.nombre} no tiene datos de tendencia - SALTANDO`);
+                        }
+                    }
+                    console.log('=== FIN GENERACIÓN DE GRÁFICAS ===\n');
+                }
+
+                // 5. ALERTAS DETALLADAS
+                if (previewIotData.alertasDetalle && previewIotData.alertasDetalle.length > 0) {
+                    if (yPosition > 200) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(0, 0, 0);
+                    doc.text('Historial de Alertas', 14, yPosition);
+                    yPosition += 6;
+
+                    const alertasData = previewIotData.alertasDetalle.map((alerta: any) => [
+                        alerta.sensorNombre,
+                        alerta.tipoAlerta,
+                        `${alerta.valor} / ${alerta.umbral}`,
+                        new Date(alerta.fechaDeteccion).toLocaleString('es-CO'),
+                        alerta.resuelta ? 'Resuelta' : 'Activa',
+                    ]);
+
+                    autoTable(doc, {
+                        startY: yPosition,
+                        head: [['Sensor', 'Tipo Alerta', 'Valor/Umbral', 'Fecha Deteccion', 'Estado']],
+                        body: alertasData,
+                        theme: 'striped',
+                        headStyles: { fillColor: [239, 68, 68], fontSize: 9 },
+                        styles: { fontSize: 8 },
+                        columnStyles: {
+                            0: { cellWidth: 35 },
+                            1: { cellWidth: 30 },
+                            2: { cellWidth: 30 },
+                            3: { cellWidth: 50 },
+                            4: { cellWidth: 30 },
+                        },
+                    });
+                    yPosition = (doc as any).lastAutoTable.finalY + 10;
+                } else if (previewIotData.totalSensors > 0) {
+                    if (yPosition > 240) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(0, 0, 0);
+                    doc.text('Historial de Alertas', 14, yPosition);
+                    yPosition += 6;
+
+                    doc.setFontSize(9);
+                    doc.setTextColor(21, 128, 61);
+                    doc.text('No hay alertas registradas. Todos los sensores operan normalmente.', 14, yPosition);
+                    yPosition += 10;
+                }
             }
 
             // Footer on last page

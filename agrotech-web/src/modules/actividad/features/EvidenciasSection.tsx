@@ -1,14 +1,14 @@
 import { Button, Input, Card, CardBody, Image } from "@heroui/react";
 import type { Control } from "react-hook-form";
 import { useFieldArray, Controller } from "react-hook-form";
-import type { CreateActividadPayload } from "../models/types";
+import type { ActividadFormData } from "../models/schemas";
 import { Plus, Trash2, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { uploadFile } from "../api/upload";
 import toast from "react-hot-toast";
 
 interface EvidenciasSectionProps {
-  control: Control<CreateActividadPayload>;
+  control: Control<ActividadFormData>;
 }
 
 export default function EvidenciasSection({ control }: EvidenciasSectionProps) {

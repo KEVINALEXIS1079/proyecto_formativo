@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In } from 'typeorm';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFDocument = require('pdfkit');
 import { Sensor } from '../entities/sensor.entity';
@@ -26,6 +26,7 @@ import type { MqttClient } from 'mqtt';
 @Injectable()
 export class IotService implements OnModuleInit {
   private sensorClients: Map<number, MqttClient> = new Map();
+  private globalClients: Map<number, MqttClient> = new Map();
 
   constructor(
     @InjectRepository(Sensor) private sensorRepo: Repository<Sensor>,
@@ -41,7 +42,7 @@ export class IotService implements OnModuleInit {
     @Inject(forwardRef(() => IotGateway))
     private iotGateway: IotGateway,
     private geoService: GeoService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     // 1. Connect to existing sensors
@@ -64,19 +65,27 @@ export class IotService implements OnModuleInit {
     // Only check active sensors
     const sensores = await this.sensorRepo.find({
       where: { activo: true },
-      relations: ['tipoSensor']
+      relations: ['tipoSensor'],
     });
 
     for (const sensor of sensores) {
       // Skip if no lastSeenAt or no TTL defined (for non-global config sensors)
-      if (!sensor.lastSeenAt || (!sensor.tipoSensor?.ttlMinutos && !sensor.globalConfigId)) continue;
+      if (
+        !sensor.lastSeenAt ||
+        (!sensor.tipoSensor?.ttlMinutos && !sensor.globalConfigId)
+      )
+        continue;
 
-      const ttlMs = sensor.globalConfigId ? 5_000 : sensor.tipoSensor.ttlMinutos * 60_000;
+      const ttlMs = sensor.globalConfigId
+        ? 5_000
+        : sensor.tipoSensor.ttlMinutos * 60_000;
       const limite = sensor.lastSeenAt.getTime() + ttlMs;
 
       if (now.getTime() > limite) {
         if (sensor.estadoConexion !== 'DESCONECTADO') {
-          console.log(`[IoT] Sensor ${sensor.id} marked as DISCONNECTED (TTL expired)`);
+          console.log(
+            `[IoT] Sensor ${sensor.id} marked as DISCONNECTED (TTL expired)`,
+          );
           sensor.estadoConexion = 'DESCONECTADO';
           await this.sensorRepo.save(sensor);
           this.iotGateway.emitSensor(sensor);
@@ -91,13 +100,29 @@ export class IotService implements OnModuleInit {
     const normalized = topic.trim().toLowerCase();
     let typeName = 'GENÉRICO';
 
-    if (['temp', 'temperatura', 'temperatura_aire'].some(k => normalized.includes(k))) {
+    if (
+      ['temp', 'temperatura', 'temperatura_aire'].some((k) =>
+        normalized.includes(k),
+      )
+    ) {
       typeName = 'TEMPERATURA_AIRE';
-    } else if (['humedad', 'humedad_aire', 'humedadaire'].some(k => normalized.includes(k))) {
+    } else if (
+      ['humedad', 'humedad_aire', 'humedadaire'].some((k) =>
+        normalized.includes(k),
+      )
+    ) {
       typeName = 'HUMEDAD_AIRE';
-    } else if (['humedad_suelo', 'humedadsuelo', 'suelo'].some(k => normalized.includes(k))) {
+    } else if (
+      ['humedad_suelo', 'humedadsuelo', 'suelo'].some((k) =>
+        normalized.includes(k),
+      )
+    ) {
       typeName = 'HUMEDAD_SUELO';
-    } else if (['bomba', 'estado_bomba', 'relay_bomba'].some(k => normalized.includes(k))) {
+    } else if (
+      ['bomba', 'estado_bomba', 'relay_bomba'].some((k) =>
+        normalized.includes(k),
+      )
+    ) {
       typeName = 'ESTADO_BOMBA';
     }
 
@@ -170,13 +195,31 @@ export class IotService implements OnModuleInit {
     const config = await this.configRepo.findOne({ where: { id } });
     if (!config) throw new NotFoundException(`Config ${id} not found`);
 
-    // Sensors are deleted by CASCADE in DB, but we might want to disconnect them first?
-    // Or just let them disconnect naturally or handle it.
-    // Ideally we should disconnect active MQTT clients for these sensors.
+    // Manually delete dependencies to ensure clean removal regardless of DB constraints
     const linkedSensors = await this.sensorRepo.find({
       where: { globalConfigId: id },
+      withDeleted: true 
     });
-    // TODO: Disconnect logic if we tracked clients by sensor ID
+
+    if (linkedSensors.length > 0) {
+      const sensorIds = linkedSensors.map(s => s.id);
+      console.log(`[IoT] Deleting ${linkedSensors.length} sensors linked to Global Config ${id}`);
+      
+      // Delete readings and alerts first (if DB cascade fails)
+      await this.lecturaRepo.delete({ sensorId: In(sensorIds) } as any); // Cast to any if needed or use FindOptions
+      await this.alertaRepo.delete({ sensorId: In(sensorIds) } as any);
+      
+      // Delete sensors
+      await this.sensorRepo.remove(linkedSensors);
+    }
+
+    // Stop the Global Discovery Client so it stops spawning zombies
+    if (this.globalClients.has(id)) {
+        console.log(`[IoT] Stopping Discovery Client for Deleted Config ${id}`);
+        const client = this.globalClients.get(id);
+        if (client) client.end();
+        this.globalClients.delete(id);
+    }
 
     return this.configRepo.remove(config);
   }
@@ -193,6 +236,14 @@ export class IotService implements OnModuleInit {
 
     if (!config.broker) return;
 
+    // Disconnect existing client if any
+    if (this.globalClients.has(config.id)) {
+        console.log(`[IoT] Disconnecting existing Global Client for Config ${config.id}`);
+        const existing = this.globalClients.get(config.id);
+        if (existing) existing.end();
+        this.globalClients.delete(config.id);
+    }
+
     console.log(
       `[IoT] Connecting to Global Broker: ${config.broker} (${config.name})`,
     );
@@ -200,12 +251,14 @@ export class IotService implements OnModuleInit {
     const client = this.mqttService.connect(
       config.broker,
       config.port,
-      `agrotech-server-discovery`,
+      `agrotech-server-discovery-${config.id}`, // Unique CLIENT ID to avoid conflicts
       {
         username: config.username,
         password: config.password,
       },
     );
+
+    this.globalClients.set(config.id, client);
 
     // Subscribe to Default Topics
     if (config.defaultTopics) {
@@ -308,7 +361,9 @@ export class IotService implements OnModuleInit {
 
   async connectToMqttSensor(sensor: Sensor) {
     if (!sensor.globalConfigId) {
-      console.warn(`[IoT] Sensor ${sensor.id} has no Global Config linked. Cannot connect.`);
+      console.warn(
+        `[IoT] Sensor ${sensor.id} has no Global Config linked. Cannot connect.`,
+      );
       return;
     }
 
@@ -317,7 +372,9 @@ export class IotService implements OnModuleInit {
     });
 
     if (!globalConfig || !globalConfig.broker) {
-      console.warn(`[IoT] Global Config ${sensor.globalConfigId} not found or missing broker url.`);
+      console.warn(
+        `[IoT] Global Config ${sensor.globalConfigId} not found or missing broker url.`,
+      );
       return;
     }
 
@@ -367,7 +424,9 @@ export class IotService implements OnModuleInit {
         relations: ['tipoSensor'],
       });
       if (!currentSensor) {
-        console.warn(`[MQTT] Sensor ${sensor.id} no existe (quizá fue eliminado). Ignorando mensaje.`);
+        console.warn(
+          `[MQTT] Sensor ${sensor.id} no existe (quizá fue eliminado). Ignorando mensaje.`,
+        );
         return;
       }
       sensor = currentSensor;
@@ -392,7 +451,8 @@ export class IotService implements OnModuleInit {
         if (valorJson !== undefined) valor = valorJson;
         if (estadoJson) {
           estado = estadoJson;
-          estadoConexion = estadoJson === 'ACTIVO' ? 'CONECTADO' : 'DESCONECTADO';
+          estadoConexion =
+            estadoJson === 'ACTIVO' ? 'CONECTADO' : 'DESCONECTADO';
         }
 
         // 2. Dynamic Type Handling
@@ -522,8 +582,330 @@ export class IotService implements OnModuleInit {
   ) {
     await this.sensorRepo.update(
       { globalConfigId },
-      { ...(loteId !== null && { loteId }), ...(subLoteId !== null && { subLoteId }) }
+      {
+        ...(loteId !== null && { loteId }),
+        ...(subLoteId !== null && { subLoteId }),
+      },
     );
+  }
+
+  async getGeneralReport(params: {
+    loteId?: number;
+    startDate?: Date;
+    endDate?: Date;
+    sensorId?: number;
+  }) {
+    const { loteId, startDate, endDate, sensorId } = params;
+    const queryBuilder = this.sensorRepo
+      .createQueryBuilder('sensor')
+      .leftJoinAndSelect('sensor.tipoSensor', 'tipoSensor')
+      .leftJoinAndSelect('sensor.globalConfig', 'globalConfig')
+      .where('sensor.activo = :activo', { activo: true });
+
+    if (loteId) {
+      queryBuilder.andWhere('sensor.loteId = :loteId', { loteId });
+    }
+
+    if (sensorId) {
+      queryBuilder.andWhere('sensor.id = :sensorId', { sensorId });
+    }
+
+    const sensors = await queryBuilder.getMany();
+    const sensorIds = sensors.map((s) => s.id);
+
+    // 1. Protocolos utilizados
+    const protocolos = {
+      mqtt: sensors.filter((s) => s.protocolo === ProtocoloSensor.MQTT).length,
+      http: sensors.filter((s) => s.protocolo === ProtocoloSensor.HTTP).length,
+      otros: sensors.filter(
+        (s) =>
+          s.protocolo !== ProtocoloSensor.MQTT &&
+          s.protocolo !== ProtocoloSensor.HTTP,
+      ).length,
+    };
+
+    // 2. Estados
+    const conectados = sensors.filter(
+      (s) => s.estadoConexion === 'CONECTADO',
+    ).length;
+    const desconectados = sensors.length - conectados;
+
+    // 3. Alertas Activas (count)
+    let alertasActivas = 0;
+    if (sensorIds.length > 0) {
+      alertasActivas = await this.alertaRepo.count({
+        where: {
+          sensor: { id: In(sensorIds) },
+        },
+      });
+    }
+
+    // 4. Configuración MQTT (si existe)
+    let configuracionMqtt = null;
+    const mqttSensors = sensors.filter(
+      (s) => s.protocolo === ProtocoloSensor.MQTT && s.globalConfig,
+    );
+    if (mqttSensors.length > 0) {
+      const config = mqttSensors[0].globalConfig;
+      configuracionMqtt = {
+        broker: config?.broker || 'N/A',
+        topicPrefix: config?.topicPrefix || '',
+        sensoresConectados: mqttSensors.filter(
+          (s) => s.estadoConexion === 'CONECTADO',
+        ).length,
+      };
+    }
+
+    // 5. Detalles por sensor con estadísticas y tendencias
+    const sensoresDetalle = [];
+
+    for (const sensor of sensors) {
+      // Estadísticas del sensor - SIN restricción de fechas
+      const qbStats = this.lecturaRepo
+        .createQueryBuilder('lectura')
+        .select('AVG(CAST(lectura.valor AS decimal))', 'promedio')
+        .addSelect('MIN(CAST(lectura.valor AS decimal))', 'minimo')
+        .addSelect('MAX(CAST(lectura.valor AS decimal))', 'maximo')
+        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
+        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'"); // Solo valores numéricos
+
+      const stats = await qbStats.getRawOne();
+
+      // Obtener lectura con valor mínimo (con fecha) - SIN restricción de fechas
+      const qbMin = this.lecturaRepo
+        .createQueryBuilder('lectura')
+        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
+        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
+        .orderBy('CAST(lectura.valor AS decimal)', 'ASC')
+        .limit(1);
+
+      const minReading = await qbMin.getOne();
+
+      // Obtener lectura con valor máximo (con fecha) - SIN restricción de fechas
+      const qbMax = this.lecturaRepo
+        .createQueryBuilder('lectura')
+        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
+        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
+        .orderBy('CAST(lectura.valor AS decimal)', 'DESC')
+        .limit(1);
+
+      const maxReading = await qbMax.getOne();
+
+      // Obtener última lectura - SIN restricción de fechas
+      const qbLast = this.lecturaRepo
+        .createQueryBuilder('lectura')
+        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
+        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
+        .orderBy('lectura.fechaLectura', 'DESC')
+        .limit(1);
+
+      const lastReading = await qbLast.getOne();
+
+      console.log(`[IoT Report] Sensor "${sensor.nombre}": Stats=${!!stats}, Min=${!!minReading}, Max=${!!maxReading}, Last=${!!lastReading}`);
+
+      // Obtener datos de tendencia (últimas 48 horas o rango especificado, agregado por hora)
+      const qbTrend = this.lecturaRepo
+        .createQueryBuilder('lectura')
+        .select("date_trunc('hour', lectura.fechaLectura)", 'fecha')
+        .addSelect('AVG(CAST(lectura.valor AS decimal))', 'valor')
+        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
+        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'"); // Solo valores numéricos
+
+      if (startDate) {
+        qbTrend.andWhere('lectura.fechaLectura >= :start', {
+          start: startDate,
+        });
+      } else {
+        // Default: últimas 48 horas
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setHours(twoDaysAgo.getHours() - 48);
+        qbTrend.andWhere('lectura.fechaLectura >= :twoDaysAgo', {
+          twoDaysAgo,
+        });
+      }
+
+      if (endDate) {
+        qbTrend.andWhere('lectura.fechaLectura <= :end', { end: endDate });
+      }
+
+      const trendData = await qbTrend
+        .groupBy("date_trunc('hour', lectura.fechaLectura)")
+        .orderBy('fecha', 'ASC')
+        .limit(48) // Limitar a 48 puntos máximo
+        .getRawMany();
+
+      console.log(`[IoT Report] Sensor "${sensor.nombre}": ${trendData.length} puntos de tendencia encontrados en rango especificado`);
+
+      // FALLBACK: Si no hay datos en el rango, buscar en los últimos 30 días
+      let finalTrendData = trendData;
+      if (finalTrendData.length === 0) {
+        console.log(`[IoT Report] Sensor "${sensor.nombre}" (ID: ${sensor.id}): Buscando en últimos 30 días...`);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        finalTrendData = await this.lecturaRepo
+          .createQueryBuilder('lectura')
+          .select("date_trunc('hour', lectura.fechaLectura)", 'fecha')
+          .addSelect('AVG(CAST(lectura.valor AS decimal))', 'valor')
+          .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
+          .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
+          .andWhere('lectura.fechaLectura >= :thirtyDaysAgo', { thirtyDaysAgo })
+          .groupBy("date_trunc('hour', lectura.fechaLectura)")
+          .orderBy('fecha', 'DESC')
+          .limit(48)
+          .getRawMany();
+        
+        console.log(`[IoT Report] Sensor "${sensor.nombre}": ${finalTrendData.length} puntos encontrados en últimos 30 días`);
+      }
+
+      // FALLBACK 2: Si aún no hay datos, buscar CUALQUIER dato sin restricción de fechas
+      if (finalTrendData.length === 0) {
+        console.log(`[IoT Report] Sensor "${sensor.nombre}" (ID: ${sensor.id}): Buscando CUALQUIER dato disponible...`);
+        
+        finalTrendData = await this.lecturaRepo
+          .createQueryBuilder('lectura')
+          .select("date_trunc('hour', lectura.fechaLectura)", 'fecha')
+          .addSelect('AVG(CAST(lectura.valor AS decimal))', 'valor')
+          .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
+          .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
+          .groupBy("date_trunc('hour', lectura.fechaLectura)")
+          .orderBy('fecha', 'DESC')
+          .limit(48)
+          .getRawMany();
+        
+        console.log(`[IoT Report] Sensor "${sensor.nombre}": ${finalTrendData.length} puntos encontrados SIN restricción de fechas`);
+        
+        // Verificar si hay ALGUNA lectura para este sensor
+        const totalCount = await this.lecturaRepo
+          .createQueryBuilder('lectura')
+          .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
+          .getCount();
+        
+        console.log(`[IoT Report] Sensor "${sensor.nombre}" (ID: ${sensor.id}): Total lecturas en BD: ${totalCount}`);
+      }
+
+      const tendencia = finalTrendData.map((t) => ({
+        fecha: t.fecha,
+        valor: parseFloat(t.valor),
+      }));
+
+      // Construir objeto de detalle del sensor
+      sensoresDetalle.push({
+        id: sensor.id,
+        nombre: sensor.nombre,
+        protocolo: sensor.protocolo || 'N/A',
+        tipoSensor: sensor.tipoSensor?.nombre || 'N/A',
+        unidad: sensor.tipoSensor?.unidad || '',
+        estadoConexion: sensor.estadoConexion || 'DESCONOCIDO',
+        estadisticas: {
+          promedio: stats?.promedio ? parseFloat(stats.promedio) : 0,
+          minimo: {
+            valor: minReading ? parseFloat(minReading.valor) : 0,
+            fecha: minReading?.fechaLectura || null,
+          },
+          maximo: {
+            valor: maxReading ? parseFloat(maxReading.valor) : 0,
+            fecha: maxReading?.fechaLectura || null,
+          },
+          ultimaLectura: {
+            valor: lastReading ? parseFloat(lastReading.valor) : 0,
+            fecha: lastReading?.fechaLectura || null,
+          },
+        },
+        tendencia,
+      });
+    }
+
+    // 6. Promedios globales (para compatibilidad con código existente)
+    const promedios = sensoresDetalle.map((s) => ({
+      label: s.nombre,
+      value: s.estadisticas.promedio.toFixed(2),
+      min: s.estadisticas.minimo.valor.toFixed(2),
+      max: s.estadisticas.maximo.valor.toFixed(2),
+      unit: s.unidad,
+    }));
+
+    // 7. Chart Data global (TimeSeries promedio de todos los sensores)
+    let chartData: { fecha: Date; valor: string }[] = [];
+    if (sensorIds.length > 0) {
+      const qbChart = this.lecturaRepo
+        .createQueryBuilder('lectura')
+        .select("date_trunc('hour', lectura.fechaLectura)", 'fecha')
+        .addSelect('AVG(CAST(lectura.valor AS decimal))', 'valor')
+        .where('lectura.sensorId IN (:...ids)', { ids: sensorIds });
+
+      if (startDate) {
+        qbChart.andWhere('lectura.fechaLectura >= :start', { start: startDate });
+      }
+      if (endDate) {
+        qbChart.andWhere('lectura.fechaLectura <= :end', { end: endDate });
+      }
+
+      const rawChart = await qbChart
+        .groupBy("date_trunc('hour', lectura.fechaLectura)")
+        .orderBy('fecha', 'ASC')
+        .getRawMany();
+
+      chartData = rawChart.map((r) => ({
+        fecha: r.fecha,
+        valor: parseFloat(r.valor).toFixed(2),
+      }));
+    }
+
+    // Global Min/Max for context
+    const allValues = promedios.map((p) => parseFloat(p.value));
+    const minGlobal =
+      allValues.length > 0 ? Math.min(...allValues).toFixed(2) : 0;
+    const maxGlobal =
+      allValues.length > 0 ? Math.max(...allValues).toFixed(2) : 0;
+
+    // 8. Obtener alertas detalladas
+    const qbAlertas = this.alertaRepo
+      .createQueryBuilder('alerta')
+      .leftJoinAndSelect('alerta.sensor', 'sensor')
+      .leftJoinAndSelect('sensor.tipoSensor', 'tipoSensor')
+      .where('alerta.loteId = :loteId', { loteId });
+
+    if (startDate) {
+      qbAlertas.andWhere('alerta.fechaAlerta >= :start', { start: startDate });
+    }
+    if (endDate) {
+      qbAlertas.andWhere('alerta.fechaAlerta <= :end', { end: endDate });
+    }
+
+    const alertas = await qbAlertas
+      .orderBy('alerta.fechaAlerta', 'DESC')
+      .limit(50) // Limitar a últimas 50 alertas
+      .getMany();
+
+    const alertasDetalle = alertas.map((alerta) => ({
+      id: alerta.id,
+      sensorNombre: alerta.sensor?.nombre || 'Desconocido',
+      tipoSensor: alerta.sensor?.tipoSensor?.nombre || 'N/A',
+      tipoAlerta: alerta.tipo,
+      valor: alerta.valor,
+      umbral: alerta.umbral,
+      fechaDeteccion: alerta.fechaAlerta,
+      resuelta: false,
+      fechaResolucion: null,
+    }));
+
+    return {
+      totalSensors: sensors.length,
+      protocolos,
+      estados: {
+        conectados,
+        desconectados,
+      },
+      alertasActivas,
+      alertasDetalle, // NUEVO: Alertas detalladas
+      configuracionMqtt,
+      sensoresDetalle,
+      promedios, // Mantener para compatibilidad
+      minGlobal,
+      maxGlobal,
+      chartData,
+    };
   }
 
   async createAutoSensor(data: {
@@ -538,7 +920,9 @@ export class IotService implements OnModuleInit {
 
     // 1. Try to find type by provided name (from MQTT payload)
     if (data.tipoNombre) {
-      let tipo = await this.tipoSensorRepo.findOne({ where: { nombre: data.tipoNombre } });
+      let tipo = await this.tipoSensorRepo.findOne({
+        where: { nombre: data.tipoNombre },
+      });
       if (tipo) {
         tipoSensorId = tipo.id;
       }
@@ -551,12 +935,14 @@ export class IotService implements OnModuleInit {
         tipoSensorId = mappedType.id;
       } else {
         // 3. Fallback to GENÉRICO
-        let generico = await this.tipoSensorRepo.findOne({ where: { nombre: 'GENÉRICO' } });
+        let generico = await this.tipoSensorRepo.findOne({
+          where: { nombre: 'GENÉRICO' },
+        });
         if (!generico) {
           generico = this.tipoSensorRepo.create({
             nombre: 'GENÉRICO',
             unidad: 'N/A',
-            descripcion: 'Tipo genérico para sensores sin clasificación'
+            descripcion: 'Tipo genérico para sensores sin clasificación',
           });
           generico = await this.tipoSensorRepo.save(generico);
         }
@@ -574,7 +960,7 @@ export class IotService implements OnModuleInit {
       protocolo: ProtocoloSensor.MQTT,
       activo: true,
       estadoConexion: 'DESCONOCIDO', // Initial state
-      creadoPorUsuarioId: 1 // System
+      creadoPorUsuarioId: 1, // System
     });
 
     const saved = await this.sensorRepo.save(sensor);
@@ -717,7 +1103,18 @@ export class IotService implements OnModuleInit {
 
   async removeSensor(id: number) {
     const sensor = await this.findSensorById(id);
-    return this.sensorRepo.softRemove(sensor);
+    
+    // Manually delete dependencies first to ensure robust deletion
+    try {
+        console.log(`[IoT] Deleting dependencies for sensor ${id}`);
+        await this.lecturaRepo.delete({ sensorId: id });
+        await this.alertaRepo.delete({ sensorId: id });
+    } catch (e) {
+        console.warn(`[IoT] Warning deleting dependencies for sensor ${id}:`, e);
+    }
+
+    return this.sensorRepo.remove(sensor); // Use remove (hard delete) instead of softRemove if we want to clean up completely, or softRemove if we want to keep it.
+    // Given the user wants to "delete", and we are deleting dependencies hard, let's hard delete the sensor too to avoid zombie data.
   }
 
   // ==================== LECTURAS ====================
@@ -728,11 +1125,107 @@ export class IotService implements OnModuleInit {
 
     return this.lecturaRepo.find({
       where,
-      relations: ['sensor'],
+      // relations: ['sensor'], // Removed for performance (charts dont need full sensor object)
       order: { fechaLectura: 'DESC' },
-      take: 1000, // Limitar resultados
+      take: 1000, 
     });
   }
+
+  // RF34 (Optimized): Get aggregated readings for charts
+  async getAggregatedReadings(
+    sensorId: number,
+    from: Date,
+    to: Date,
+    interval: 'hour' | 'day' | 'week' = 'day',
+  ) {
+    // Construct interval string for PostgreSQL date_trunc
+    const intervalStr =
+      interval === 'week' ? 'week' : interval === 'hour' ? 'hour' : 'day';
+
+    try {
+      const result = await this.lecturaRepo.query(
+        `
+        SELECT
+          date_trunc($1, "fecha_lectura") as date,
+          AVG(CASE WHEN "valor" ~ '^[0-9.-]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as avg_value,
+          MIN(CASE WHEN "valor" ~ '^[0-9.-]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as min_value,
+          MAX(CASE WHEN "valor" ~ '^[0-9.-]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as max_value
+        FROM "sensor_lecturas"
+        WHERE "sensor_id" = $2
+          AND "fecha_lectura" >= $3
+          AND "fecha_lectura" <= $4
+        GROUP BY 1
+        ORDER BY 1 ASC
+        `,
+        [intervalStr, sensorId, from, to],
+      );
+
+      return result.map((r: any) => ({
+        fecha: r.date,
+        promedio: r.avg_value || 0,
+        lecturaMinima: { valor: r.min_value || 0 },
+        lecturaMaxima: { valor: r.max_value || 0 },
+      }));
+    } catch (error) {
+      console.error('Error aggregated readings:', error);
+      return [];
+    }
+  }
+
+  // RF34 (Bulk Optimization): Get aggregated readings for MULTIPLE sensors
+  async getBulkReadings(
+    sensorIds: number[],
+    from: Date,
+    to: Date,
+    interval: 'hour' | 'day' | 'week' = 'day'
+  ) {
+    if (!sensorIds.length) return {};
+    
+    // Construct interval string
+    const intervalStr =
+      interval === 'week' ? 'week' : interval === 'hour' ? 'hour' : 'day';
+
+    try {
+      // Use Postgres ANY($2) for array of IDs
+      const result = await this.lecturaRepo.query(
+        `
+        SELECT
+          "sensor_id",
+          date_trunc($1, "fecha_lectura") as date,
+          AVG(CASE WHEN "valor" ~ '^[0-9.-]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as avg_value,
+          MIN(CASE WHEN "valor" ~ '^[0-9.-]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as min_value,
+          MAX(CASE WHEN "valor" ~ '^[0-9.-]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as max_value
+        FROM "sensor_lecturas"
+        WHERE "sensor_id" = ANY($2::int[])
+          AND "fecha_lectura" >= $3
+          AND "fecha_lectura" <= $4
+        GROUP BY 1, 2
+        ORDER BY 2 ASC
+        `,
+        [intervalStr, sensorIds, from, to],
+      );
+      
+      // Group by sensorId
+      const grouped: Record<number, any[]> = {};
+      sensorIds.forEach(id => grouped[id] = []);
+      
+      result.forEach((r: any) => {
+        if (!grouped[r.sensor_id]) grouped[r.sensor_id] = [];
+        grouped[r.sensor_id].push({
+           fecha: r.date,
+           promedio: r.avg_value || 0,
+           lecturaMinima: { valor: r.min_value || 0 }, // Mock object structure to match existing DTO
+           lecturaMaxima: { valor: r.max_value || 0 }
+        });
+      });
+      
+      return grouped;
+    } catch (error) {
+      console.error('Error in bulk readings:', error);
+      return {};
+    }
+  }
+
 
   async findAlerts(filters: {
     loteId?: number;
@@ -757,7 +1250,9 @@ export class IotService implements OnModuleInit {
       .take(200);
 
     if (filters.sensorId) {
-      query.andWhere('alerta.sensorId = :sensorId', { sensorId: filters.sensorId });
+      query.andWhere('alerta.sensorId = :sensorId', {
+        sensorId: filters.sensorId,
+      });
     }
     if (filters.loteId) {
       query.andWhere('alerta.loteId = :loteId', { loteId: filters.loteId });
@@ -770,6 +1265,45 @@ export class IotService implements OnModuleInit {
     }
 
     return query.getMany();
+  }
+
+  // RFxx: Get context (surrounding readings) for a specific alert
+  async getAlertContext(alertId: number) {
+    const alert = await this.alertaRepo.findOne({
+      where: { id: alertId },
+      relations: ['sensor'],
+    });
+
+    if (!alert) throw new NotFoundException(`Alert ${alertId} not found`);
+
+    const contextBefore = await this.lecturaRepo
+      .createQueryBuilder('l')
+      .where('l.sensorId = :sensorId', { sensorId: alert.sensorId })
+      .andWhere('l.fechaLectura <= :date', { date: alert.fechaAlerta })
+      .orderBy('l.fechaLectura', 'DESC')
+      .take(15) // 15 points before (including the point itself roughly)
+      .getMany();
+      
+    const contextAfter = await this.lecturaRepo
+      .createQueryBuilder('l')
+      .where('l.sensorId = :sensorId', { sensorId: alert.sensorId })
+      .andWhere('l.fechaLectura > :date', { date: alert.fechaAlerta })
+      .orderBy('l.fechaLectura', 'ASC')
+      .take(15) // 15 points after
+      .getMany();
+
+    // Combine and sort
+    const context = [...contextBefore, ...contextAfter].sort((a, b) => 
+        new Date(a.fechaLectura).getTime() - new Date(b.fechaLectura).getTime()
+    );
+
+    return {
+       alert,
+       context: context.map(c => ({
+         ...c,
+         valor: parseFloat(String(c.valor)) || 0
+       }))
+    };
   }
 
   async generateLotPdf(filters: {
@@ -813,7 +1347,11 @@ export class IotService implements OnModuleInit {
 
     for (const sensor of sensores.slice(0, 5)) {
       doc.fontSize(12).text(sensor.nombre, { underline: true });
-      doc.fontSize(9).text(`Tipo: ${sensor.tipoSensor?.nombre || ''} (${sensor.tipoSensor?.unidad || ''})`);
+      doc
+        .fontSize(9)
+        .text(
+          `Tipo: ${sensor.tipoSensor?.nombre || ''} (${sensor.tipoSensor?.unidad || ''})`,
+        );
       const lecturas = await this.lecturaRepo.find({
         where: { sensorId: sensor.id },
         order: { fechaLectura: 'ASC' },
@@ -825,7 +1363,9 @@ export class IotService implements OnModuleInit {
         const t = new Date(l.fechaLectura).getTime();
         return t >= fromTs && t <= toTs;
       });
-      const vals = lecturasFiltradas.map((l) => Number(l.valor)).filter((v) => !Number.isNaN(v));
+      const vals = lecturasFiltradas
+        .map((l) => Number(l.valor))
+        .filter((v) => !Number.isNaN(v));
       if (vals.length > 0) {
         const min = Math.min(...vals);
         const max = Math.max(...vals);
@@ -856,7 +1396,9 @@ export class IotService implements OnModuleInit {
             const tAlert = new Date(a.fechaAlerta).getTime();
             let best = Infinity;
             lecturasFiltradas.forEach((l, i) => {
-              const diff = Math.abs(new Date(l.fechaLectura).getTime() - tAlert);
+              const diff = Math.abs(
+                new Date(l.fechaLectura).getTime() - tAlert,
+              );
               if (diff < best) {
                 best = diff;
                 idx = i;
@@ -918,7 +1460,12 @@ export class IotService implements OnModuleInit {
   }
 
   // RF34: Actualizar estado de conexión basado en TTL
-  private async updateSensorEstado(sensor: Sensor, valor: any, fecha: Date, gateway?: IotGateway) {
+  private async updateSensorEstado(
+    sensor: Sensor,
+    valor: any,
+    fecha: Date,
+    gateway?: IotGateway,
+  ) {
     sensor.ultimaLectura = fecha;
     sensor.lastSeenAt = fecha;
     sensor.estadoConexion = 'CONECTADO';
@@ -929,12 +1476,26 @@ export class IotService implements OnModuleInit {
     if (!isNaN(valorNum)) {
       if (sensor.umbralMin !== null && valorNum < sensor.umbralMin) {
         sensor.estadoConexion = 'ALERTA_MIN';
-        await this.registrarAlerta(sensor, valorNum, sensor.umbralMin, 'LOW', fecha, gateway);
+        await this.registrarAlerta(
+          sensor,
+          valorNum,
+          sensor.umbralMin,
+          'LOW',
+          fecha,
+          gateway,
+        );
       }
 
       if (sensor.umbralMax !== null && valorNum > sensor.umbralMax) {
         sensor.estadoConexion = 'ALERTA_MAX';
-        await this.registrarAlerta(sensor, valorNum, sensor.umbralMax, 'HIGH', fecha, gateway);
+        await this.registrarAlerta(
+          sensor,
+          valorNum,
+          sensor.umbralMax,
+          'HIGH',
+          fecha,
+          gateway,
+        );
       }
     }
 
@@ -1052,296 +1613,7 @@ export class IotService implements OnModuleInit {
   }
   // ==================== REPORTES ====================
 
-  async getGeneralReport(
-    loteId?: number,
-    startDate?: Date,
-    endDate?: Date,
-    sensorId?: number,
-  ) {
-    try {
-      const where: any = {};
-      if (loteId) where.loteId = loteId;
-      if (sensorId) where.id = sensorId;
 
-      const sensors = await this.sensorRepo.find({
-        where,
-        relations: ['tipoSensor'],
-      });
-
-      const totalSensors = sensors.length;
-      const activos = sensors.filter(
-        (s) => s.estadoConexion === 'CONECTADO',
-      ).length;
-      const porcentajeActivos =
-        totalSensors > 0 ? Math.round((activos / totalSensors) * 100) : 0;
-
-      // Connection Status (Donut) - Current State
-      const connectedCount = sensors.filter(
-        (s) => s.estadoConexion !== 'DESCONECTADO',
-      ).length;
-      const disconnectedCount = sensors.filter(
-        (s) => s.estadoConexion === 'DESCONECTADO',
-      ).length;
-
-      // Protocol Distribution (Bars) - Current State
-      const protocols = {
-        MQTT: sensors.filter((s) => s.protocolo === ProtocoloSensor.MQTT).length,
-        HTTP: sensors.filter((s) => s.protocolo === ProtocoloSensor.HTTP).length,
-        WS: sensors.filter((s) => s.protocolo === ProtocoloSensor.WEBSOCKET)
-          .length,
-      };
-
-      // Critical Alerts & Averages - Historical (Filtered by Date)
-      // If no date provided, default to last 24h for alerts/averages to be meaningful?
-      // Or just all time? Let's default to last 24h if not provided to avoid massive queries,
-      // but the user said "filtre bien por fechas... para no tener una gran magnitud".
-
-      const start =
-        startDate || new Date(new Date().setDate(new Date().getDate() - 1));
-      const end = endDate || new Date();
-
-      // Dynamic Averages
-      const promedios: { label: string; value: string; unit: string }[] = [];
-
-      // Get unique sensor types from the filtered sensors
-      const uniqueTypes = new Map<number, { name: string; unit: string }>();
-      sensors.forEach((s) => {
-        if (s.tipoSensor) {
-          uniqueTypes.set(s.tipoSensor.id, {
-            name: s.tipoSensor.nombre,
-            unit: s.tipoSensor.unidad,
-          });
-        }
-      });
-
-      for (const [typeId, typeInfo] of uniqueTypes) {
-        const sensorIds = sensors
-          .filter((s) => s.tipoSensorId === typeId)
-          .map((s) => s.id);
-
-        if (sensorIds.length > 0) {
-          const { avg } = await this.lecturaRepo
-            .createQueryBuilder('lectura')
-            .select('AVG(CAST(lectura.valor AS FLOAT))', 'avg')
-            .where('lectura.sensorId IN (:...ids)', { ids: sensorIds })
-            .andWhere('lectura.fechaLectura >= :start', { start })
-            .andWhere('lectura.fechaLectura <= :end', { end })
-            // Safe guard: Only numeric values
-            .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'")
-            .getRawOne();
-
-          if (avg) {
-            promedios.push({
-              label: typeInfo.name,
-              value: parseFloat(avg).toFixed(1),
-              unit: typeInfo.unit,
-            });
-          }
-        }
-      }
-
-      // Alerts: Find readings outside thresholds in the date range
-      // We need to check each sensor's thresholds.
-      // This is complex in a single query because thresholds are on the sensor table.
-      // We can join sensor table.
-      const alertasRaw = await this.lecturaRepo
-        .createQueryBuilder('lectura')
-        .innerJoinAndSelect('lectura.sensor', 'sensor')
-        .innerJoinAndSelect('sensor.tipoSensor', 'tipoSensor') // Include tipoSensor for context if needed
-        .where('sensor.id IN (:...ids)', {
-          ids: sensors.map((s) => s.id).concat([0]),
-        }) // Handle empty array
-        .andWhere('lectura.fechaLectura >= :start', { start })
-        .andWhere('lectura.fechaLectura <= :end', { end })
-        // Safe guard: Only numeric values for threshold comparison
-        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'")
-        .andWhere(
-          '( (sensor.umbralMin IS NOT NULL AND CAST(lectura.valor AS FLOAT) < sensor.umbralMin) OR (sensor.umbralMax IS NOT NULL AND CAST(lectura.valor AS FLOAT) > sensor.umbralMax) )',
-        )
-        .orderBy('lectura.fechaLectura', 'DESC')
-        .take(50) // Limit to top 50 alerts to avoid huge PDF
-        .getMany();
-
-      const alertas = alertasRaw.map((l) => ({
-        sensor: l.sensor.nombre,
-        valor: l.valor,
-        max: l.sensor.umbralMax,
-        min: l.sensor.umbralMin,
-        tipoAlerta:
-          Number(l.valor) > (l.sensor.umbralMax ?? Infinity)
-            ? 'ALERTA_MAX'
-            : 'ALERTA_MIN',
-        hora: l.fechaLectura,
-      }));
-
-      // Count unique sensors with alerts in this period
-      const uniqueAlertSensors = new Set(alertasRaw.map((l) => l.sensorId)).size;
-
-      // Lotes Summary (for General Report)
-      const lotesSummary: any[] = [];
-      if (!loteId) {
-        const allSensorsWithLote = await this.sensorRepo.find({
-          relations: ['lote', 'subLote', 'tipoSensor'],
-        });
-
-        const loteMap = new Map<number, any>();
-        allSensorsWithLote.forEach((s) => {
-          if (s.loteId) {
-            if (!loteMap.has(s.loteId)) {
-              loteMap.set(s.loteId, {
-                loteId: s.loteId,
-                loteNombre: s.lote?.nombre || `Lote ${s.loteId}`,
-                totalSensores: 0,
-                activos: 0,
-              });
-            }
-            const lote = loteMap.get(s.loteId);
-            lote.totalSensores++;
-            if (s.estadoConexion === 'CONECTADO') lote.activos++;
-          }
-        });
-
-        lotesSummary.push(...Array.from(loteMap.values()));
-      }
-
-      // Calculate stats per sensor (Max/Min) for the period
-      const sensorStats = new Map<number, { max: number; min: number }>();
-      if (loteId && sensors.length > 0) {
-        const sensorIds = sensors.map((s) => s.id);
-        const statsRaw = await this.lecturaRepo
-          .createQueryBuilder('lectura')
-          .select('lectura.sensorId', 'sensorId')
-          .addSelect('MAX(CAST(lectura.valor AS FLOAT))', 'max')
-          .addSelect('MIN(CAST(lectura.valor AS FLOAT))', 'min')
-          .where('lectura.sensorId IN (:...ids)', { ids: sensorIds })
-          .andWhere('lectura.fechaLectura >= :start', { start })
-          .andWhere('lectura.fechaLectura <= :end', { end })
-          // Safe guard: Only numeric values
-          .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'")
-          .groupBy('lectura.sensorId')
-          .getRawMany();
-
-        statsRaw.forEach((stat) => {
-          sensorStats.set(stat.sensorId, {
-            max: parseFloat(stat.max),
-            min: parseFloat(stat.min),
-          });
-        });
-      }
-
-      // Sensors Detail (for Specific Report)
-      const sensorsDetail = sensors.map((s) => {
-        const stats = sensorStats.get(s.id);
-        return {
-          id: s.id,
-          nombre: s.nombre,
-          tipo: s.tipoSensor?.nombre || 'N/A',
-          unidad: s.tipoSensor?.unidad || '',
-          ultimoValor: s.ultimoValor || 'N/A',
-          estado: s.estadoConexion,
-          max: stats ? stats.max : null,
-          min: stats ? stats.min : null,
-        };
-      });
-
-      // Chart Data (for Specific Report) - Last 100 readings
-      let chartData: any[] = [];
-      if (loteId && sensors.length > 0) {
-        const sensorIds = sensors.map((s) => s.id);
-        const readings = await this.lecturaRepo
-          .createQueryBuilder('lectura')
-          .where('lectura.sensorId IN (:...ids)', { ids: sensorIds })
-          .andWhere('lectura.fechaLectura >= :start', { start })
-          .andWhere('lectura.fechaLectura <= :end', { end })
-          // Safe guard: Only numeric values
-          .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'")
-          .orderBy('lectura.fechaLectura', 'ASC')
-          .take(100)
-          .getMany();
-
-        chartData = readings.map((r) => ({
-          fecha: r.fechaLectura,
-          valor: parseFloat(r.valor) || 0,
-          sensorId: r.sensorId,
-        }));
-      }
-
-      // Calculate global stats for specific report
-      let maxGlobal = 0;
-      let minGlobal = 0;
-      let avgGlobal = 0;
-
-      if (loteId && sensors.length > 0) {
-        const sensorIds = sensors.map((s) => s.id);
-        const stats = await this.lecturaRepo
-          .createQueryBuilder('lectura')
-          .select('MAX(CAST(lectura.valor AS FLOAT))', 'max')
-          .addSelect('MIN(CAST(lectura.valor AS FLOAT))', 'min')
-          .addSelect('AVG(CAST(lectura.valor AS FLOAT))', 'avg')
-          .where('lectura.sensorId IN (:...ids)', { ids: sensorIds })
-          .andWhere('lectura.fechaLectura >= :start', { start })
-          .andWhere('lectura.fechaLectura <= :end', { end })
-          // Safe guard: Only numeric values
-          .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'")
-          .getRawOne();
-
-        maxGlobal = stats?.max ? parseFloat(stats.max) : 0;
-        minGlobal = stats?.min ? parseFloat(stats.min) : 0;
-        avgGlobal = stats?.avg ? parseFloat(stats.avg) : 0;
-      }
-
-      return {
-        totalSensors,
-        activos,
-        porcentajeActivos,
-        alertasActivas: uniqueAlertSensors,
-        estados: {
-          conectados: connectedCount,
-          desconectados: disconnectedCount,
-        },
-        protocolos: protocols,
-        alertasDetalle: alertas,
-        promedios,
-        lotesSummary,
-        sensorsDetail,
-        chartData,
-        maxGlobal,
-        minGlobal,
-        avgGlobal,
-        fechaGeneracion: new Date(),
-      };
-    } catch (error) {
-      console.error('Error in getGeneralReport:', error);
-      console.error('Parameters:', { loteId, startDate, endDate, sensorId });
-
-      // Return safe fallback data instead of throwing
-      return {
-        totalSensors: 0,
-        activos: 0,
-        porcentajeActivos: 0,
-        alertasActivas: 0,
-        estados: {
-          conectados: 0,
-          desconectados: 0,
-        },
-        protocolos: {
-          MQTT: 0,
-          HTTP: 0,
-          WS: 0,
-        },
-        alertasDetalle: [],
-        promedios: [],
-        lotesSummary: [],
-        sensorsDetail: [],
-        chartData: [],
-        maxGlobal: 0,
-        minGlobal: 0,
-        avgGlobal: 0,
-        fechaGeneracion: new Date(),
-        error: error.message || 'Unknown error occurred',
-      };
-    }
-  }
 
 
   async getLotsComparison(

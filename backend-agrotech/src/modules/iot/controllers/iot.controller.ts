@@ -69,6 +69,7 @@ export class IotController {
   @Delete('config/:id')
   @RequirePermissions('iot.eliminar')
   async deleteGlobalConfig(@Param('id', ParseIntPipe) id: number) {
+    console.log(`[IoTController] Request to delete Global Config ID: ${id}`);
     return this.iotService.deleteGlobalConfig(id);
   }
 
@@ -118,6 +119,7 @@ export class IotController {
   @Delete('sensors/:id')
   @RequirePermissions('iot.eliminar')
   async removeSensorHttp(@Param('id', ParseIntPipe) id: number) {
+    console.log(`[IoTController] Request to delete Sensor ID: ${id}`);
     return this.removeSensor({ id });
   }
 
@@ -144,6 +146,12 @@ export class IotController {
     });
   }
 
+  @Get('alerts/:id/context')
+  @RequirePermissions('iot.ver')
+  async getAlertContextHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.iotService.getAlertContext(id);
+  }
+
   async createLecturaHttp(@Body() dto: IotCreateLecturaDoDto) {
     return this.createLectura(dto, undefined);
   }
@@ -163,6 +171,22 @@ export class IotController {
     return this.iotService.getUltimasLecturas(id, limit);
   }
 
+  @Get('sensors/:id/aggregated')
+  @RequirePermissions('iot.ver')
+  async getAggregatedReadings(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('interval') interval: 'hour' | 'day' | 'week',
+  ) {
+    return this.iotService.getAggregatedReadings(
+      id,
+      new Date(from),
+      new Date(to),
+      interval,
+    );
+  }
+
   @Get('general-report')
   @RequirePermissions('iot.ver')
   async getGeneralReportHttp(
@@ -175,7 +199,12 @@ export class IotController {
     const sId = sensorId ? parseInt(sensorId, 10) : undefined;
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
-    return this.iotService.getGeneralReport(lId, start, end, sId);
+    return this.iotService.getGeneralReport({
+      loteId: lId,
+      startDate: start,
+      endDate: end,
+      sensorId: sId,
+    });
   }
 
   // ==================== TIPO SENSOR ENDPOINTS ====================

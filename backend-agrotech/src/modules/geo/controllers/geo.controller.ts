@@ -27,6 +27,12 @@ export class GeoController {
     return this.createLote(dto);
   }
 
+  @Get('lotes/summary')
+  @RequirePermissions('lotes.ver')
+  async findAllLotesSummaryHttp() {
+    return this.geoService.findAllLotesSummary();
+  }
+
   @Get('lotes')
   @RequirePermissions('lotes.ver')
   async findAllLotesHttp() {

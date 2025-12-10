@@ -11,7 +11,7 @@ export class SensorAlerta extends BaseEntity {
   @Column({ name: 'sensor_id' })
   sensorId: number;
 
-  @ManyToOne(() => Sensor)
+  @ManyToOne(() => Sensor, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'sensor_id' })
   sensor: Sensor;
 

@@ -27,12 +27,21 @@ export class VerificationService {
     await this.emailCodeRepo.save(emailCode);
 
     // Enviar email basado en tipo
-    if (tipo === 'verify') {
-      await this.emailService.sendVerificationEmail(email, code);
-    } else if (tipo === 'reset') {
-      await this.emailService.sendPasswordResetEmail(email, code);
-    } else {
-      throw new BadRequestException('Tipo de verificación no soportado');
+    try {
+      if (tipo === 'verify') {
+        await this.emailService.sendVerificationEmail(email, code);
+      } else if (tipo === 'reset') {
+        await this.emailService.sendPasswordResetEmail(email, code);
+      } else {
+        throw new BadRequestException('Tipo de verificación no soportado');
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      // We might want to throw acceptable error or just log it? 
+      // If we throw, user gets error but code is generated.
+      // If we don't throw, user thinks it worked but gets no email.
+      // Throwing 500 is default, but logging helps debug.
+      throw new BadRequestException('Error al enviar el correo de verificación. Revise los logs del servidor.');
     }
   }
 

@@ -168,15 +168,38 @@ export class CultivosService {
       whereDestino.subLoteId = targetSubLoteId;
     } else {
       whereDestino.loteId = targetLoteId;
-      whereDestino.subLoteId = null;
+      whereDestino.subLoteId = IsNull();
     }
+    
+    // DEBUG: Ver por qué falla la validación
+    console.log('DEBUG updateCultivo request:', {
+       idParam: id,
+       idType: typeof id,
+       targetLoteId,
+       targetSubLoteId
+    });
+
+    const whereQuery = {
+        ...whereDestino,
+        id: Not(Number(id)), 
+        deletedAt: IsNull()
+    };
+    
+    console.log('DEBUG updateCultivo validation query:', JSON.stringify(whereQuery));
 
     const cultivoEnDestino = await this.cultivoRepo.findOne({
-      where: { ...whereDestino, id: Not(id), deletedAt: IsNull() },
+      where: whereQuery,
     });
 
     if (cultivoEnDestino) {
-      throw new BadRequestException('Ya existe un cultivo activo en esta ubicación');
+      console.log('DEBUG Conflict found with record:', {
+          id: cultivoEnDestino.id,
+          nombre: cultivoEnDestino.nombreCultivo,
+          estado: cultivoEnDestino.estado,
+          loteId: cultivoEnDestino.loteId,
+          subLoteId: cultivoEnDestino.subLoteId
+      });
+      throw new BadRequestException(`Ya existe un cultivo activo en esta ubicación (ID Conflicto: ${cultivoEnDestino.id}, Nombre: ${cultivoEnDestino.nombreCultivo})`);
     }
 
     const payloadWithLocation = {

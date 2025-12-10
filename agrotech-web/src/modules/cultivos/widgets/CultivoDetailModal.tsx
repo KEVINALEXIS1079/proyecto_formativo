@@ -4,6 +4,10 @@ import { Modal, ModalContent, ModalHeader, ModalBody, Chip, Card, CardBody, Divi
 import { Calendar, MapPin, Sprout, CircleDollarSign, History, Pencil, Workflow } from "lucide-react";
 import { useCultivoDetail, useCultivoUpdate } from "../hooks/useCultivos";
 import { useActividades } from "@/modules/actividad/hooks/useActividades";
+import { IoTApi } from "@/modules/iot/api/iot.api";
+import type { Sensor } from "@/modules/iot/model/iot.types";
+import { SensorCharts } from "@/modules/iot/widgets/SensorCharts";
+import { Wifi, Bell, Activity as ActivityIcon, Thermometer, Droplets } from "lucide-react";
 
 export function CultivoDetailModal({ cultivoId, onClose }: { cultivoId: number | null; onClose: () => void }) {
   const { data: cultivo, isLoading } = useCultivoDetail(cultivoId || 0);
@@ -12,6 +16,30 @@ export function CultivoDetailModal({ cultivoId, onClose }: { cultivoId: number |
   const [nuevoEstado, setNuevoEstado] = useState<string>("activo");
   const [motivo, setMotivo] = useState("");
   const { data: actividades = [] } = useActividades(cultivoId ? { cultivoId } : undefined, { enabled: !!cultivoId });
+
+  // Estado para IoT
+  const [iotSensors, setIotSensors] = useState<Sensor[]>([]);
+  const [globalConfig, setGlobalConfig] = useState<any>(null);
+  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [loadingIoT, setLoadingIoT] = useState(false);
+
+  // Cargar datos IoT cuando abre el modal
+  useState(() => {
+     if (cultivo?.lote?.id) {
+        setLoadingIoT(true);
+        Promise.all([
+           IoTApi.getSensors({ loteId: cultivo.lote.id }),
+           IoTApi.getGlobalConfigs(),
+           IoTApi.getAlerts({ loteId: cultivo.lote.id })
+        ]).then(([sensors, configs, alerts]) => {
+           setIotSensors(sensors);
+           const config = configs.find(c => c.loteId === cultivo.lote?.id);
+           setGlobalConfig(config);
+           setRecentAlerts(alerts ? alerts.slice(0, 3) : []);
+        }).finally(() => setLoadingIoT(false));
+     }
+  }); // Note: useEffect better, but simplest refactor logic here. Actually using useEffect inside component body is cleaner.
+
 
   const fmtDate = (date?: string) => (date ? new Date(date).toLocaleDateString("es-CO") : "N/A");
   const fmtMoney = (value?: number) =>
@@ -254,9 +282,120 @@ export function CultivoDetailModal({ cultivoId, onClose }: { cultivoId: number |
                       )}
                     </div>
                   </Tab>
-
                   
-                </Tabs>
+                  <Tab
+                    key="iot-monitor"
+                    title={
+                      <div className="flex items-center gap-2">
+                        <ActivityIcon className="h-4 w-4" />
+                        <span>Monitor IoT</span>
+                      </div>
+                    }
+                  >
+                    <div className="space-y-6">
+                       {/* Global Config Summary */}
+                       {globalConfig && (
+                         <Card shadow="sm" className="bg-slate-50 border border-slate-200">
+                           <CardBody>
+                             <div className="flex items-center gap-3 mb-2">
+                               <Wifi className="w-5 h-5 text-blue-600" />
+                               <h4 className="font-bold text-gray-800">Configuración Global del Lote</h4>
+                             </div>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                               <div>
+                                 <span className="text-gray-500 block">Broker</span>
+                                 <span className="font-mono text-gray-800">{globalConfig.broker}:{globalConfig.port}</span>
+                               </div>
+                               <div>
+                                 <span className="text-gray-500 block">Tópico Base</span>
+                                 <span className="font-mono text-gray-800">{globalConfig.topicPrefix}</span>
+                               </div>
+                               <div>
+                                  <span className="text-gray-500 block">Estado</span>
+                                  <Chip size="sm" color={globalConfig.activo ? "success" : "default"} variant="dot">{globalConfig.activo ? 'Activo' : 'Inactivo'}</Chip>
+                               </div>
+                             </div>
+                           </CardBody>
+                         </Card>
+                       )}
+
+                       {/* Sensors List & Thresholds */}
+                       <div>
+                         <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            <Thermometer className="w-4 h-4 text-emerald-600" /> Sensores Activos ({iotSensors.length})
+                         </h4>
+                         {iotSensors.length === 0 ? (
+                           <p className="text-gray-500 text-sm">No hay sensores asignados a este lote.</p>
+                         ) : (
+                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {iotSensors.map(sensor => (
+                                <Card key={sensor.id} shadow="sm" className="border border-gray-100">
+                                  <CardBody className="p-3">
+                                     <div className="flex justify-between items-start mb-2">
+                                       <div>
+                                          <p className="font-semibold text-gray-800 text-sm">{sensor.nombre}</p>
+                                          <p className="text-xs text-gray-500">{sensor.tipoSensor?.nombre || sensor.mqttTopic}</p>
+                                       </div>
+                                       <Chip size="sm" color={sensor.estadoConexion === 'conected' ? 'success' : 'danger'} variant="flat" className="h-6">
+                                          {sensor.estadoConexion === 'conected' ? 'Online' : 'Offline'}
+                                       </Chip>
+                                     </div>
+                                     <div className="flex items-end gap-2 mt-1">
+                                        <span className="text-2xl font-bold text-gray-900">{sensor.ultimoValor ?? '--'}</span>
+                                        <span className="text-sm text-gray-500 mb-1">{sensor.unidad}</span>
+                                     </div>
+                                     <Divider className="my-2" />
+                                     <div className="flex justify-between text-xs text-gray-500">
+                                        <span>Min: {sensor.umbralMin ?? '-'}</span>
+                                        <span>Max: {sensor.umbralMax ?? '-'}</span>
+                                     </div>
+                                  </CardBody>
+                                </Card>
+                              ))}
+                           </div>
+                         )}
+                       </div>
+
+                       {/* Charts */}
+                       {iotSensors.length > 0 && (
+                          <div>
+                            <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                <ActivityIcon className="w-4 h-4 text-purple-600" /> Gráficas en Tiempo Real
+                            </h4>
+                            <div className="h-[350px]">
+                               <SensorCharts sensors={iotSensors} layout="carousel" isLive={true} />
+                            </div>
+                          </div>
+                       )}
+
+                       {/* Recent Alerts */}
+                       <div>
+                          <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                             <Bell className="w-4 h-4 text-red-500" /> Últimas Alertas
+                          </h4>
+                          {recentAlerts.length === 0 ? (
+                            <p className="text-gray-500 text-sm italic">No hay alertas recientes.</p>
+                          ) : (
+                            <div className="space-y-2">
+                               {recentAlerts.map((alert, idx) => (
+                                 <div key={idx} className="flex items-center gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">
+                                    <Bell className="w-5 h-5 text-red-500" />
+                                    <div>
+                                       <p className="text-sm font-semibold text-gray-800">
+                                          {alert.mensaje || `Alerta en ${alert.sensor?.nombre || 'Sensor'}`}
+                                       </p>
+                                       <p className="text-xs text-gray-600">
+                                          Valor: {alert.valor} | Fecha: {new Date(alert.fechaAlerta).toLocaleString()}
+                                       </p>
+                                    </div>
+                                 </div>
+                               ))}
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                  </Tab>
+                  </Tabs>
               )}
             </ModalBody>
           </>

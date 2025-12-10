@@ -43,6 +43,32 @@ export class GeoService {
     });
   }
 
+  async findAllLotesSummary() {
+    // OPTIMIZED: Use raw query to avoid ORM overhead or accidental eager loading
+    const raw = await this.loteRepo.query(`
+      SELECT l.id, l.nombre 
+      FROM lotes l 
+      WHERE l.estado = 'activo'
+      ORDER BY l.nombre ASC
+    `);
+    
+    // Fetch sublotes separately or in a second light query if needed, 
+    // or just return lots first to verify speed. 
+    // For now, let's join manually to avoid N+1 if we really need sublotes.
+    // Actually, distinct query for sublotes is faster than large join if many rows.
+    
+    const sublotes = await this.subLoteRepo.query(`
+      SELECT s.id, s.nombre, s.lote_id as "loteId" 
+      FROM sublotes s
+    `);
+    
+    // Merge in JS (much faster for 6 lots)
+    return raw.map((l: any) => ({
+        ...l,
+        sublotes: sublotes.filter((s: any) => s.loteId === l.id)
+    }));
+  }
+
   async findLoteById(id: number) {
     const lote = await this.loteRepo.findOne({ where: { id } });
     if (!lote) throw new NotFoundException(`Lote ${id} not found`);

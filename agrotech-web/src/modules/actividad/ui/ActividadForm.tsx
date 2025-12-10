@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useMemo } from "react";
+import { useForm, type SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Tabs, Tab, Card, CardBody } from "@heroui/react";
 import { Save } from "lucide-react";
+import { actividadSchema, type ActividadFormData } from "../models/schemas";
 import type { CreateActividadPayload } from "../models/types";
 import GeneralSection from "../features/GeneralSection";
 import ResponsablesSection from "../features/ResponsablesSection";
@@ -16,6 +18,7 @@ import {
   listInsumos,
   listSubLotes,
 } from "../api";
+import toast from "react-hot-toast";
 
 interface ActividadFormProps {
   onSubmit: (data: CreateActividadPayload) => Promise<void>;
@@ -32,30 +35,91 @@ export default function ActividadForm({
   submitLabel = "Guardar",
   onCancel,
 }: ActividadFormProps) {
-  // ... (useForm logic remains same, skipping lines 33-80 implicitly by targeting outer block or just replacing Button area)
-  // Wait, I can't "skip" in replace_file_content.
-  // I'll grab the props definition block (lines 20-32) and the footer block (lines 148-158).
-  // But replace_file_content is single contiguous block.
-  // I'll use `multi_replace_file_content`.
-
-  // But first I need to check if multi_replace is available. It is.
-  // Let's use multi_replace.
-  // Chunk 1: Interface and Destructuring.
-  // Chunk 2: Button Rendering.
-
-  const { control, handleSubmit, watch, setValue } =
-    useForm<CreateActividadPayload>({
-      defaultValues: initialData || {
+  const processedDefaultValues: Partial<ActividadFormData> = useMemo(() => {
+    if (!initialData) {
+      return {
         nombre: "",
         tipo: "",
         subtipo: "",
+        fecha: new Date(),
+        loteId: 0,
+        subLoteId: undefined, // Explicit undefined
+        cultivoId: 0,
+        descripcion: "",
         responsables: [],
         insumos: [],
         servicios: [],
         evidencias: [],
         herramientas: [],
-      },
+        horasActividad: 0,
+        precioHoraActividad: 0,
+      };
+    }
+
+    const fechaDate = initialData.fecha ? new Date(initialData.fecha) : new Date();
+
+    return {
+      nombre: initialData.nombre || "",
+      tipo: initialData.tipo || "",
+      subtipo: initialData.subtipo || "",
+      fecha: fechaDate,
+      loteId: initialData.loteId ?? 0,
+      subLoteId: initialData.subLoteId ?? undefined,
+      cultivoId: initialData.cultivoId ?? 0,
+      descripcion: initialData.descripcion || "",
+      horasActividad: initialData.horasActividad ?? 0,
+      precioHoraActividad: initialData.precioHoraActividad ?? 0,
+      cantidadPlantas: initialData.cantidadPlantas ?? undefined,
+      kgRecolectados: initialData.kgRecolectados ?? undefined,
+      responsables: (initialData.responsables || []).map(r => ({
+        usuarioId: r.usuarioId,
+        horas: r.horas ?? 0,
+        precioHora: r.precioHora ?? 0,
+      })),
+      insumos: (initialData.insumos || []).map(i => ({
+        insumoId: i.insumoId,
+        cantidadUso: i.cantidadUso,
+        costoUnitarioUso: i.costoUnitarioUso,
+        descripcion: i.descripcion,
+      })),
+      servicios: (initialData.servicios || []).map(s => ({
+        nombreServicio: s.nombreServicio,
+        horas: s.horas,
+        precioHora: s.precioHora,
+      })),
+      evidencias: (initialData.evidencias || []).map(e => ({
+        descripcion: e.descripcion,
+        imagenes: e.imagenes,
+      })),
+      herramientas: (initialData.herramientas || []).map(h => ({
+        activoFijoId: h.activoFijoId,
+        horasUso: h.horasUso,
+      })),
+    }; // removed type assertion to let TS check compatibility
+  }, [initialData]);
+
+  const { control, handleSubmit, watch, setValue } =
+    useForm<ActividadFormData>({
+      resolver: zodResolver(actividadSchema) as any, // Cast to any to bypass inferred type mismatch
+      defaultValues: processedDefaultValues,
     });
+
+    const onError = (errors: any) => {
+      console.log("Validation Errors:", errors);
+      toast.error("Por favor corrija los errores en el formulario");
+    }
+
+    const handleFormSubmit: SubmitHandler<ActividadFormData> = (data) => {
+      // Transform Form Data (Date) to Payload (String)
+      const payload: CreateActividadPayload = {
+        ...data,
+        fecha: data.fecha.toISOString(),
+        subLoteId: data.subLoteId, // Direct assignment now possible
+        cantidadPlantas: data.cantidadPlantas,
+        kgRecolectados: data.kgRecolectados,
+      };
+      return onSubmit(payload);
+    };
 
   // ... inside component
   const [cultivos, setCultivos] = useState<any[]>([]);
@@ -92,7 +156,7 @@ export default function ActividadForm({
   const isReservationMode = !isFinalized && !willFinalize;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleFormSubmit, onError)} className="space-y-6">
       <Tabs
         aria-label="Opciones de actividad"
         color="success"
@@ -117,7 +181,6 @@ export default function ActividadForm({
             <CardBody>
               <ResponsablesSection
                 control={control}
-                setValue={setValue}
                 watch={watch}
                 usuarios={usuarios}
               />

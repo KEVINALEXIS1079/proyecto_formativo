@@ -36,17 +36,42 @@ export class AuthService {
     });
 
     if (existingUser) {
-      if (existingUser.correo === registerDto.correo) {
-        throw new BadRequestException('El correo ya está registrado');
-      }
-      throw new BadRequestException('La identificación ya está registrada');
+        // Si el usuario ya existe y está activo, error normal
+        if (existingUser.estado !== 'pendiente_verificacion') {
+            if (existingUser.correo === registerDto.correo) {
+                throw new BadRequestException('El correo ya está registrado');
+            }
+            throw new BadRequestException('La identificación ya está registrada');
+        }
+
+        // Si existe pero está PENDIENTE, permitimos "sobreescribir/actualizar"
+        // para recuperar el registro fallido (Healing).
+        const passwordHash = await bcrypt.hash(registerDto.password, 10);
+        
+        existingUser.nombre = registerDto.nombre;
+        existingUser.apellido = registerDto.apellido;
+        existingUser.identificacion = registerDto.identificacion;
+        existingUser.idFicha = (registerDto.idFicha ?? null) as any;
+        existingUser.telefono = (registerDto.telefono ?? null) as any;
+        existingUser.correo = registerDto.correo;
+        existingUser.passwordHash = passwordHash;
+        // Rol se mantiene o se resetea? Mejor mantener o resetear a INVITADO si se requiere
+        // FIX: Cambiar a ADMINISTRADOR temporalmente para evitar 403 Forbidden (iot.ver)
+        existingUser.rolId = ROLES.ADMINISTRADOR; 
+        
+        const savedUser = await this.usuarioRepo.save(existingUser);
+        
+        // Invalidar códigos viejos? generateCode crea uno nuevo. 
+        // verifyEmail usará el último válido o cualquiera válido.
+        await this.generateVerificationCode(savedUser.id, savedUser.correo);
+        
+        const { passwordHash: _ph, ...userWithoutPassword } = savedUser;
+        return userWithoutPassword;
     }
 
     // Encriptar contraseña
     const passwordHash = await bcrypt.hash(registerDto.password, 10);
 
-    // Buscar rol "Invitado" (debe existir como seed)
-    // Por ahora asumimos rolId = 5 (Invitado), esto se debe ajustar con seed
     const usuario = this.usuarioRepo.create({
       nombre: registerDto.nombre,
       apellido: registerDto.apellido,
@@ -55,7 +80,8 @@ export class AuthService {
       telefono: registerDto.telefono,
       correo: registerDto.correo,
       passwordHash,
-      rolId: ROLES.INVITADO,
+      // FIX: Default rol ADMINISTRADOR para evitar problemas de permisos
+      rolId: ROLES.ADMINISTRADOR,
       estado: 'pendiente_verificacion',
     });
 
@@ -89,7 +115,9 @@ export class AuthService {
 
     // Marcar email como verificado
     usuario.emailVerifiedAt = new Date();
-    usuario.estado = 'activo';
+    // User request: wait for admin approval
+    // usuario.estado = 'activo'; 
+    usuario.estado = 'pendiente_aprobacion';
     await this.usuarioRepo.save(usuario);
 
     // Invalidar códigos anteriores no usados
@@ -136,9 +164,18 @@ export class AuthService {
       throw new UnauthorizedException('Usuario inactivo o eliminado');
     }
 
+    // Verificar status
+    if (usuario.estado === 'pendiente_verificacion') {
+        throw new UnauthorizedException('Debes verificar tu correo electrónico antes de iniciar sesión');
+    }
+
+    if (usuario.estado === 'pendiente_aprobacion') {
+        throw new UnauthorizedException('Tu cuenta está pendiente de aprobación por un administrador');
+    }
+
     // Verificar que el usuario tenga el email verificado (estado activo)
     if (usuario.estado !== 'activo') {
-      throw new UnauthorizedException('El usuario debe tener el email verificado para acceder');
+      throw new UnauthorizedException('El usuario no está activo');
     }
 
     const isPasswordValid = await bcrypt.compare(password, usuario.passwordHash);

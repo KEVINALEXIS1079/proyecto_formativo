@@ -6,21 +6,19 @@ import {
   Card,
   CardBody,
 } from "@heroui/react";
-import type { Control, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { useFieldArray, Controller } from "react-hook-form";
-import type { CreateActividadPayload } from "../models/types";
+import type { Control, UseFormWatch } from "react-hook-form";
+import type { ActividadFormData } from "../models/schemas";
 import { Plus, Trash2 } from "lucide-react";
 
 interface ResponsablesSectionProps {
-  control: Control<CreateActividadPayload>;
-  setValue: UseFormSetValue<CreateActividadPayload>;
-  watch: UseFormWatch<CreateActividadPayload>;
+  control: Control<ActividadFormData>;
+  watch: UseFormWatch<ActividadFormData>;
   usuarios: any[];
 }
 
 export default function ResponsablesSection({
   control,
-  setValue,
   watch,
   usuarios,
 }: ResponsablesSectionProps) {

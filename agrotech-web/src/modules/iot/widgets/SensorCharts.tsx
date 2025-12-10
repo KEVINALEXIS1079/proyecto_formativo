@@ -6,20 +6,15 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   BarChart,
   Bar,
   AreaChart,
   Area,
-  RadialBarChart,
-  RadialBar,
-  PolarAngleAxis,
 } from 'recharts';
-import { Card, CardBody, ButtonGroup, Button } from '@heroui/react';
+import { Card, CardBody, ButtonGroup, Button, CircularProgress } from '@heroui/react';
 import { BarChart3 as BarChartIcon, AreaChart as AreaChartIcon, LineChart as LineIcon, Activity } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { useIoTRealTimeSensors } from '../hooks/useIoTRealTimeSensors';
 import type { Sensor } from '../model/iot.types';
 
@@ -29,6 +24,7 @@ interface SensorChartsProps {
   loading: boolean;
   isLive?: boolean;
   sensors?: Sensor[];
+  layout?: 'carousel' | 'grid';
 }
 
 type ChartType = 'line' | 'area' | 'bar' | 'radial';
@@ -44,7 +40,7 @@ const COLORS = [
   { stroke: '#f97316', fill: 'url(#colorDeepOrange)' },
 ];
 
-export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sensorSummaryData, loading, isLive, sensors = [] }) => {
+export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sensorSummaryData, loading, isLive, sensors = [], layout = 'carousel' }) => {
   const [chartType, setChartType] = useState<ChartType>('line');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -69,7 +65,7 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
     if (cards.length <= 1) return;
     const id = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % cards.length);
-    }, 8000);
+    }, 20000);
     return () => clearInterval(id);
   }, [cards.length]);
 
@@ -92,17 +88,7 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
     );
   }
 
-  if (timeSeriesData.length === 0 && sensorSummaryData.length === 0) {
-    return (
-      <div className="h-[180px] flex items-center justify-center">
-        <div className="text-center flex flex-col items-center gap-2">
-          <BarChartIcon className="w-8 h-8 text-gray-400" />
-          <p className="text-gray-400 text-lg">No hay datos disponibles</p>
-          <p className="text-gray-300 text-sm mt-2">Seleccione un lote para ver las graficas</p>
-        </div>
-      </div>
-    );
-  }
+
 
   const renderGradients = () => (
     <defs>
@@ -165,6 +151,7 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
     return null;
   };
 
+  // ... render functions ...
   const renderIndividualChart = (series: any, idx: number, sensor?: Sensor) => {
     const colorIndex = idx % COLORS.length;
 
@@ -274,14 +261,15 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
                   if (isPump) {
                     return Number(value) === 1 ? 'Prendido' : 'Apagado';
                   }
-                  return value;
+                  return typeof value === 'number' ? value.toFixed(2) : value;
                 }}
               />
               <Tooltip
                 content={({ active, payload, label }: any) => {
                   if (active && payload && payload.length) {
                     const value = payload[0].value;
-                    const displayValue = isPump ? (Number(value) === 1 ? 'Prendido' : 'Apagado') : value;
+                    const formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
+                    const displayValue = isPump ? (Number(value) === 1 ? 'Prendido' : 'Apagado') : formattedValue;
 
                     return (
                       <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
@@ -349,40 +337,27 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
             <span className="text-sm text-gray-500">Actual</span>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center">
-            <RadialBarChart
-              width={320}
-              height={320}
-              cx="50%"
-              cy="50%"
-              innerRadius="70%"
-              outerRadius="100%"
-              barSize={18}
-              data={gaugeData}
-              startAngle={225}
-              endAngle={-45}
-            >
-              <PolarAngleAxis type="number" domain={[0, maxValue]} tick={false} />
-              <RadialBar background dataKey="value" cornerRadius={10} />
-              <text
-                x="50%"
-                y="50%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="text-3xl font-bold fill-gray-900"
-              >
-                {lastValue}
-              </text>
-              <text
-                x="50%"
-                y="62%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="text-sm fill-gray-500"
-              >
-                Valor actual
-              </text>
-            </RadialBarChart>
-            <p className="text-xs text-gray-500 mt-2">Máximo referencia: {maxValue}</p>
+            <CircularProgress
+              classNames={{
+                svg: "w-48 h-48 drop-shadow-md",
+                indicator: "stroke-current",
+                track: "stroke-gray-100",
+                value: "text-3xl font-bold font-mono text-gray-800",
+              }}
+              value={lastValue}
+              maxValue={maxValue}
+              size="lg"
+              showValueLabel={true}
+              color={
+                 idx % COLORS.length === 0 ? "primary" :
+                 idx % COLORS.length === 1 ? "success" :
+                 idx % COLORS.length === 2 ? "warning" :
+                 idx % COLORS.length === 4 ? "danger" : 
+                 "secondary"
+              }
+              formatOptions={{ style: "decimal", minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+            />
+            <p className="text-sm text-gray-500 mt-4 font-medium">Referencia Max: {maxValue}</p>
           </div>
         </div>
       );
@@ -444,8 +419,7 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
           )}
         </div>
 
-        {!isLive && (
-          <ButtonGroup size="sm" variant="flat" className="shadow-sm">
+        <ButtonGroup size="sm" variant="flat" className="shadow-sm">
             <Button
               onClick={() => setChartType('line')}
               className={`transition-all duration-200 ${chartType === 'line' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -479,14 +453,12 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
               Radial
             </Button>
           </ButtonGroup>
-        )}
       </div>
-
       {isLive ? (
         <div className="relative">
           <div
             ref={containerRef}
-            className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-hide"
+            className="w-full"
           >
             {activeSeriesList.map((series) => {
               const lastReading = series.data && series.data.length > 0 ? series.data[series.data.length - 1] : null;
@@ -497,7 +469,8 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
                 sensor.nombre?.toLowerCase().includes('bomba'));
               const currentValue = realTimeData ? realTimeData.value : (lastReading ? lastReading.valor : null);
               const isDisconnected = realTimeData?.estado === 'DESCONECTADO' || sensor?.estado === 'DESCONECTADO';
-              const displayValue = isDisconnected ? 'DESCONECTADO' : (isPump && currentValue !== null ? (Number(currentValue) === 1 ? 'Prendido' : 'Apagado') : currentValue);
+              const formattedCurrentValue = typeof currentValue === 'number' ? currentValue.toFixed(2) : currentValue;
+              const displayValue = isDisconnected ? 'DESCONECTADO' : (isPump && currentValue !== null ? (Number(currentValue) === 1 ? 'Prendido' : 'Apagado') : formattedCurrentValue);
               const statusColor = isPump ? (Number(currentValue) === 1 ? 'text-green-600' : 'text-red-600') : { color };
 
               return (
@@ -511,14 +484,7 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
                         <div>
                           <p className="text-xs text-gray-500">Sensor</p>
                           <p className="text-lg font-bold text-gray-900">{series.name}</p>
-                          {sensor && sensor.protocolo === 'MQTT' && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                              <span className="text-xs text-gray-500 capitalize">
-                                {connectionStatus === 'connected' ? 'En línea' : 'Desconectado'}
-                              </span>
-                            </div>
-                          )}
+
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-gray-500">Valor actual</p>
@@ -534,11 +500,43 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
                           </p>
                         </div>
                       </div>
-                      <div className="h-[170px] w-full">
+                      <div className="h-[240px] w-full">
+                        {chartType === 'radial' ? (
+                          <div className="flex flex-col items-center justify-center w-full h-full">
+                            <CircularProgress
+                              classNames={{
+                                svg: "w-44 h-44 drop-shadow-md",
+                                indicator: "stroke-current",
+                                track: "stroke-gray-100",
+                                value: "text-2xl font-bold font-mono",
+                              }}
+                              value={typeof currentValue === 'number' ? currentValue : 0}
+                              maxValue={100}
+                              size="lg"
+                              showValueLabel={true}
+                              strokeWidth={4}
+                              color={
+                                activeIndex % COLORS.length === 0 ? "primary" :
+                                activeIndex % COLORS.length === 1 ? "success" :
+                                activeIndex % COLORS.length === 2 ? "warning" :
+                                activeIndex % COLORS.length === 4 ? "danger" : 
+                                "secondary"
+                              }
+                              formatOptions={{ style: "decimal", minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+                            />
+                            <p className="text-sm text-gray-600 mt-3 font-semibold text-center">{series.name}</p>
+                          </div>
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={series.data.slice(-80)} margin={{ top: 10, right: 16, left: 0, bottom: 24 }}>
-                            {renderGradients()}
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.6} />
+                        {chartType === 'line' ? (
+                          <LineChart data={series.data.slice(-150)} margin={{ top: 10, right: 16, left: 0, bottom: 24 }}>
+                            <defs>
+                              <linearGradient id={`gradient-${sensor?.id}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={color} stopOpacity={0.1} />
+                                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
                             <XAxis
                               dataKey="fechaLectura"
                               angle={-30}
@@ -551,13 +549,91 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
                                 return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                               }}
                             />
-                            <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} width={50} />
-                            <Tooltip content={<CustomTooltip />} />
+                            <YAxis 
+                              domain={['dataMin - 2', 'dataMax + 2']} 
+                              tick={{ fill: '#6b7280', fontSize: 11 }} 
+                              width={50} 
+                            />
+                            <Tooltip
+                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              formatter={(value: any) => [typeof value === 'number' ? value.toFixed(2) : value, 'Valor']}
+                              labelFormatter={(label) => new Date(label).toLocaleTimeString()}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="valor"
+                              stroke={color}
+                              strokeWidth={3}
+                              dot={false}
+                              activeDot={{ r: 4, strokeWidth: 0 }}
+                              animationDuration={500}
+                              isAnimationActive={false}
+                              connectNulls
+                            />
+                          </LineChart>
+                        ) : chartType === 'bar' ? (
+                          <BarChart data={series.data.slice(-150)} margin={{ top: 10, right: 16, left: 0, bottom: 24 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
+                            <XAxis
+                              dataKey="fechaLectura"
+                              angle={-30}
+                              textAnchor="end"
+                              height={40}
+                              tick={{ fill: '#6b7280', fontSize: 10 }}
+                              tickFormatter={(value) => {
+                                if (!value) return '';
+                                const date = new Date(value);
+                                return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                              }}
+                            />
+                            <YAxis 
+                              domain={['dataMin - 2', 'dataMax + 2']} 
+                              tick={{ fill: '#6b7280', fontSize: 11 }} 
+                              width={50} 
+                            />
+                            <Tooltip
+                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              formatter={(value: any) => [typeof value === 'number' ? value.toFixed(2) : value, 'Valor']}
+                              labelFormatter={(label) => new Date(label).toLocaleTimeString()}
+                            />
+                            <Bar dataKey="valor" fill={color} radius={[4, 4, 0, 0]} animationDuration={500} isAnimationActive={false} />
+                          </BarChart>
+                        ) : ( // Default to AreaChart
+                          <AreaChart data={series.data.slice(-150)} margin={{ top: 10, right: 16, left: 0, bottom: 24 }}>
+                            <defs>
+                              <linearGradient id={`gradient-${sensor?.id}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.6} />
+                            <XAxis
+                              dataKey="fechaLectura"
+                              angle={-30}
+                              textAnchor="end"
+                              height={40}
+                              tick={{ fill: '#6b7280', fontSize: 10 }}
+                              tickFormatter={(value) => {
+                                if (!value) return '';
+                                const date = new Date(value);
+                                return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                              }}
+                            />
+                            <YAxis 
+                              domain={['dataMin - 2', 'dataMax + 2']} 
+                              tick={{ fill: '#6b7280', fontSize: 11 }} 
+                              width={50} 
+                            />
+                            <Tooltip
+                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              formatter={(value: any) => [typeof value === 'number' ? value.toFixed(2) : value, 'Valor']}
+                              labelFormatter={(label) => new Date(label).toLocaleTimeString()}
+                            />
                             <Area
                               type="monotone"
                               dataKey="valor"
                               stroke={color}
-                              fill={COLORS[activeIndex % COLORS.length].fill}
+                              fill={`url(#gradient-${sensor?.id})`}
                               strokeWidth={3}
                               dot={false}
                               animationDuration={500}
@@ -565,7 +641,9 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, sens
                               connectNulls
                             />
                           </AreaChart>
+                          )}
                         </ResponsiveContainer>
+                        )}
                       </div>
                     </CardBody>
                   </Card>

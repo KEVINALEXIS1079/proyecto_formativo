@@ -3,16 +3,16 @@ import { connectSocket, api } from '../../../shared/api/client';
 import { IoTApi } from '../api/iot.api';
 import type { Sensor, SensorLectura, LotMetrics } from '../model/iot.types';
 
-// Time window for data retention (2 minutes)
-const TWO_MINUTES_MS = 2 * 60 * 1000;
-const MAX_LIVE_READINGS = 30; // Cap live points per sensor to avoid heavy renders
+// Time window for data retention (24 hours for initial live view context)
+const LIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const MAX_LIVE_READINGS = 50; // Increased cap to show more context
 
 // Helper function to filter readings by time window
 const filterRecentReadings = (readings: SensorLectura[]): SensorLectura[] => {
   const now = Date.now();
   return readings.filter(r => {
     const readingTime = new Date(r.fechaLectura).getTime();
-    return (now - readingTime) <= TWO_MINUTES_MS;
+    return (now - readingTime) <= LIVE_WINDOW_MS;
   });
 };
 
@@ -71,39 +71,79 @@ export const useIoTLotCharts = (
       const newSummaries: Record<number, any> = {};
       
       try {
-        await Promise.all(activeSensors.map(async (sensor) => {
-          // 1. Fetch Readings
-          const options: any = { limit: 100 };
-          if (dateRange) {
-            options.from = dateRange.start.toISOString();
-            options.to = dateRange.end.toISOString();
-            delete options.limit;
-          }
-          const data = await IoTApi.getSensorReadings(sensor.id, options);
-          // Apply time-based filtering for live mode
-          const reversedData = data.reverse();
-          newReadings[sensor.id] = isLive
-            ? capLiveReadings(filterRecentReadings(reversedData))
-            : reversedData;
+        if (dateRange) {
+          // ==============================
+          // BULK STRATEGY (High Performance)
+          // ==============================
+          const diffDays = (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 3600 * 24);
+          
+          if (diffDays > 2) {
+             let interval: 'hour' | 'day' | 'week' = 'day';
+             if (diffDays <= 7) interval = 'hour';
+             else if (diffDays <= 60) interval = 'day';
+             else interval = 'week';
 
-          // 2. Fetch Summary (if sensor has type)
-          if (sensor.tipoSensorId) {
-             const summaryParams: any = {
-               tipoSensorId: sensor.tipoSensorId,
-               from: dateRange ? dateRange.start.toISOString() : '2020-01-01',
-               to: dateRange ? dateRange.end.toISOString() : '2030-12-31'
-             };
-             
-             try {
-               const summaryRes = await api.get('/reports/iot/summary', { params: summaryParams });
-               newSummaries[sensor.id] = summaryRes.data;
-             } catch (e) {
-               console.warn(`Could not fetch summary for sensor ${sensor.id}`, e);
-             }
+             // 1. Bulk Call
+             const sensorIds = activeSensors.map(s => s.id);
+             const bulkData = await IoTApi.getBulkAggregatedReadings(sensorIds, {
+               from: dateRange.start.toISOString(),
+               to: dateRange.end.toISOString(),
+               interval
+             });
+
+             // 2. Map response
+             Object.entries(bulkData).forEach(([sId, data]) => {
+                const sensorId = parseInt(sId);
+                newReadings[sensorId] = data.map((a: any) => ({
+                  id: 0,
+                  sensorId: sensorId,
+                  valor: a.promedio,
+                  fechaLectura: a.fecha, 
+                  fecha: a.fecha
+                }));
+             });
+          } else {
+             // Short range: Parallel Fetch (still N+1 but acceptable for small data range or implement bulk raw later)
+             await Promise.all(activeSensors.map(async (sensor) => {
+                const options: any = { 
+                   from: dateRange.start.toISOString(),
+                   to: dateRange.end.toISOString()
+                };
+                const data = await IoTApi.getSensorReadings(sensor.id, options);
+                newReadings[sensor.id] = data.reverse();
+             }));
           }
-        }));
+
+        } else {
+           // ==============================
+           // LIVE STRATEGY
+           // ==============================
+           await Promise.all(activeSensors.map(async (sensor) => {
+             const data = await IoTApi.getSensorReadings(sensor.id, { limit: 100 });
+             const reversedData = data.reverse();
+             newReadings[sensor.id] = capLiveReadings(filterRecentReadings(reversedData));
+           }));
+        }
+
+        // Fetch Summaries in parallel (optimizable to bulk later if needed)
+        // For now, allow these to fail without blocking charts
+        activeSensors.forEach(sensor => {
+            if (sensor.tipoSensorId) {
+                // Fire and forget-ish, or just dont wait for all
+                const summaryParams: any = {
+                   tipoSensorId: sensor.tipoSensorId,
+                   from: dateRange ? dateRange.start.toISOString() : '2020-01-01',
+                   to: dateRange ? dateRange.end.toISOString() : '2030-12-31'
+                };
+                api.get('/reports/iot/summary', { params: summaryParams })
+                   .then(res => {
+                       setSummaries(prev => ({ ...prev, [sensor.id]: res.data }));
+                   })
+                   .catch(e => console.warn('Summary fetch failed', e));
+            }
+        });
+
         setReadings(newReadings);
-        setSummaries(newSummaries);
       } catch (err) {
         console.error("Error fetching data", err);
       } finally {
@@ -113,6 +153,10 @@ export const useIoTLotCharts = (
 
     fetchData();
 
+    if (!isLive) return; 
+
+    // Socket logic: Always connect if "isLive" (current time in range), 
+    // but ONLY filter by 2 minutes if we are strictly in "No Range" mode.
     const socket = connectSocket('/iot');
     
     const handleNuevaLectura = (lectura: any) => {
@@ -124,21 +168,33 @@ export const useIoTLotCharts = (
         const transformedLectura = {
           ...lectura,
           fechaLectura: lectura.fecha || lectura.fechaLectura,
-          valor: typeof lectura.valor === 'string' ? parseFloat(lectura.valor) : lectura.valor
+          valor: typeof lectura.valor === 'string' ? parseFloat(parseFloat(lectura.valor).toFixed(2)) : parseFloat(Number(lectura.valor).toFixed(2))
         };
-        // Add new reading and filter by time window
-        const updated = capLiveReadings(
-          filterRecentReadings([...sensorReadings, transformedLectura])
-        );
+        
+        let updated = [...sensorReadings, transformedLectura];
+
+        // If explicitly dateRanged, we don't strictly cap to 2 mins, but we might want to cap length to avoid memory leak
+        if (!dateRange) {
+           updated = capLiveReadings(filterRecentReadings(updated));
+        } else {
+           // For Ranged views, just ensure we don't hold infinite points. 
+           // If we are aggregating, we shouldn't really append raw points blindly, 
+           // but for UX it's nicer to see them appear. 
+           // We'll keep last 500 to be safe.
+           if (updated.length > 500) updated = updated.slice(-500);
+        }
+
         return { ...prev, [lectura.sensorId]: updated };
       });
     };
-
+    
     socket.on('nuevaLectura', handleNuevaLectura);
 
-    // Cleanup interval: Remove stale data every 30 seconds
+    // Cleanup interval: Only needed for strict live mode
     const cleanupInterval = setInterval(() => {
-      setReadings(prev => {
+       if (dateRange) return; // Don't auto-clean in history mode
+       
+       setReadings(prev => {
         const cleaned: Record<number, SensorLectura[]> = {};
         Object.keys(prev).forEach(sensorIdStr => {
           const sensorId = parseInt(sensorIdStr);

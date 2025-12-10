@@ -33,6 +33,7 @@ export function adaptLote(raw: any): Lote {
   return {
     id: raw?.id ?? raw?.id_lote_pk ?? raw?.idLote,
     nombre: raw?.nombre ?? raw?.nombre_lote ?? "",
+    nombre_lote: raw?.nombre_lote ?? raw?.nombre ?? "",
     descripcion: raw?.descripcion ?? "",
     area_lote: Number(raw?.areaM2 ?? raw?.area_lote ?? 0),
     // Parse geom to coordinates
@@ -45,6 +46,7 @@ export function adaptSublote(raw: any): Sublote {
   return {
     id: raw?.id ?? raw?.id_sublote_pk ?? raw?.idSublote,
     nombre: raw?.nombre ?? raw?.nombre_sublote ?? "",
+    nombre_sublote: raw?.nombre_sublote ?? raw?.nombre ?? "",
     idLote: raw?.loteId ?? raw?.id_lote_fk ?? raw?.idLote ?? raw?.lote_id,
     descripcion: raw?.descripcion ?? "",
     area_sublote: Number(raw?.areaM2 ?? raw?.area_sublote ?? 0),

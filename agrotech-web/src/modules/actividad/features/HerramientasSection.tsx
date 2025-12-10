@@ -4,9 +4,10 @@ import { useFieldArray } from "react-hook-form";
 import { Button, Input, Select, SelectItem, Card, CardBody } from "@heroui/react";
 import { Plus, Trash2, Wrench } from "lucide-react";
 import { api } from "@/shared/api/client";
+import type { ActividadFormData } from "../models/schemas";
 
 interface HerramientasSectionProps {
-    control: Control<any>;
+    control: Control<ActividadFormData>;
 }
 
 export default function HerramientasSection({ control }: HerramientasSectionProps) {
@@ -35,7 +36,7 @@ export default function HerramientasSection({ control }: HerramientasSectionProp
                     size="sm"
                     color="primary"
                     startContent={<Plus className="w-4 h-4" />}
-                    onPress={() => append({ activoFijoId: "", horasUso: 1 })}
+                    onPress={() => append({ activoFijoId: 0, horasUso: 1 })}
                 >
                     Agregar Herramienta
                 </Button>
@@ -59,7 +60,7 @@ export default function HerramientasSection({ control }: HerramientasSectionProp
                                         {...control.register(`herramientas.${index}.activoFijoId` as const, { required: true })}
                                     >
                                         {activosFijos.map((activo) => (
-                                            <SelectItem key={activo.id} textValue={activo.nombre}>
+                                            <SelectItem key={String(activo.id)} textValue={activo.nombre}>
                                                 {activo.nombre} ({activo.codigo})
                                             </SelectItem>
                                         ))}

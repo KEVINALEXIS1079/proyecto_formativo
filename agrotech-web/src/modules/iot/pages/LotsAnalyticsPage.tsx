@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Select, SelectItem, Card, CardBody, Button, Input, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@heroui/react';
-import { BarChart3, LineChart, FileSpreadsheet, FileText, Download, Activity, Filter, Search, Power, Edit3, Trash2, Bell } from 'lucide-react';
+import { Select, SelectItem, Card, CardBody, Button, Input, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Badge } from '@heroui/react';
+import { BarChart3, LineChart, FileSpreadsheet, FileText, Download, Activity, Filter, Search, Power, Edit3, Trash2, Bell, AlertTriangle } from 'lucide-react';
 import { api, connectSocket } from '../../../shared/api/client';
 import { useIoTLotCharts } from '../hooks/useIoTLotCharts';
 import { SensorCharts } from '../widgets/SensorCharts';
@@ -9,42 +9,97 @@ import type { Sensor } from '../model/iot.types';
 import { IoTApi } from '../api/iot.api';
 import { useIoTRealTimeSensors } from '../hooks/useIoTRealTimeSensors';
 
+const MemoizedSensorCharts = React.memo(SensorCharts);
+
 export const LotsAnalyticsPage: React.FC = () => {
-  const { sensors, refreshSensors, onToggleSensor, onEditSensor, onDeleteSensor } = useOutletContext<any>();
+  const { sensors, refreshSensors, onEditSensor, onDeleteSensor } = useOutletContext<any>();
   const [localSensors, setLocalSensors] = useState<Sensor[]>(sensors || []);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [alertsModalOpen, setAlertsModalOpen] = useState(false);
   const [reportStart, setReportStart] = useState<string>('');
   const [reportEnd, setReportEnd] = useState<string>('');
   const [exporting, setExporting] = useState(false);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [liveAlert, setLiveAlert] = useState<any | null>(null);
+  
+  // Alert Pagination & Filter State
+  const [alertFilterSensorId, setAlertFilterSensorId] = useState<string>('all');
+  const [alertPage, setAlertPage] = useState<number>(1);
+
+  const filteredAlerts = useMemo(() => {
+    if (alertFilterSensorId === 'all') return alerts;
+    return alerts.filter(a => {
+        // Normalize IDs to string for comparison
+        const id1 = a.sensorId?.toString();
+        // Check nesting - sometimes backend sends sensor: { id: ... }
+        const id2 = a.sensor?.id?.toString();
+        const match = id1 === alertFilterSensorId || id2 === alertFilterSensorId;
+        return match;
+    });
+  }, [alerts, alertFilterSensorId]);
+
+  // Derive filter options from actual alerts to ensure all displayed alerts can be filtered
+  const alertSensorOptions = useMemo(() => {
+      const unique = new Map();
+      alerts.forEach(a => {
+          const sId = a.sensorId?.toString() || a.sensor?.id?.toString();
+          const sName = a.sensor?.nombre || `Sensor ${sId}`;
+          if (sId && !unique.has(sId)) {
+              unique.set(sId, sName);
+          }
+      });
+      return Array.from(unique.entries()).map(([id, name]) => ({ id, name }));
+  }, [alerts]);
+
+  const paginatedAlerts = useMemo(() => {
+    const start = (alertPage - 1) * 5;
+    return filteredAlerts.slice(start, start + 5);
+  }, [filteredAlerts, alertPage]);
 
   const [lotes, setLotes] = useState<any[]>([]);
+  const [loadingLotes, setLoadingLotes] = useState(true);
   const [subLotes, setSubLotes] = useState<any[]>([]);
   const [selectedLoteId, setSelectedLoteId] = useState<number | null>(null);
   const [selectedSubLoteId, setSelectedSubLoteId] = useState<number | null>(null);
   const [selectedSensorId, setSelectedSensorId] = useState<string>('all');
 
-  const [startDate, setStartDate] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  // Historical date state removed for strict Real-Time mode
+  // const [startDate, setStartDate] = useState...
+  // const [endDate, setEndDate] = useState...
 
   useEffect(() => {
-    const fetchLotes = async () => {
+    let mounted = true;
+    const fetchLotes = async (retryCount = 0) => {
       try {
-        const response = await api.get('/geo/lotes');
-        setLotes(response.data);
-        if (response.data.length > 0 && !selectedLoteId) {
-          setSelectedLoteId(response.data[0].id);
+        setLoadingLotes(true);
+        const response = await api.get('/geo/lotes/summary');
+        
+        if (mounted) {
+           if (response.data && response.data.length > 0) {
+              setLotes(response.data);
+              if (!selectedLoteId) {
+                setSelectedLoteId(response.data[0].id);
+              }
+              setLoadingLotes(false);
+           } else if (retryCount < 2) {
+              // Retry if empty (maybe auth race condition)
+              setTimeout(() => fetchLotes(retryCount + 1), 500);
+           } else {
+              setLotes([]);
+              setLoadingLotes(false);
+           }
         }
       } catch (err) {
         console.error('Error fetching lotes:', err);
+        if (mounted && retryCount < 2) {
+             setTimeout(() => fetchLotes(retryCount + 1), 1000);
+        } else if (mounted) {
+           setLoadingLotes(false);
+        }
       }
     };
     fetchLotes();
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -87,15 +142,10 @@ export const LotsAnalyticsPage: React.FC = () => {
     }
   }, [sensors, realTimeSensors]);
 
-  const dateRange = useMemo(
-    () => ({
-      start: new Date(startDate),
-      end: new Date(new Date(endDate).setHours(23, 59, 59)),
-    }),
-    [startDate, endDate]
-  );
+  // Force Live Mode (undefined dateRange)
+  const dateRange = undefined;
 
-  const { timeSeriesData, sensorSummaryData, loading, metrics, isLive } = useIoTLotCharts(
+  const { timeSeriesData, sensorSummaryData, loading, isLive } = useIoTLotCharts(
     sensors,
     selectedLoteId,
     selectedSubLoteId,
@@ -104,7 +154,7 @@ export const LotsAnalyticsPage: React.FC = () => {
 
   const displayedTimeSeries = useMemo(() => {
     if (selectedSensorId === 'all') return timeSeriesData;
-    return timeSeriesData.filter((d) => d.sensorId === parseInt(selectedSensorId));
+    return timeSeriesData.filter((d) => d?.sensorId === parseInt(selectedSensorId));
   }, [timeSeriesData, selectedSensorId]);
 
   const displayedSummary = useMemo(() => {
@@ -112,43 +162,57 @@ export const LotsAnalyticsPage: React.FC = () => {
     return sensorSummaryData.filter((d) => d.sensorId === parseInt(selectedSensorId));
   }, [sensorSummaryData, selectedSensorId]);
 
-  const handleQuickDate = (days: number) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
-  };
+  // handleQuickDate removed
 
+  // Unused handleQuickDate and variables removed
   const selectedLoteName = lotes.find((l) => l.id === selectedLoteId)?.nombre || 'Seleccionar Lote';
-  const totalSensors = availableSensors.length;
   const activeSeries = displayedTimeSeries.length;
 
   useEffect(() => {
-    // Keep modal defaults synced with filtros actuales
-    setReportStart(startDate);
-    setReportEnd(endDate);
-  }, [startDate, endDate]);
+    // Initialize report modal defaults to last 7 days when opened, independently of page state
+    const end = new Date().toISOString().split('T')[0];
+    const start = new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0];
+    setReportStart(start);
+    setReportEnd(end);
+  }, []);
 
-  // Cargar alertas cuando cambie lote/rango
+  // Cargar alertas cuando cambie lote (Range removed)
+  // Cargar alertas: API + LocalStorage
   useEffect(() => {
-    const fetchAlerts = async () => {
+    const loadAlerts = async () => {
       try {
-        const from = startDate;
-        const to = endDate;
+        // 1. Recover from LocalStorage first to show something immediately
+        const cached = localStorage.getItem(`alerts_${selectedLoteId}`);
+        if (cached) {
+            setAlerts(JSON.parse(cached));
+        }
+
+        // 2. Fetch from API (Historical/Recent)
         const data = await IoTApi.getAlerts({
           loteId: selectedLoteId || undefined,
-          from,
-          to,
         });
-        setAlerts(data || []);
+        
+        // 3. Merge: deduplicate by ID if possible, or just replace if API is the source of truth
+        // For now, we trust the API. If the API returns empty, we might keep cached if it was live data.
+        if (data && data.length > 0) {
+            setAlerts(data);
+            localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(data));
+        }
       } catch (e) {
         console.error('Error fetching alerts', e);
-        setAlerts([]);
       }
     };
-    fetchAlerts();
-  }, [selectedLoteId, startDate, endDate]);
+    if (selectedLoteId) {
+        loadAlerts();
+    }
+  }, [selectedLoteId]);
+
+  // Save live alerts to LocalStorage
+  useEffect(() => {
+      if (alerts.length > 0 && selectedLoteId) {
+          localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(alerts.slice(0, 50)));
+      }
+  }, [alerts, selectedLoteId]);
 
   // Escuchar alertas en vivo por websocket
   useEffect(() => {
@@ -168,8 +232,8 @@ export const LotsAnalyticsPage: React.FC = () => {
   const handleExport = async (format: 'csv' | 'pdf') => {
     try {
       setExporting(true);
-      const from = reportStart || startDate;
-      const to = reportEnd || endDate;
+      const from = reportStart || new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0];
+      const to = reportEnd || new Date().toISOString().split('T')[0];
       const commonParams = {
         loteId: selectedLoteId || undefined,
         sensorId: selectedSensorId !== 'all' ? parseInt(selectedSensorId) : undefined,
@@ -200,23 +264,8 @@ export const LotsAnalyticsPage: React.FC = () => {
     }
   };
 
-  const handleToggle = async (sensor: Sensor) => {
-    try {
-      if (onToggleSensor) {
-        await onToggleSensor(sensor.id);
-      } else {
-        await IoTApi.toggleSensor(sensor.id);
-      }
-      if (refreshSensors) {
-        refreshSensors();
-      }
-      setLocalSensors((prev) =>
-        prev.map((s) => (s.id === sensor.id ? { ...s, activo: !s.activo } : s))
-      );
-    } catch (e) {
-      console.error('Error toggling sensor', e);
-    }
-  };
+  // Removed unused handleToggle
+
 
   const handleDelete = async (sensor: Sensor) => {
     try {
@@ -232,19 +281,8 @@ export const LotsAnalyticsPage: React.FC = () => {
     }
   };
 
-  const aggregateFromSummary = useMemo(() => {
-    if (!displayedSummary || displayedSummary.length === 0) return null;
-    const avg =
-      displayedSummary.reduce((acc: number, s: any) => acc + (s.avg || 0), 0) /
-      displayedSummary.length;
-    const min = Math.min(...displayedSummary.map((s: any) => s.min ?? Number.POSITIVE_INFINITY));
-    const max = Math.max(...displayedSummary.map((s: any) => s.max ?? Number.NEGATIVE_INFINITY));
-    return {
-      avg: Number.isFinite(avg) ? parseFloat(avg.toFixed(2)) : null,
-      min: Number.isFinite(min) ? min : null,
-      max: Number.isFinite(max) ? max : null,
-    };
-  }, [displayedSummary]);
+ // Removed unused aggregateFromSummary
+
 
   return (
     <div className="bg-white p-3 md:p-4 space-y-3 md:space-y-4">
@@ -272,21 +310,17 @@ export const LotsAnalyticsPage: React.FC = () => {
             <Button size="sm" color="primary" variant="solid" startContent={<Download className="w-4 h-4" />} onPress={() => setReportModalOpen(true)}>
               Reporte
             </Button>
-            <Button size="sm" variant="flat" onPress={() => handleQuickDate(7)}>
-              7 dias
+            <Button size="sm" variant="ghost" color="primary" onPress={() => window.location.reload()}>
+               Recargar Datos
             </Button>
-            <Button size="sm" variant="flat" onPress={() => handleQuickDate(30)}>
-              30 dias
-            </Button>
-            <Button size="sm" variant="flat" onPress={() => handleQuickDate(90)}>
-              3 meses
-            </Button>
-            <Chip size="sm" color={alerts.length > 0 ? 'danger' : 'default'} variant="flat">
-              {alerts.length} alertas
-            </Chip>
+            <Badge content={alerts.length} color="danger" isInvisible={alerts.length === 0} shape="circle">
+              <Button isIconOnly variant="flat" onPress={() => setAlertsModalOpen(true)}>
+                <Bell className="w-5 h-5 text-gray-600" />
+              </Button>
+            </Badge>
           </div>
           <p className="text-xs text-gray-500">
-            Rango actual: <span className="font-semibold text-gray-800">{startDate}</span> al <span className="font-semibold text-gray-800">{endDate}</span>
+             Vista en Tiempo Real
           </p>
           {liveAlert && (
             <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-red-700">
@@ -301,6 +335,7 @@ export const LotsAnalyticsPage: React.FC = () => {
             <Select
               label="Lote"
               labelPlacement="outside"
+              isLoading={loadingLotes}
               selectedKeys={selectedLoteId ? [selectedLoteId.toString()] : []}
               onChange={(e) => {
                 const val = parseInt(e.target.value);
@@ -403,7 +438,8 @@ export const LotsAnalyticsPage: React.FC = () => {
               <div className="max-h-72 overflow-auto space-y-2">
                 {availableSensors.map((s) => {
                   const realTimeData = getFormattedSensorData(s.id);
-                  const estado = realTimeData?.estadoConexion || realTimeData?.estado || s.estadoConexion || s.estado || 'Sin estado';
+                  const sAny = s as any;
+                  const estado = realTimeData?.estadoConexion || realTimeData?.estado || sAny.estadoConexion || sAny.estado || 'Sin estado';
                   const estadoDisplay = estado === 'CONECTADO' ? 'Conectado' :
                     estado === 'DESCONECTADO' ? 'Desconectado' :
                       estado === 'ERROR' ? 'Error' : estado;
@@ -432,32 +468,9 @@ export const LotsAnalyticsPage: React.FC = () => {
                   );
                 })}
               </div>
-              {alerts.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-gray-700">Alertas recientes</p>
-                    <Chip size="sm" color="danger" variant="flat">{alerts.length}</Chip>
-                  </div>
-                  <div className="max-h-48 overflow-auto space-y-1">
-                    {alerts.slice(0, 10).map((a: any) => (
-                      <div key={a.id} className="flex items-center justify-between px-3 py-2 bg-red-50 border border-red-100 rounded-lg">
-                        <div>
-                          <p className="text-sm font-semibold text-red-800">{a.sensor?.nombre || `Sensor ${a.sensorId}`}</p>
-                          <p className="text-xs text-red-700">
-                            {a.tipo === 'LOW' ? 'Bajo' : 'Alto'}: {a.valor} (umbral {a.umbral ?? '-'})
-                          </p>
-                        </div>
-                        <p className="text-[11px] text-red-600">
-                          {new Date(a.fechaAlerta).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
             </CardBody>
           </Card>
-
         </div>
       </div>
 
@@ -480,12 +493,13 @@ export const LotsAnalyticsPage: React.FC = () => {
             </Chip>
           </div>
           <div className="min-h-[360px] md:min-h-[400px]">
-            <SensorCharts
+            <MemoizedSensorCharts
               timeSeriesData={displayedTimeSeries}
               sensorSummaryData={displayedSummary}
               loading={loading}
               isLive={isLive}
-              sensors={sensors}
+              sensors={localSensors}
+              layout="carousel"
             />
           </div>
         </CardBody>
@@ -518,7 +532,7 @@ export const LotsAnalyticsPage: React.FC = () => {
               <ModalFooter className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <FileSpreadsheet className="w-4 h-4" />
-                  Rango seleccionado: {reportStart || startDate} - {reportEnd || endDate}
+                  Rango seleccionado: {reportStart} - {reportEnd}
                 </div>
                 <div className="flex gap-2">
                   <Button variant="light" onPress={() => setReportModalOpen(false)}>
@@ -541,6 +555,99 @@ export const LotsAnalyticsPage: React.FC = () => {
                     PDF
                   </Button>
                 </div>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={alertsModalOpen} onClose={() => setAlertsModalOpen(false)} scrollBehavior="inside">
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <span>Alertas Recientes</span>
+                </div>
+              </ModalHeader>
+              <ModalBody>
+                 <div className="flex justify-between items-center mb-2">
+                   <div className="w-1/2">
+                    <Select 
+                      label="Filtrar por Sensor" 
+                      size="sm" 
+                      placeholder="Todos"
+                      selectedKeys={[alertFilterSensorId]}
+                      onChange={(e) => {
+                        setAlertFilterSensorId(e.target.value || 'all');
+                        setAlertPage(1);
+                      }}
+                    >
+                      <SelectItem key="all">Todos</SelectItem>
+                      {alertSensorOptions.map(s => <SelectItem key={s.id}>{s.name}</SelectItem>)}
+                    </Select>
+                   </div>
+                   <Chip size="sm" variant="flat">{filteredAlerts.length} alertas</Chip>
+                 </div>
+                 {paginatedAlerts.length === 0 ? (
+                   <div className="text-center py-8 text-gray-400">
+                     <Bell className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                     <p>No hay alertas recientes</p>
+                   </div>
+                 ) : (
+                   <div className="space-y-2">
+                     {paginatedAlerts.map((a: any) => (
+                       <div key={a.id} className="flex items-center justify-between px-3 py-3 bg-red-50/50 border border-red-100 rounded-lg hover:bg-red-50 transition-colors">
+                         <div>
+                           <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-gray-800">{a.sensor?.nombre || `Sensor ${a.sensorId}`}</p>
+                              <Chip size="sm" color="danger" variant="flat" className="h-5 text-[10px] px-1">
+                                {a.tipo === 'LOW' ? 'Bajo' : 'Alto'}
+                              </Chip>
+                           </div>
+                           <p className="text-xs text-gray-600 mt-1">
+                             Valor registrado: <span className="font-bold">{a.valor}</span> (Umbral: {a.umbral ?? '-'})
+                           </p>
+                         </div>
+                         <div className="text-right">
+                            <p className="text-[11px] text-gray-400">
+                              {new Date(a.fechaAlerta).toLocaleDateString('es-ES')}
+                            </p>
+                            <p className="text-[11px] text-gray-400">
+                              {new Date(a.fechaAlerta).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+              </ModalBody>
+              <ModalFooter className="flex justify-between items-center">
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="flat" 
+                    disabled={alertPage === 1} 
+                    onPress={() => setAlertPage(p => Math.max(1, p - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-sm flex items-center">
+                    Pág {alertPage} de {Math.max(1, Math.ceil(filteredAlerts.length / 5))}
+                  </span>
+                  <Button 
+                    size="sm" 
+                    variant="flat" 
+                    disabled={alertPage * 5 >= filteredAlerts.length} 
+                    onPress={() => setAlertPage(p => p + 1)}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+                <Button color="primary" onPress={onClose}>
+                  Cerrar
+                </Button>
               </ModalFooter>
             </>
           )}

@@ -16,7 +16,16 @@ export default function AuthLoginForm({
 
   return (
     <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); onSubmit({ correo, password, remember }); }}>
-      <Input label="Correo electrónico" type="email" value={correo} onValueChange={setCorreo} radius="lg" isClearable required />
+      <Input 
+        label="Correo electrónico" 
+        type="email" 
+        value={correo} 
+        onValueChange={(v) => setCorreo(v.toLowerCase())} 
+        radius="lg" 
+        placeholder="usuario@gmail.com"
+        isClearable 
+        required 
+      />
       <Input
         label="Contraseña"
         type={isVisible ? "text" : "password"}
