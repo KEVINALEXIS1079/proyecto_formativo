@@ -10,8 +10,12 @@ export class SensorLectura extends BaseEntity {
   @Column({ nullable: true })
   valor: string;
 
-  @Column({ name: 'timestamp', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  fecha: Date;
+  @Column({
+    name: 'fecha_lectura',
+    type: 'timestamptz',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  fechaLectura: Date;
 
   @Column({ nullable: true })
   unidad: string;

@@ -1,35 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { Card } from "@heroui/react";
 import { ListChecks } from "lucide-react";
+import toast from "react-hot-toast";
 
 import type { LayoutContext } from "@/app/layout/ProtectedLayout";
-import type { CreateActividadInput } from "../../actividades/model/types";
-import ActividadForm from "../../actividades/ui/ActividadForm";
-import { createActividad } from "../api";
+import type { CreateActividadPayload } from "../models/types";
+import ActividadForm from "../ui/ActividadForm";
+import { useCreateActividad } from "../hooks/useActividades";
 
 export default function CrearPage() {
   const { setTitle } = useOutletContext<LayoutContext>();
   const navigate = useNavigate();
+  const createMutation = useCreateActividad();
 
-  // título dinámico en el layout
   useEffect(() => setTitle("Registrar Actividad"), [setTitle]);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (data: CreateActividadInput) => {
-    setError("");
+  const handleSubmit = async (data: CreateActividadPayload) => {
     try {
-      setLoading(true);
-      await createActividad(data);
+      console.log("Submitting activity data:", data);
+
+      // Send all data in a single request
+      // The backend accepts responsables, insumos, servicios, and evidencias in the initial payload
+      await createMutation.mutateAsync(data);
+
+      toast.success("Actividad creada exitosamente");
       navigate("/actividades");
     } catch (err: any) {
-      const msgBack =
-        err?.response?.data?.message ?? "No se pudo crear la actividad.";
-      setError(Array.isArray(msgBack) ? msgBack.join(", ") : String(msgBack));
-    } finally {
-      setLoading(false);
+      console.error("Error creating activity:", err);
+      toast.error(err.response?.data?.message || "Error al crear la actividad");
     }
   };
 
@@ -38,19 +37,16 @@ export default function CrearPage() {
       <Card className="p-8 shadow-sm border border-gray-200">
         <div className="flex items-center gap-2 mb-8">
           <ListChecks className="h-6 w-6 text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-800">Registrar Actividad</h2>
+          <h2 className="text-2xl font-bold text-gray-800">
+            Registrar Actividad
+          </h2>
         </div>
 
         <ActividadForm
           onSubmit={handleSubmit}
-          isLoading={loading}
+          isLoading={createMutation.isPending}
           submitLabel="Registrar"
         />
-
-        {/* Errores */}
-        {error && (
-          <p className="text-red-500 text-xs mt-4">{error}</p>
-        )}
       </Card>
     </div>
   );

@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Query, ParseIntPipe, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  ParseIntPipe,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { IotReportsService } from '../services/iot-reports.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -21,6 +29,7 @@ export class IotReportsController {
   async getAggregations(
     @Query('sensorId') sensorId?: string,
     @Query('cultivoId') cultivoId?: string,
+    @Query('loteId') loteId?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('interval') interval?: 'hour' | 'day' | 'week',
@@ -28,6 +37,7 @@ export class IotReportsController {
     return this.iotService.getSensorAggregations({
       sensorId: sensorId ? parseInt(sensorId) : undefined,
       cultivoId: cultivoId ? parseInt(cultivoId) : undefined,
+      loteId: loteId ? parseInt(loteId) : undefined,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
       interval,
@@ -40,10 +50,11 @@ export class IotReportsController {
     return this.iotService.getSensorComparison({
       tipoSensorId: query.tipoSensorId ? +query.tipoSensorId : undefined,
       cultivoId: query.cultivoId ? +query.cultivoId : undefined,
+      loteId: query.loteId ? +query.loteId : undefined,
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
       metric: query.metric || 'avg',
-      limit: query.limit ? +query.limit : 10
+      limit: query.limit ? +query.limit : 10,
     });
   }
 
@@ -54,18 +65,34 @@ export class IotReportsController {
     const filters = {
       sensorId: query.sensorId ? +query.sensorId : undefined,
       cultivoId: query.cultivoId ? +query.cultivoId : undefined,
+      loteId: query.loteId ? +query.loteId : undefined,
       tipoSensorId: query.tipoSensorId ? +query.tipoSensorId : undefined,
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
       interval: query.interval,
       metric: query.metric || 'avg',
-      limit: query.limit ? +query.limit : 10
+      limit: query.limit ? +query.limit : 10,
     };
-    
+
     const csv = await this.iotService.getIotReportCsv(type, filters);
     res.header('Content-Type', 'text/csv');
     res.header('Content-Disposition', `attachment; filename=iot_${type}.csv`);
     res.send(csv);
+  }
+
+  @Get('export-pdf')
+  @RequirePermissions('iot.ver')
+  async exportIotPdf(@Query() query: any, @Res() res: Response) {
+    const filters = {
+      loteId: query.loteId ? +query.loteId : undefined,
+      sensorId: query.sensorId ? +query.sensorId : undefined,
+      from: query.from ? new Date(query.from) : undefined,
+      to: query.to ? new Date(query.to) : undefined,
+    };
+    const buffer = await this.iotService.generateLotPdf(filters);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=report_iot.pdf');
+    res.send(buffer);
   }
 
   @Get('sensors/:id/out-of-range')
@@ -86,7 +113,7 @@ export class IotReportsController {
     if (!query.tipoSensorId || !query.from || !query.to) {
       throw new Error('tipoSensorId, from, and to are required');
     }
-    
+
     return this.iotService.getSummaryReport({
       tipoSensorId: +query.tipoSensorId,
       cultivoId: query.cultivoId ? +query.cultivoId : undefined,
@@ -99,7 +126,7 @@ export class IotReportsController {
   @RequirePermissions('iot.ver')
   async getSparkline(
     @Param('id', ParseIntPipe) id: number,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
   ) {
     return this.iotService.getSparkline(id, limit ? parseInt(limit) : 20);
   }

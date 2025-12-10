@@ -12,6 +12,14 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - agrotech_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.60'
+          memory: '700M'
+        reservations:
+          cpus: '0.20'
+          memory: '300M'
 
   redis:
     image: redis:7-alpine
@@ -20,9 +28,18 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 150mb
+      --maxmemory-policy allkeys-lru
     networks:
       - agrotech_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: '200M'
 
   pgadmin:
     image: dpage/pgadmin4
@@ -38,6 +55,11 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     networks:
       - agrotech_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.40'
+          memory: '300M'
 
 volumes:
   pgdata:

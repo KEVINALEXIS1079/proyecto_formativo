@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Request } from 'express';
 import { EPA } from '../entities/epa.entity';
 import { TipoCultivoWiki } from '../entities/tipo-cultivo-wiki.entity';
 import { TipoEpa } from '../entities/tipo-epa.entity';
@@ -42,7 +43,7 @@ export class WikiService {
     // RF30: Búsqueda de texto
     if (filters?.q) {
       queryBuilder.andWhere(
-        '(epa.nombre ILIKE :q OR epa.descripcion ILIKE :q OR epa.sintomas ILIKE :q OR epa.tags ILIKE :q)',
+        '(epa.nombre ILIKE :q OR epa.descripcion ILIKE :q OR epa.sintomas ILIKE :q OR array_to_string(epa.tags, \' \') ILIKE :q)',
         { q: `%${filters.q}%` },
       );
     }
@@ -82,28 +83,139 @@ export class WikiService {
       );
     }
 
-    return queryBuilder.getMany();
+    const epas = await queryBuilder.getMany();
+
+    // Para cada EPA, obtener el objeto TipoEpa completo
+    for (const epa of epas) {
+      if (epa.tipoEpa) {
+        const tipoEpaEntity = await this.tipoEpaRepo.findOne({
+          where: { tipoEpaEnum: epa.tipoEpa }
+        });
+        if (tipoEpaEntity) {
+          (epa as any).tipoEpa = tipoEpaEntity;
+        }
+      }
+    }
+
+    return epas;
   }
 
   async findOne(id: number) {
     const epa = await this.epaRepo.findOne({
       where: { id },
-      relations: ['tiposCultivo'],
+      relations: ['epaTipoCultivos'],
     });
 
     if (!epa) throw new NotFoundException(`EPA ${id} not found`);
+
+    // Obtener el objeto TipoEpa completo
+    if (epa.tipoEpa) {
+      const tipoEpaEntity = await this.tipoEpaRepo.findOne({
+        where: { tipoEpaEnum: epa.tipoEpa }
+      });
+      if (tipoEpaEntity) {
+        (epa as any).tipoEpa = tipoEpaEntity;
+      }
+    }
+
     return epa;
   }
 
-  async create(data: CreateEpaDto) {
-    const epa = this.epaRepo.create(data);
-    return this.epaRepo.save(epa);
+  async create(data: CreateEpaDto, userId?: number) {
+    console.log('=== WIKI SERVICE CREATE DEBUG ===');
+    console.log('Data received:', JSON.stringify(data, null, 2));
+    console.log('UserId:', userId);
+
+    const { tiposCultivoIds, tipoEpa, ...epaData } = data;
+    console.log('tiposCultivoIds:', tiposCultivoIds);
+    console.log('tipoEpa:', tipoEpa);
+    console.log('epaData:', JSON.stringify(epaData, null, 2));
+
+    // Validar que tipoEpa sea válido
+    const validTipoEpa = ['enfermedad', 'plaga', 'arvense'];
+    if (!tipoEpa || !validTipoEpa.includes(tipoEpa.toLowerCase())) {
+      throw new BadRequestException(`Tipo EPA inválido: ${tipoEpa}`);
+    }
+
+    // Crear la EPA primero
+    const epa = this.epaRepo.create({
+      ...epaData,
+      tipoEpa,
+      manejoYControl: data.manejo, // Mapear manejo a manejoYControl
+      creadoPorUsuarioId: userId || 1, // Default al admin si no se proporciona
+    });
+
+    console.log('EPA to create:', JSON.stringify(epa, null, 2));
+
+    const savedEpa = await this.epaRepo.save(epa);
+    console.log('EPA saved:', JSON.stringify(savedEpa, null, 2));
+
+    // Crear las relaciones con tipos de cultivo si se proporcionaron
+    if (tiposCultivoIds && tiposCultivoIds.length > 0) {
+      for (const tipoCultivoId of tiposCultivoIds) {
+        // Verificar que el tipo de cultivo existe
+        const tipoCultivo = await this.tipoCultivoWikiRepo.findOne({
+          where: { id: tipoCultivoId }
+        });
+
+        if (tipoCultivo) {
+          // Crear la relación EPA_TipoCultivoWiki
+          await this.epaRepo.query(`
+            INSERT INTO epa_tipos_cultivos_wiki ("epaId", "tipoCultivoWikiId")
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+          `, [savedEpa.id, tipoCultivoId]);
+        }
+      }
+    }
+
+    return savedEpa;
   }
 
   async update(id: number, data: UpdateEpaDto) {
-    const epa = await this.findOne(id);
-    Object.assign(epa, data);
-    return this.epaRepo.save(epa);
+    console.log('=== WIKI SERVICE UPDATE DEBUG ===');
+    console.log('ID:', id);
+    console.log('Data received:', JSON.stringify(data, null, 2));
+
+    try {
+      const epa = await this.findOne(id);
+      console.log('EPA found:', !!epa);
+
+      // Mapear campos como en create
+      const updateData: any = { ...data };
+
+      // Usar tipoEpa directamente si se proporciona
+      if (data.tipoEpa !== undefined) {
+        const validTipoEpa = ['enfermedad', 'plaga', 'arvense'];
+        if (!validTipoEpa.includes(data.tipoEpa.toLowerCase())) {
+          throw new BadRequestException(`Tipo EPA inválido: ${data.tipoEpa}`);
+        }
+        updateData.tipoEpa = data.tipoEpa.toLowerCase();
+      }
+  
+        // Mapear manejo a manejoYControl si existe
+      if ((data as any).manejo !== undefined) {
+        updateData.manejoYControl = (data as any).manejo;
+        delete updateData.manejo;
+        console.log('Mapped manejo to manejoYControl');
+      }
+
+      console.log('Update data after mapping:', JSON.stringify(updateData, null, 2));
+
+      Object.assign(epa, updateData);
+      console.log('EPA after Object.assign');
+
+      const savedEpa = await this.epaRepo.save(epa);
+      console.log('EPA saved successfully');
+
+      return savedEpa;
+    } catch (error) {
+      console.error('=== UPDATE ERROR ===');
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
   }
 
   async remove(id: number) {

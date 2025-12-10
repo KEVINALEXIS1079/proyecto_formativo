@@ -1,6 +1,8 @@
-import { Card, CardHeader, CardBody, CardFooter, Divider, Input, Button } from "@heroui/react";
-import { Mail } from "lucide-react";
+import { useState } from 'react';
+import { Card, CardHeader, CardBody, CardFooter, Divider, Input, Button, Checkbox } from "@heroui/react";
+import { Mail, Lock } from "lucide-react";
 import type { UpdateProfileInput } from "../models/types/profile.types";
+import { ChangePasswordForm } from './ChangePasswordForm';
 
 interface ProfileFormProps {
   values: UpdateProfileInput;
@@ -13,6 +15,8 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ values, onChange, onSave, onCancel, isSaving, isEditMode = true, errorMessage }: ProfileFormProps) {
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+
   const handleChange = (key: keyof UpdateProfileInput, value: string) => {
     onChange({ ...values, [key]: value });
   };
@@ -73,6 +77,31 @@ export function ProfileForm({ values, onChange, onSave, onCancel, isSaving, isEd
           isDisabled={!isEditMode}
         />
       </CardBody>
+
+      {/* Password Change Section - Only in Edit Mode */}
+      {isEditMode && (
+        <>
+          <Divider />
+          <CardBody>
+            <Checkbox
+              isSelected={showPasswordChange}
+              onValueChange={setShowPasswordChange}
+              color="success"
+            >
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                <span>Cambiar contraseña</span>
+              </div>
+            </Checkbox>
+
+            {showPasswordChange && (
+              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <ChangePasswordForm onSuccess={() => setShowPasswordChange(false)} />
+              </div>
+            )}
+          </CardBody>
+        </>
+      )}
 
       {errorMessage && !errorMessage.includes("teléfono") && !errorMessage.includes("dígitos") && (
         <div className="px-6 py-3 bg-danger-50 dark:bg-danger-900/20 border-t border-danger-200 dark:border-danger-800">

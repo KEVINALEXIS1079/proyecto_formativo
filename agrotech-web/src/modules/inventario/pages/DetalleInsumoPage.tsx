@@ -6,7 +6,7 @@ import { useRemoveInsumo } from "../hooks/useRemoveInsumo";
 import { useMovimientoList } from "../hooks/useMovimientoList";
 import { useInventarioRealtime } from "../hooks/useInventarioRealtime";
 import { updateMovimiento, removeMovimiento } from "../api/movimientos.service";
-import { ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, RefreshCw, AlertCircle, Calendar, User, Package, TrendingUp, TrendingDown, Minus, ArrowRightLeft } from "lucide-react";
 import ConfirmationModal from "../ui/widgets/ConfirmationModal";
 import { Input, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Image } from "@heroui/react";
 
@@ -56,56 +56,144 @@ export default function DetalleInsumoPage() {
   const [filtros, setFiltros] = useState({
     idFicha: '',
     nombre: '',
-    identificacionUsuario: '',
-    categoria: '',
-    nombreInsumo: ''
+    identificacionUsuario: ''
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Función auxiliar para renderizar tipo de movimiento con iconos
+  const renderTipoMovimiento = (tipo: string) => {
+    const iconMap: Record<string, { icon: any; color: string; bgColor: string; label: string }> = {
+      'INICIAL': { icon: Package, color: 'text-blue-600', bgColor: 'bg-blue-100', label: 'Inicial' },
+      'INGRESO': { icon: TrendingUp, color: 'text-green-600', bgColor: 'bg-green-100', label: 'Ingreso' },
+      'INGRESO_COMPRA': { icon: TrendingUp, color: 'text-emerald-600', bgColor: 'bg-emerald-100', label: 'Compra' },
+      'CONSUMO': { icon: TrendingDown, color: 'text-red-600', bgColor: 'bg-red-100', label: 'Consumo' },
+      'SALIDA': { icon: ArrowRightLeft, color: 'text-orange-600', bgColor: 'bg-orange-100', label: 'Salida' },
+      'AJUSTE': { icon: Minus, color: 'text-yellow-600', bgColor: 'bg-yellow-100', label: 'Ajuste' },
+      'TRASLADO': { icon: ArrowRightLeft, color: 'text-purple-600', bgColor: 'bg-purple-100', label: 'Traslado' },
+      'ELIMINACION': { icon: Trash2, color: 'text-red-800', bgColor: 'bg-red-200', label: 'Eliminación' },
+      'RESTAURACION': { icon: RefreshCw, color: 'text-indigo-600', bgColor: 'bg-indigo-100', label: 'Restauración' },
+    };
 
-  const isFertilizante = insumo?.categoria.nombre.toLowerCase().includes('fertilizante') || false;
+    const config = iconMap[tipo] || { icon: Package, color: 'text-gray-600', bgColor: 'bg-gray-100', label: tipo };
+    const Icon = config.icon;
+
+    return (
+      <div className="flex items-center gap-2">
+        <div className={`p-1.5 rounded-lg ${config.bgColor} ${config.color}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+        <span className={`font-medium ${config.color}`}>{config.label}</span>
+      </div>
+    );
+  };
+
   const movimientosFiltrados = movimientos?.filter(mov => {
-    const matchesIdFicha = !filtros.idFicha || insumo?.id.toString().includes(filtros.idFicha);
-    const matchesNombre = !filtros.nombre || insumo?.nombre.toLowerCase().includes(filtros.nombre.toLowerCase());
-    const matchesIdentificacionUsuario = !filtros.identificacionUsuario || mov.usuarioResponsable?.identificacion?.toLowerCase().includes(filtros.identificacionUsuario.toLowerCase());
-    const matchesCategoria = !isFertilizante || !filtros.categoria || insumo?.categoria.nombre.toLowerCase().includes(filtros.categoria.toLowerCase());
-    const matchesNombreInsumo = !isFertilizante || !filtros.nombreInsumo || insumo?.nombre.toLowerCase().includes(filtros.nombreInsumo.toLowerCase());
-    return matchesIdFicha && matchesNombre && matchesIdentificacionUsuario && matchesCategoria && matchesNombreInsumo;
+    const matchesIdFicha = !filtros.idFicha || mov.id.toString().includes(filtros.idFicha);
+    const matchesNombre = !filtros.nombre || 
+      mov.descripcion?.toLowerCase().includes(filtros.nombre.toLowerCase()) || 
+      mov.tipoMovimiento?.toLowerCase().includes(filtros.nombre.toLowerCase());
+    const matchesIdentificacionUsuario = !filtros.identificacionUsuario || 
+      mov.usuarioResponsable?.identificacion?.toLowerCase().includes(filtros.identificacionUsuario.toLowerCase()) || 
+      mov.usuarioResponsable?.nombreUsuario?.toLowerCase().includes(filtros.identificacionUsuario.toLowerCase());
+    return matchesIdFicha && matchesNombre && matchesIdentificacionUsuario;
   }) || [];
+
+  // Paginación
+  const totalItems = movimientosFiltrados.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const movimientosPaginados = movimientosFiltrados.slice(startIndex, endIndex);
+
+  // Función para refrescar datos
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["inventario", "movimientos", "list"] });
+    queryClient.invalidateQueries({ queryKey: ["inventario", "insumo"] });
+  };
 
   const renderCell = (item: any, columnKey: string) => {
     switch (columnKey) {
       case "tipo":
-        return item.tipoMovimiento;
+        return renderTipoMovimiento(item.tipoMovimiento);
       case "cantidad":
-        return item.cantidadPresentaciones;
+        return (
+          <div className="text-right">
+            <div className="font-semibold text-gray-900">
+              {item.cantidadPresentaciones?.toLocaleString() || '0'}
+            </div>
+            <div className="text-xs text-gray-500">presentaciones</div>
+          </div>
+        );
       case "fecha":
-        return new Date(item.fechaMovimiento).toLocaleDateString();
+        return (
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            <div>
+              <div className="text-sm font-medium text-gray-900">
+                {item.fechaMovimiento ? new Date(item.fechaMovimiento).toLocaleDateString() : 'N/A'}
+              </div>
+              <div className="text-xs text-gray-500">
+                {item.fechaMovimiento ? new Date(item.fechaMovimiento).toLocaleTimeString() : ''}
+              </div>
+            </div>
+          </div>
+        );
       case "usuario":
-        return item.usuarioResponsable?.nombreUsuario || 'N/A';
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+              {(item.usuarioResponsable?.nombreUsuario || 'U')[0].toUpperCase()}
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-900">
+                {item.usuarioResponsable?.nombreUsuario || 'N/A'}
+              </div>
+              <div className="text-xs text-gray-500">
+                {item.usuarioResponsable?.identificacion || 'Sin identificación'}
+              </div>
+            </div>
+          </div>
+        );
       case "descripcion":
-        return item.descripcion;
+        return (
+          <div className="max-w-xs">
+            <div className="text-sm text-gray-900 truncate" title={item.descripcion}>
+              {item.descripcion || 'Sin descripción'}
+            </div>
+            {item.origen && (
+              <div className="text-xs text-gray-500">
+                Origen: {item.origen}
+              </div>
+            )}
+          </div>
+        );
       case "actividad":
         return item.id_actividad_fk ? (
           <button
             onClick={() => navigate(`/actividades/${item.id_actividad_fk}`)}
-            className="text-blue-600 hover:text-blue-900 underline"
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
             title="Ver Actividad"
           >
-            Ver Actividad
+            <User className="w-3 h-3" />
+            Actividad #{item.id_actividad_fk}
           </button>
-        ) : null;
+        ) : (
+          <span className="text-gray-400 text-sm">No relacionada</span>
+        );
       case "acciones":
         return (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => handleEditMovimiento(item)}
-              className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+              className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
               title="Editar movimiento"
             >
               <Edit className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleDeleteMovimiento(item)}
-              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+              className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
               title="Eliminar movimiento"
             >
               <Trash2 className="w-4 h-4" />
@@ -160,53 +248,128 @@ export default function DetalleInsumoPage() {
   
             {/* Historial de Movimientos */}
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl p-8 border border-gray-200 hover:shadow-2xl transition-shadow duration-300">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-indigo-600 rounded-full"></div>
-                Historial de Movimientos
-              </h2>
-              <div className="mb-4 grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                  <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-indigo-600 rounded-full"></div>
+                  Historial de Movimientos
+                  <span className="text-sm font-normal text-gray-500 ml-4">
+                    ({totalItems} {totalItems === 1 ? 'movimiento' : 'movimientos'})
+                  </span>
+                </h2>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleRefresh}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Actualizar datos"
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Estadísticas rápidas */}
+              {movimientosFiltrados.length > 0 && (
+                <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {['INGRESO', 'CONSUMO', 'TRASLADO', 'AJUSTE'].map((tipo) => {
+                    const count = movimientosFiltrados.filter(m => m.tipoMovimiento === tipo).length;
+                    return (
+                      <div key={tipo} className="bg-white rounded-lg p-4 border border-gray-200">
+                        <div className="text-2xl font-bold text-gray-900">{count}</div>
+                        <div className="text-sm text-gray-600">{renderTipoMovimiento(tipo).props.children[1].props.children}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Input
-                  label="ID de Ficha"
+                  label="ID de Movimiento"
                   value={filtros.idFicha}
                   onChange={(e) => setFiltros({ ...filtros, idFicha: e.target.value })}
                   placeholder="Filtrar por ID"
                 />
                 <Input
-                  label="Nombre"
+                  label="Descripción/Tipo"
                   value={filtros.nombre}
                   onChange={(e) => setFiltros({ ...filtros, nombre: e.target.value })}
-                  placeholder="Filtrar por nombre"
+                  placeholder="Filtrar por descripción o tipo"
                 />
                 <Input
-                  label="Identificación Usuario"
+                  label="Usuario"
                   value={filtros.identificacionUsuario}
                   onChange={(e) => setFiltros({ ...filtros, identificacionUsuario: e.target.value })}
-                  placeholder="Filtrar por identificación"
+                  placeholder="Filtrar por usuario"
                 />
-                {isFertilizante && (
-                  <>
-                    <Input
-                      label="Categoría"
-                      value={filtros.categoria}
-                      onChange={(e) => setFiltros({ ...filtros, categoria: e.target.value })}
-                      placeholder="Filtrar por categoría"
-                    />
-                    <Input
-                      label="Nombre Insumo"
-                      value={filtros.nombreInsumo}
-                      onChange={(e) => setFiltros({ ...filtros, nombreInsumo: e.target.value })}
-                      placeholder="Filtrar por nombre insumo"
-                    />
-                  </>
-                )}
               </div>
+
+              {/* Controles de paginación */}
+              {totalPages > 1 && (
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Mostrando {startIndex + 1}-{endIndex} de {totalItems} resultados
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value={5}>5 por página</option>
+                      <option value={10}>10 por página</option>
+                      <option value={25}>25 por página</option>
+                      <option value={50}>50 por página</option>
+                    </select>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                      >
+                        Anterior
+                      </button>
+                      <span className="px-3 py-1 text-sm font-medium text-gray-900">
+                        {currentPage} de {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tabla de movimientos */}
               <Table aria-label="Tabla de movimientos" removeWrapper isVirtualized={false}>
                 <TableHeader columns={columns}>
-                  {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
+                  {(column) => (
+                    <TableColumn key={column.key} className="font-semibold text-gray-700">
+                      {column.label}
+                    </TableColumn>
+                  )}
                 </TableHeader>
-                <TableBody items={movimientosFiltrados} emptyContent="No hay movimientos registrados">
+                <TableBody 
+                  items={movimientosPaginados} 
+                  emptyContent={
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <AlertCircle className="w-12 h-12 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No hay movimientos registrados</h3>
+                      <p className="text-gray-500">Los movimientos de este insumo aparecerán aquí una vez que se registren.</p>
+                    </div>
+                  }
+                >
                   {(item) => (
-                    <TableRow key={item.id}>
+                    <TableRow 
+                      key={item.id} 
+                      className="hover:bg-gray-50 transition-colors"
+                    >
                       {(columnKey) => <TableCell>{renderCell(item, columnKey as string)}</TableCell>}
                     </TableRow>
                   )}
@@ -423,6 +586,9 @@ export default function DetalleInsumoPage() {
                 <p className="mt-3 text-4xl font-bold text-blue-600">
                   {insumo.stockTotalBase} <span className="text-lg">{insumo.unidadBase}</span>
                 </p>
+                <p className="mt-2 text-sm text-blue-600">
+                  Stock Uso: {insumo.stockTotalBase}
+                </p>
               </div>
             </div>
           </div>
@@ -435,13 +601,16 @@ export default function DetalleInsumoPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200 text-center">
-                <label className="block text-sm font-semibold text-amber-700 uppercase tracking-wide">Precio Unitario</label>
+                <label className="block text-sm font-semibold text-amber-700 uppercase tracking-wide">Precio Unitario Presentación</label>
                 <p className="mt-3 text-3xl font-bold text-amber-600">
-                  {insumo.precioUnitario ? `$${insumo.precioUnitario.toLocaleString()}` : 'N/A'}
+                  {insumo.precioUnitarioPresentacion ? `$${insumo.precioUnitarioPresentacion.toLocaleString()}` : 'N/A'}
+                </p>
+                <p className="mt-2 text-sm text-amber-600">
+                  Precio Uso: {insumo.precioUnitarioUso ? `$${insumo.precioUnitarioUso.toLocaleString()}` : 'N/A'}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200 text-center">
-                <label className="block text-sm font-semibold text-indigo-700 uppercase tracking-wide">Precio Total</label>
+                <label className="block text-sm font-semibold text-indigo-700 uppercase tracking-wide">Valor Inventario</label>
                 <p className="mt-3 text-3xl font-bold text-indigo-600">
                   {insumo.precioTotal ? `$${insumo.precioTotal.toLocaleString()}` : 'N/A'}
                 </p>

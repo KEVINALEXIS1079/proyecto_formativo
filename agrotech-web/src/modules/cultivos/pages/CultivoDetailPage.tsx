@@ -1,8 +1,11 @@
-import { Button, Card, CardBody, CardHeader, Spacer } from "@heroui/react";
-import { Edit, CheckCircle, Leaf, Calendar, MapPin, DollarSign, TrendingUp, TrendingDown, Activity, Sprout, Target } from "lucide-react";
+import { Button, Card, CardBody, CardHeader, Spacer, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Select, SelectItem, Textarea } from "@heroui/react";
+import { Edit, Leaf, Calendar, MapPin, DollarSign, TrendingUp, TrendingDown, Activity, Sprout } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { useCultivoDetail, useCultivoFinalizar } from "../hooks/useCultivos";
+import { useCultivoDetail, useCultivoUpdate } from "../hooks/useCultivos";
 import { useCultivosRealtime } from "../hooks/useCultivosRealtime";
+import type { EstadoCultivo } from "../model/types";
+import { useState } from "react";
+import { toast } from "react-toastify";
 
 const EDIT_PATH = (id: number) => `/cultivos/editar/${id}`;
 
@@ -11,7 +14,10 @@ export default function CultivoDetailPage() {
   const cultivoId = Number(id);
 
   const { data: cultivo, isLoading } = useCultivoDetail(cultivoId);
-  const finalizarMutation = useCultivoFinalizar();
+  const updateMutation = useCultivoUpdate();
+  const [openEstadoModal, setOpenEstadoModal] = useState(false);
+  const [nuevoEstado, setNuevoEstado] = useState<EstadoCultivo>("activo");
+  const [motivo, setMotivo] = useState("");
 
   // Habilitar actualizaciones en tiempo real para cultivos
   useCultivosRealtime();
@@ -39,9 +45,34 @@ export default function CultivoDetailPage() {
   const estadoColor: Record<string, "warning" | "primary" | "success" | "danger"> = {
     activo: "success",
     inactivo: "danger",
+    finalizado: "primary",
+  };
+
+  const openEstado = () => {
+    if (!cultivo) return;
+    setNuevoEstado((cultivo.estado as EstadoCultivo) ?? "activo");
+    setMotivo("");
+    setOpenEstadoModal(true);
+  };
+
+  const submitCambioEstado = async () => {
+    if (!cultivo) return;
+    if (!motivo.trim()) {
+      toast.error("Debes ingresar un motivo");
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({ id: cultivo.id, dto: { estado: nuevoEstado, motivo } });
+      setOpenEstadoModal(false);
+      toast.success("Estado actualizado");
+    } catch (err) {
+      console.error("Error cambiando estado:", err);
+      toast.error("No se pudo actualizar el estado");
+    }
   };
 
   return (
+    <>
     <div className="min-h-screen bg-white py-8 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Header Section */}
@@ -51,17 +82,14 @@ export default function CultivoDetailPage() {
            <div className="flex justify-between items-center px-8 py-6">
              <h1 className="text-4xl font-bold">Detalle del Cultivo</h1>
              <div className="flex gap-3">
-               {cultivo.estado === 'activo' && (
-                 <Button
-                   color="danger"
-                   variant="solid"
-                   startContent={<CheckCircle className="h-5 w-5" />}
-                   onPress={() => finalizarMutation.mutate(cultivo.id)}
-                   className="bg-red-500 hover:bg-red-600 text-white font-semibold"
-                 >
-                   Finalizar
-                 </Button>
-               )}
+               <Button
+                 color="warning"
+                 variant="solid"
+                 onPress={openEstado}
+                 className="text-white font-semibold"
+               >
+                 Cambiar estado
+               </Button>
                <Button
                  as={Link}
                  to={EDIT_PATH(cultivo.id)}
@@ -98,7 +126,9 @@ export default function CultivoDetailPage() {
                   <CardBody className="text-center p-4">
                     <Leaf className="h-8 w-8 text-green-600 mx-auto mb-2" />
                     <p className="text-sm font-medium text-gray-500 mb-1">Tipo de Cultivo</p>
-                    <p className="text-lg font-bold text-gray-800">{cultivo.tipoCultivo.nombre}</p>
+                    <p className="text-lg font-bold text-gray-800">
+                      {typeof cultivo.tipoCultivo === "string" ? cultivo.tipoCultivo : cultivo.tipoCultivo?.nombre || "N/A"}
+                    </p>
                   </CardBody>
                 </Card>
                 <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 shadow-md">
@@ -191,5 +221,38 @@ export default function CultivoDetailPage() {
         )}
       </div>
     </div>
+
+    <Modal isOpen={openEstadoModal} onOpenChange={setOpenEstadoModal}>
+      <ModalContent>
+        <ModalHeader>Cambiar estado del cultivo</ModalHeader>
+        <ModalBody>
+          <Select
+            label="Nuevo estado"
+            selectedKeys={new Set([nuevoEstado])}
+            onSelectionChange={(keys) => {
+              const k = (keys as Set<string>).values().next().value as EstadoCultivo;
+              setNuevoEstado(k);
+            }}
+          >
+            {["activo", "inactivo", "finalizado"].map((e) => (
+              <SelectItem key={e}>{e}</SelectItem>
+            ))}
+          </Select>
+          <Textarea
+            label="Motivo del cambio"
+            placeholder="Describe el motivo"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            minRows={3}
+            isRequired
+          />
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="light" onPress={() => setOpenEstadoModal(false)}>Cancelar</Button>
+          <Button color="primary" onPress={submitCambioEstado} isLoading={updateMutation.isPending}>Guardar</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+    </>
   );
 }

@@ -17,25 +17,25 @@ export class PermissionsService {
     @InjectRepository(UsuarioPermiso) private usuarioPermisoRepo: Repository<UsuarioPermiso>,
     @InjectRepository(Usuario) private usuarioRepo: Repository<Usuario>,
     private redisService: RedisService,
-  ) {}
+  ) { }
 
   // ==================== GESTIÓN DE PERMISOS ====================
-  
+
   // RF07: Crear permiso
   async createPermiso(data: { modulo: string; accion: string; descripcion?: string }) {
     const clave = `${data.modulo}.${data.accion}`;
-    
+
     // Validar que no exista
     const existing = await this.permisoRepo.findOne({ where: { clave } });
     if (existing) {
       throw new BadRequestException(`El permiso ${clave} ya existe`);
     }
-    
+
     const permiso = this.permisoRepo.create({
       ...data,
       clave,
     });
-    
+
     return this.permisoRepo.save(permiso);
   }
 
@@ -51,7 +51,7 @@ export class PermissionsService {
 
   async updatePermiso(id: number, data: { modulo?: string; accion?: string; descripcion?: string }) {
     const permiso = await this.findPermisoById(id);
-    
+
     if (data.modulo && data.accion) {
       const clave = `${data.modulo}.${data.accion}`;
       // Check if another permission has this key
@@ -61,16 +61,16 @@ export class PermissionsService {
       }
       permiso.clave = clave;
     } else if (data.modulo || data.accion) {
-       // If only one part changes, we need to reconstruct the key using the other part from existing
-       const modulo = data.modulo || permiso.modulo;
-       const accion = data.accion || permiso.accion;
-       const clave = `${modulo}.${accion}`;
-       
-       const existing = await this.permisoRepo.findOne({ where: { clave } });
-       if (existing && existing.id !== id) {
-         throw new BadRequestException(`El permiso ${clave} ya existe`);
-       }
-       permiso.clave = clave;
+      // If only one part changes, we need to reconstruct the key using the other part from existing
+      const modulo = data.modulo || permiso.modulo;
+      const accion = data.accion || permiso.accion;
+      const clave = `${modulo}.${accion}`;
+
+      const existing = await this.permisoRepo.findOne({ where: { clave } });
+      if (existing && existing.id !== id) {
+        throw new BadRequestException(`El permiso ${clave} ya existe`);
+      }
+      permiso.clave = clave;
     }
 
     Object.assign(permiso, data);
@@ -78,7 +78,7 @@ export class PermissionsService {
   }
 
   // ==================== GESTIÓN DE ROLES ====================
-  
+
   // RF06: Crear rol
   async createRol(data: { nombre: string; descripcion?: string; esSistema?: boolean }) {
     const rol = this.rolRepo.create({
@@ -86,12 +86,21 @@ export class PermissionsService {
       esSistema: data.esSistema || false,
       estado: 'activo',
     });
-    
+
     return this.rolRepo.save(rol);
   }
 
   async findAllRoles() {
-    return this.rolRepo.find();
+    const roles = await this.rolRepo.find({
+      relations: ['rolPermisos', 'rolPermisos.permiso'],
+    });
+
+    return roles.map(rol => ({
+      ...rol,
+      permisos: rol.rolPermisos?.map(rp => rp.permiso) || [],
+      // Remove the join array from response if desired, to keep it clean matches frontend type
+      rolPermisos: undefined,
+    }));
   }
 
   async findRolById(id: number) {
@@ -102,22 +111,22 @@ export class PermissionsService {
 
   async updateRol(id: number, data: { nombre?: string; descripcion?: string; estado?: string }) {
     const rol = await this.findRolById(id);
-    
+
     if (rol.esSistema) {
       throw new BadRequestException('No se puede modificar un rol del sistema');
     }
-    
+
     Object.assign(rol, data);
     return this.rolRepo.save(rol);
   }
 
   async deleteRol(id: number) {
     const rol = await this.findRolById(id);
-    
+
     if (rol.esSistema) {
       throw new BadRequestException('No se puede eliminar un rol del sistema');
     }
-    
+
     return this.rolRepo.softRemove(rol);
   }
 
@@ -143,27 +152,27 @@ export class PermissionsService {
   }
 
   // ==================== ASIGNAR PERMISOS A ROLES ====================
-  
+
   // RF06: Asignar permiso a rol
   async assignPermisoToRol(rolId: number, permisoId: number) {
     const rol = await this.findRolById(rolId);
     const permiso = await this.findPermisoById(permisoId);
-    
+
     // Verificar si ya existe
     const existing = await this.rolPermisoRepo.findOne({
       where: { rolId, permisoId },
     });
-    
+
     if (existing) {
       throw new BadRequestException('El permiso ya está asignado a este rol');
     }
-    
+
     const rolPermiso = this.rolPermisoRepo.create({ rolId, permisoId });
     await this.rolPermisoRepo.save(rolPermiso);
-    
+
     // Invalidar caché de permisos para usuarios con este rol
     await this.redisService.invalidateRolePermissions(rolId);
-    
+
     return { message: `Permiso ${permiso.clave} asignado al rol ${rol.nombre}` };
   }
 
@@ -172,55 +181,55 @@ export class PermissionsService {
     const rolPermiso = await this.rolPermisoRepo.findOne({
       where: { rolId, permisoId },
     });
-    
+
     if (!rolPermiso) {
       throw new NotFoundException('El permiso no está asignado a este rol');
     }
-    
+
     await this.rolPermisoRepo.remove(rolPermiso);
-    
+
     // Invalidar caché de permisos para usuarios con este rol
     await this.redisService.invalidateRolePermissions(rolId);
-    
+
     return { message: 'Permiso removido del rol' };
   }
 
   // RF06: Obtener permisos de un rol
   async getPermisosByRol(rolId: number) {
     const rol = await this.findRolById(rolId);
-    
+
     const rolPermisos = await this.rolPermisoRepo.find({
       where: { rolId },
       relations: ['permiso'],
     });
-    
+
     return rolPermisos.map(rp => rp.permiso);
   }
 
   // ==================== ASIGNAR PERMISOS A USUARIOS ====================
-  
+
   // RF07: Asignar permiso directo a usuario
   async assignPermisoToUsuario(usuarioId: number, permisoId: number) {
     const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
     if (!usuario) throw new NotFoundException(`Usuario ${usuarioId} not found`);
-    
+
     const permiso = await this.findPermisoById(permisoId);
-    
+
     // Verificar si ya existe
     const existing = await this.usuarioPermisoRepo.findOne({
       where: { usuarioId, permisoId },
     });
-    
+
     if (existing) {
       throw new BadRequestException('El permiso ya está asignado a este usuario');
     }
-    
+
     const usuarioPermiso = this.usuarioPermisoRepo.create({ usuarioId, permisoId });
     await this.usuarioPermisoRepo.save(usuarioPermiso);
-    
+
     // Invalidar caché de permisos para este usuario
     await this.redisService.invalidateUserPermissions(usuarioId);
-    
+
     return { message: `Permiso ${permiso.clave} asignado al usuario` };
   }
 
@@ -229,16 +238,16 @@ export class PermissionsService {
     const usuarioPermiso = await this.usuarioPermisoRepo.findOne({
       where: { usuarioId, permisoId },
     });
-    
+
     if (!usuarioPermiso) {
       throw new NotFoundException('El permiso no está asignado a este usuario');
     }
-    
+
     await this.usuarioPermisoRepo.remove(usuarioPermiso);
-    
+
     // Invalidar caché de permisos para este usuario
     await this.redisService.invalidateUserPermissions(usuarioId);
-    
+
     return { message: 'Permiso removido del usuario' };
   }
 
@@ -246,36 +255,36 @@ export class PermissionsService {
   async getPermisosDirectosByUsuario(usuarioId: number) {
     const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
     if (!usuario) throw new NotFoundException(`Usuario ${usuarioId} not found`);
-    
+
     const usuarioPermisos = await this.usuarioPermisoRepo.find({
       where: { usuarioId },
       relations: ['permiso'],
     });
-    
+
     return usuarioPermisos.map(up => up.permiso);
   }
 
   // ==================== PERMISOS EFECTIVOS ====================
-  
+
   // RF08: Calcular permisos efectivos de un usuario
   async getPermisosEfectivos(usuarioId: number): Promise<string[]> {
-    const usuario = await this.usuarioRepo.findOne({ 
+    const usuario = await this.usuarioRepo.findOne({
       where: { id: usuarioId },
       relations: ['rol'],
     });
-    
+
     if (!usuario) throw new NotFoundException(`Usuario ${usuarioId} not found`);
-    
+
     const permisosSet = new Set<string>();
-    
+
     // 1. Permisos del rol
     const permisosRol = await this.getPermisosByRol(usuario.rolId);
     permisosRol.forEach(p => permisosSet.add(p.clave));
-    
+
     // 2. Permisos directos del usuario
     const permisosDirectos = await this.getPermisosDirectosByUsuario(usuarioId);
     permisosDirectos.forEach(p => permisosSet.add(p.clave));
-    
+
     return Array.from(permisosSet);
   }
 
@@ -286,12 +295,12 @@ export class PermissionsService {
   }
 
   // ==================== ASIGNACIÓN MASIVA ====================
-  
+
   // Asignar múltiples permisos a un rol
   async assignMultiplePermisosToRol(rolId: number, permisoIds: number[]) {
     const rol = await this.findRolById(rolId);
     const results = [];
-    
+
     for (const permisoId of permisoIds) {
       try {
         await this.assignPermisoToRol(rolId, permisoId);
@@ -300,43 +309,43 @@ export class PermissionsService {
         results.push({ permisoId, success: false, error: error.message });
       }
     }
-    
+
     return results;
   }
 
   // Sincronizar permisos de un rol (reemplazar todos)
   async syncPermisosRol(rolId: number, permisoIds: number[]) {
     const rol = await this.findRolById(rolId);
-    
+
     // Eliminar todos los permisos actuales
     await this.rolPermisoRepo.delete({ rolId });
-    
+
     // Asignar los nuevos
     for (const permisoId of permisoIds) {
       await this.rolPermisoRepo.save({ rolId, permisoId });
     }
-    
+
     // Invalidar caché de permisos para usuarios con este rol
     await this.redisService.invalidateRolePermissions(rolId);
-    
+
     return { message: `Permisos sincronizados para el rol ${rol.nombre}` };
   }
   // Sincronizar permisos de un usuario (reemplazar todos los permisos directos)
   async syncUserPermissions(usuarioId: number, permisoIds: number[]) {
     const usuario = await this.usuarioRepo.findOne({ where: { id: usuarioId } });
     if (!usuario) throw new NotFoundException(`Usuario ${usuarioId} not found`);
-    
+
     // Eliminar todos los permisos directos actuales
     await this.usuarioPermisoRepo.delete({ usuarioId });
-    
+
     // Asignar los nuevos
     for (const permisoId of permisoIds) {
       await this.usuarioPermisoRepo.save({ usuarioId, permisoId });
     }
-    
+
     // Invalidar caché de permisos para este usuario
     await this.redisService.invalidateUserPermissions(usuarioId);
-    
+
     return { message: `Permisos sincronizados para el usuario` };
   }
 }

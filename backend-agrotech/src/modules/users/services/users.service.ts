@@ -27,7 +27,7 @@ export class UsersService {
     private emailService: EmailService,
     private imageUploadService: ImageUploadService,
     private usersGateway: UsersGateway,
-  ) {}
+  ) { }
 
   // RF66: Búsqueda avanzada con filtros
   async findAll(filters?: { q?: string; rolId?: number; estado?: string }) {
@@ -52,11 +52,11 @@ export class UsersService {
     if (filters?.estado && filters.estado.trim() !== '') {
       queryBuilder.andWhere('LOWER(usuario.estado) = LOWER(:estado)', { estado: filters.estado });
     }
-    
+
     const result = await queryBuilder
       .orderBy('usuario.createdAt', 'DESC')
       .getMany();
-    
+
     return result;
   }
 
@@ -159,7 +159,7 @@ export class UsersService {
   // RF70: Activar/Inactivar/Bloquear usuario
   async changeStatus(id: number, data: ChangeStatusDto) {
     const usuario = await this.findById(id);
-    
+
     usuario.estado = data.estado;
     await this.usuarioRepo.save(usuario);
 
@@ -168,8 +168,8 @@ export class UsersService {
       await this.redisService.deleteAllUserSessions(id);
     }
 
-    return { 
-      message: `Usuario ${data.estado}. ${data.estado !== UserStatus.ACTIVO ? 'Sesiones cerradas.' : ''}` 
+    return {
+      message: `Usuario ${data.estado}. ${data.estado !== UserStatus.ACTIVO ? 'Sesiones cerradas.' : ''}`
     };
   }
 

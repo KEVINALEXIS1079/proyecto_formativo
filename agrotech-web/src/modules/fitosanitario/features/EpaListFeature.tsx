@@ -9,13 +9,14 @@ import EpaForm from "../widgets/EpaForm";
 import EpaDetail from "../widgets/EpaDetail";
 import EpaFilters from "../ui/EpaFilters";
 import TipoEpaFeature from "../ui/TipoEpaFeature";
-import type { TipoEpaListRef } from "../ui/TipoEpaFeature";
 import TipoCultivoEpaFeature from "../ui/TipoCultivoEpaFeature";
 import type { TipoCultivoEpaListRef } from "../ui/TipoCultivoEpaFeature";
+import type { TipoEpaListRef } from "../ui/TipoEpaFeature";
 import Surface from "../ui/Surface";
 import EpaPillToggle from "../ui/EpaPillToggle";
 import type { EpaTab } from "../ui/EpaPillToggle";
 import { useEpaList, useTipoEpaList, useTipoCultivoEpaList, useCreateEpa, useUpdateEpa } from "../hooks/useFitosanitario";
+import { useRemoveEpa } from "../hooks/useFitosanitario";
 import { useFitosanitarioRealtime } from "../hooks/useFitosanitarioRealtime";
 import type { TipoEpaEnum, Epa, CreateEpaInput } from "../models/types";
 
@@ -48,6 +49,7 @@ export default function EpaListFeature() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedEpa, setSelectedEpa] = useState<Epa | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<Epa | null>(null);
 
   // Datos de listas para filtros
   const { data: tiposEpa = [] } = useTipoEpaList();
@@ -56,6 +58,7 @@ export default function EpaListFeature() {
   // Mutations
   const createMutation = useCreateEpa();
   const updateMutation = useUpdateEpa();
+  const deleteMutation = useRemoveEpa();
 
   // Habilitar actualizaciones en tiempo real
   useFitosanitarioRealtime();
@@ -76,7 +79,7 @@ export default function EpaListFeature() {
     limit,
   });
 
-  const items = useMemo(() => data?.items ?? [], [data]);
+  const items = useMemo(() => (data?.items ?? []).filter(epa => epa.id), [data]);
   const totalItems = data?.total ?? 0;
   const totalPages = Math.ceil(totalItems / limit);
 
@@ -86,10 +89,23 @@ export default function EpaListFeature() {
     setIsDetailOpen(true);
   }, []);
 
-  const handleEdit = useCallback((epa: Epa) => {
-    setSelectedEpa(epa);
-    setIsFormOpen(true);
+  const handleDeleteEpa = useCallback((epa: Epa) => {
+    setShowDeleteConfirm(epa);
   }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!showDeleteConfirm) return;
+
+    try {
+      await deleteMutation.mutateAsync(showDeleteConfirm.id);
+      toast.success("EPA eliminada correctamente");
+      setShowDeleteConfirm(null);
+    } catch (error: any) {
+      console.error("Error deleting EPA:", error);
+      toast.error("Error al eliminar EPA");
+    }
+  }, [deleteMutation, showDeleteConfirm]);
+
 
   const handleCreateNew = useCallback(() => {
     if (activeTab === "epas") {
@@ -103,26 +119,104 @@ export default function EpaListFeature() {
   }, [activeTab]);
 
   const handleFormSubmit = async (data: CreateEpaInput) => {
+    console.log("=== HANDLE FORM SUBMIT INICIADO ===");
+    console.log("Modo:", selectedEpa ? "EDICIÓN" : "CREACIÓN");
+    console.log("EPA seleccionada:", selectedEpa ? `ID: ${selectedEpa.id}, Nombre: ${selectedEpa.nombre}` : "Ninguna");
+    console.log("=== DATOS RECIBIDOS EN handleFormSubmit ===");
+    console.log("Datos del formulario:", JSON.stringify(data, null, 2));
+    console.log("Tipos EPA disponibles:", tiposEpa?.length || 0, "tipos");
+
+    // Validación adicional antes de enviar
+    if (!data.nombre?.trim()) {
+      console.error("ERROR: Nombre está vacío");
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+
+    if (!data.tipoEpa) {
+      console.error("ERROR: Tipo EPA no seleccionado");
+      toast.error("Debe seleccionar un tipo de EPA");
+      return;
+    }
+
+    if (!data.tipoCultivoEpaId) {
+      console.error("ERROR: Tipo cultivo no seleccionado");
+      toast.error("Debe seleccionar un cultivo afectado");
+      return;
+    }
+
     try {
       if (selectedEpa) {
-        await updateMutation.mutateAsync({ id: selectedEpa.id, input: data });
+        console.log("=== ACTUALIZANDO EPA ===");
+        console.log("ID:", selectedEpa.id);
+        console.log("Datos originales del formulario:", JSON.stringify(data, null, 2));
+
+        // Convertir CreateEpaInput a UpdateEpaInput
+        const updateData: any = {
+          nombre: data.nombre,
+          descripcion: data.descripcion,
+          sintomas: data.sintomas,
+          manejoYControl: data.manejoYControl,
+          mesesProbables: data.mesesProbables,
+          temporadas: data.temporadas,
+          tags: data.tags,
+          tipoEpa: data.tipoEpa,
+          tipoCultivoEpaId: data.tipoCultivoEpaId,
+          fotosGenerales: data.imagenes, // Map imagenes to fotosGenerales for backend
+        };
+
+        console.log("Datos convertidos para actualización:", JSON.stringify(updateData, null, 2));
+
+        const result = await updateMutation.mutateAsync({ id: selectedEpa.id, input: updateData });
+        console.log("Resultado de actualización:", result);
         toast.success("EPA actualizado correctamente");
       } else {
-        await createMutation.mutateAsync(data);
+        // Map imagenes to fotosGenerales for create operation
+        const createData = {
+          ...data,
+          fotosGenerales: data.imagenes,
+        };
+        await createMutation.mutateAsync(createData);
         toast.success("EPA creado correctamente");
       }
       setIsFormOpen(false);
       setSelectedEpa(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving EPA:", error);
-      toast.error("Error al guardar EPA");
+
+      // Extraer mensaje de error específico
+      let errorMessage = "Error al guardar EPA";
+
+      if (error?.response?.data?.message) {
+        // Error del backend con mensaje específico
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        // Error del backend con campo error
+        errorMessage = error.response.data.error;
+      } else if (error?.message) {
+        // Error genérico con mensaje
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        // Error como string
+        errorMessage = error;
+      }
+
+      // Mostrar errores de validación específicos si existen
+      if (error?.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        const validationErrors = error.response.data.errors.map((err: any) => err.message || err).join(', ');
+        errorMessage = validationErrors;
+      }
+
+      console.error("Error message to show:", errorMessage);
+      toast.error(errorMessage);
     }
   };
 
   const getButtonLabel = () => {
     if (activeTab === 'epas') return 'Nueva EPA';
     if (activeTab === 'tipos-epa') return 'Nuevo Tipo EPA';
-    return 'Nuevo Tipo Cultivo';
+    if (activeTab === 'tipos-cultivo') return 'Nuevo Tipo Cultivo';
+    return '';
   };
 
   return (
@@ -158,7 +252,7 @@ export default function EpaListFeature() {
               {activeTab === 'epas' && (
                 <div className="space-y-6">
                   {/* Filtros */}
-                  <EpaFilters 
+                  <EpaFilters
                     q={q}
                     setQ={setQ}
                     tipoEpaFilter={tipoEpaFilter}
@@ -195,17 +289,23 @@ export default function EpaListFeature() {
                     ) : (
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                          {items.map((epa) => (
-                            <motion.div key={epa.id} variants={hoverCard} initial="rest" whileHover="hover">
+                          {items.map((epa, index) => (
+                            <motion.div
+                              key={`epa-${epa.id || `temp-${index}`}`}
+                              variants={hoverCard}
+                              initial="rest"
+                              whileHover="hover"
+                              layoutId={`epa-card-${epa.id || `temp-${index}`}`}
+                            >
                               <EpaCard
                                 epa={epa}
                                 onViewDetail={handleViewDetail}
-                                onEdit={handleEdit}
+                                onDelete={handleDeleteEpa}
                               />
                             </motion.div>
                           ))}
                         </div>
-                        
+
                         {/* Paginación */}
                         {totalPages > 1 && (
                           <div className="flex justify-center mt-8">
@@ -242,8 +342,8 @@ export default function EpaListFeature() {
       />
 
       {/* Modal Ver Detalle EPA */}
-      <Modal 
-        isOpen={isDetailOpen} 
+      <Modal
+        isOpen={isDetailOpen}
         onOpenChange={(open) => {
           if (!open) {
             setIsDetailOpen(false);
@@ -264,11 +364,14 @@ export default function EpaListFeature() {
                 <Button color="primary" variant="light" onPress={onClose}>
                   Cerrar
                 </Button>
-                <Button 
-                  color="primary" 
+                <Button
+                  color="primary"
                   onPress={() => {
                     onClose();
-                    if (selectedEpa) handleEdit(selectedEpa);
+                    if (selectedEpa) {
+                      setSelectedEpa(selectedEpa);
+                      setIsFormOpen(true);
+                    }
                   }}
                 >
                   Editar
@@ -276,6 +379,34 @@ export default function EpaListFeature() {
               </ModalFooter>
             </>
           )}
+        </ModalContent>
+      </Modal>
+
+      {/* Modal Confirmar Eliminación EPA */}
+      <Modal
+        isOpen={!!showDeleteConfirm}
+        onOpenChange={() => setShowDeleteConfirm(null)}
+      >
+        <ModalContent>
+          <ModalHeader>Confirmar eliminación</ModalHeader>
+          <ModalBody>
+            <p>¿Desea eliminar esta EPA?</p>
+            <p className="text-sm text-default-500 mt-2">
+              Esta acción no se puede deshacer.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={() => setShowDeleteConfirm(null)}>
+              Cancelar
+            </Button>
+            <Button
+              color="danger"
+              onPress={handleConfirmDelete}
+              isLoading={deleteMutation.isPending}
+            >
+              Eliminar
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </div>

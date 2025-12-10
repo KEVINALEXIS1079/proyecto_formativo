@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { Permiso, CreatePermisoDto } from '../models/types/permissions.types';
 import { useCreatePermiso, useUpdatePermiso } from '../hooks/usePermissions';
-import { Input, Textarea, Button } from "@heroui/react";
+import { Input, Textarea } from "@heroui/react";
 
 interface PermissionFormProps {
   permiso?: Permiso;
@@ -10,7 +10,11 @@ interface PermissionFormProps {
   onSuccess: () => void;
 }
 
-export const PermissionForm = ({ permiso, readOnly = false, onClose, onSuccess }: PermissionFormProps) => {
+export interface PermissionFormRef {
+  save: () => Promise<void>;
+}
+
+export const PermissionForm = forwardRef<PermissionFormRef, PermissionFormProps>(({ permiso, readOnly = false, onSuccess }, ref) => {
   const createPermisoMutation = useCreatePermiso();
   const updatePermisoMutation = useUpdatePermiso();
 
@@ -35,7 +39,7 @@ export const PermissionForm = ({ permiso, readOnly = false, onClose, onSuccess }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (readOnly) return;
-    
+
     try {
       if (permiso) {
         await updatePermisoMutation.mutateAsync({ id: permiso.id, data: formData });
@@ -52,7 +56,13 @@ export const PermissionForm = ({ permiso, readOnly = false, onClose, onSuccess }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const isLoading = createPermisoMutation.isPending || updatePermisoMutation.isPending;
+  // Expose save method to parent via ref
+  useImperativeHandle(ref, () => ({
+    save: async () => {
+      const event = new Event('submit', { bubbles: true, cancelable: true });
+      await handleSubmit(event as any);
+    }
+  }));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -90,33 +100,6 @@ export const PermissionForm = ({ permiso, readOnly = false, onClose, onSuccess }
         onValueChange={(value) => handleChange('descripcion', value)}
         isDisabled={readOnly}
       />
-
-      <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-default-200">
-        {readOnly ? (
-          <Button
-            color="success"
-            onPress={onClose}
-          >
-            Cerrar
-          </Button>
-        ) : (
-          <>
-            <Button
-              variant="light"
-              onPress={onClose}
-            >
-              Cancelar
-            </Button>
-            <Button
-              color="success"
-              type="submit"
-              isLoading={isLoading}
-            >
-              {isLoading ? 'Guardando...' : permiso ? 'Guardar Cambios' : 'Crear'}
-            </Button>
-          </>
-        )}
-      </div>
     </form>
   );
-};
+});

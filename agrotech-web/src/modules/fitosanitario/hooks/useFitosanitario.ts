@@ -20,8 +20,8 @@ import { tipoCultivoEpaService } from "../api/tipoCultivoEpa.service";
 // =========================
 export const QK = {
   EPA_LIST_ROOT: ["epa", "list"] as const,
-  EPA_LIST: (q: string, tipoId: number | undefined, tipoCultivoEpaId: number | undefined, page: number, limit: number) =>
-    ["epa", "list", { q, tipoId, tipoCultivoEpaId, page, limit }] as const,
+  EPA_LIST: (q: string, tipoId: number | undefined, tipoCultivoEpaId: number | undefined) =>
+    ["epa", "list", { q, tipoId, tipoCultivoEpaId }] as const,
   EPA_BY_ID: (id: number) => ["epa", "byId", id] as const,
   TIPO_EPA_LIST: ["tipo-epa", "list"] as const,
   TIPO_CULTIVO_EPA_LIST: ["tipo-cultivo-epa", "list"] as const,
@@ -56,27 +56,28 @@ export function useEpaList({
   limit = 10,
 }: EpaListParams = {}) {
   return useQuery<EpaListResp, unknown, EpaListResp>({
-    queryKey: QK.EPA_LIST(q, tipoId, tipoCultivoEpaId, page, limit),
+    queryKey: QK.EPA_LIST(q, tipoId, tipoCultivoEpaId),
     queryFn: async (): Promise<EpaListResp> => {
-      const resp = await epaService.list({
+      const data = await epaService.list({
         q: q?.trim() || undefined,
         tipoId,
         tipoCultivoEpaId,
-        page,
-        limit,
       });
 
-      // Asumimos que el backend devuelve array plano, normalizamos a paginado
-      const arr: Epa[] = Array.isArray(resp) ? resp : [];
-      const start = (page - 1) * limit;
-      const paged = arr.slice(start, start + limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const items = data.slice(startIndex, endIndex);
+      const total = data.length;
+      const hasMore = endIndex < total;
+      const nextOffset = endIndex;
+
       return {
-        items: paged,
+        items,
         page,
         limit,
-        total: arr.length,
-        hasMore: start + limit < arr.length,
-        nextOffset: start + limit,
+        total,
+        hasMore,
+        nextOffset,
       };
     },
     staleTime: 15_000,
@@ -93,8 +94,24 @@ export function useEpaById(id: number) {
 
 export function useCreateEpa() {
   const qc = useQueryClient();
+  const { data: tiposEpa = [], isLoading: tiposEpaLoading, error: tiposEpaError } = useTipoEpaList();
+
   return useMutation({
-    mutationFn: (input: CreateEpaInput) => epaService.create(input),
+    mutationFn: async (input: CreateEpaInput) => {
+      console.log("=== HOOK useCreateEpa DEBUG ===");
+      console.log("Input:", JSON.stringify(input, null, 2));
+      console.log("Tipos EPA disponibles:", tiposEpa?.length || 0, tiposEpa);
+      console.log("Tipos EPA loading:", tiposEpaLoading);
+      console.log("Tipos EPA error:", tiposEpaError);
+
+      // Si hay error cargando tipos EPA, intentar usar mapper básico
+      if (tiposEpaError || (!tiposEpaLoading && (!tiposEpa || tiposEpa.length === 0))) {
+        console.warn("Error o no tipos EPA cargados, usando mapper fallback");
+        return epaService.create(input, []); // Forzar mapper fallback
+      }
+
+      return epaService.create(input, tiposEpa);
+    },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: QK.EPA_LIST_ROOT });
     },
@@ -104,10 +121,37 @@ export function useCreateEpa() {
 export function useUpdateEpa() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: number; input: UpdateEpaInput }) =>
-      epaService.update(id, input),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: QK.EPA_LIST_ROOT });
+    mutationFn: async ({ id, input }: { id: number; input: UpdateEpaInput }) => {
+      console.log("=== USE UPDATE EPA HOOK ===");
+      console.log("ID:", id);
+      console.log("Input:", JSON.stringify(input, null, 2));
+
+      const result = await epaService.update(id, input);
+      console.log("Update result:", result);
+      return result;
+    },
+    onSuccess: async (data) => {
+      console.log("=== UPDATE SUCCESS ===");
+      console.log("Updated EPA:", data);
+
+      // Forzar recarga completa invalidando todas las queries de EPA
+      await qc.invalidateQueries({
+        queryKey: QK.EPA_LIST_ROOT,
+        exact: false,
+        refetchType: 'active' // Solo refetch queries activas
+      });
+
+      // Invalidar queries individuales
+      await qc.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === 'epa',
+        refetchType: 'active'
+      });
+
+      console.log("Cache invalidated - forcing refetch");
+    },
+    onError: (error) => {
+      console.error("=== UPDATE ERROR ===");
+      console.error("Error:", error);
     },
   });
 }

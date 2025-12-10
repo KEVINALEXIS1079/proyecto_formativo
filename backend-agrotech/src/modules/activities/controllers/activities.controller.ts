@@ -12,7 +12,13 @@ import {
   UsePipes,
   ValidationPipe,
   ParseIntPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  Query,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ImageUploadService } from '../../../common/services/image-upload.service';
 import type { Request } from 'express';
 import { ActivitiesService } from '../services/activities.service';
 import { CreateActivityDto } from '../dtos/create-activity.dto';
@@ -29,9 +35,10 @@ import { ActivitiesGateway } from '../gateways/activities.gateway';
 export class ActivitiesController {
   constructor(
     private readonly activitiesService: ActivitiesService,
+    private readonly imageUploadService: ImageUploadService,
     @Inject(forwardRef(() => ActivitiesGateway))
     private readonly activitiesGateway: ActivitiesGateway,
-  ) {}
+  ) { }
 
   private extractUserId(request: Request | any): number {
     const userId = request?.user?.id ?? request?.user?.userId;
@@ -63,8 +70,19 @@ export class ActivitiesController {
 
   @Get()
   @RequirePermissions('actividades.ver')
-  async findAllActivitiesHttp() {
-    return this.findAll();
+  async findAllActivitiesHttp(@Query() filters?: { cultivoId?: number; loteId?: number; tipo?: string }) {
+    return this.findAll(filters);
+  }
+
+  @Post('upload')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    const url = await this.imageUploadService.uploadImage(file);
+    return { url };
   }
 
   @Get(':id')
@@ -79,8 +97,21 @@ export class ActivitiesController {
   async updateActivityHttp(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateActivityDto,
+    @Req() req: Request,
   ) {
-    return this.update(id, dto);
+    const userId = this.extractUserId(req);
+    return this.update(id, dto, userId);
+  }
+
+  @Patch(':id/finalize')
+  @RequirePermissions('actividades.editar')
+  async finalizeActivityHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: any,
+    @Req() req: Request,
+  ) {
+    const userId = this.extractUserId(req);
+    return this.activitiesService.finalizarActividad(id, data, userId);
   }
 
   @Delete(':id')
@@ -93,10 +124,12 @@ export class ActivitiesController {
   @RequirePermissions('actividades.editar')
   async addInsumoHttp(
     @Param('id', ParseIntPipe) id: number,
+    @Req() req: Request,
     @Body()
     data: { insumoId: number; cantidadUso: number; costoUnitarioUso: number },
   ) {
-    return this.activitiesService.consumirInsumo(id, data);
+    const userId = this.extractUserId(req);
+    return this.activitiesService.consumirInsumo(id, data, userId);
   }
 
   @Post(':id/servicios')
@@ -129,8 +162,8 @@ export class ActivitiesController {
 
   // Internal method for WebSocket: handles finding all activities by calling the service
   // Flow: Gateway calls this method -> calls activitiesService.findAll -> returns activities list
-  async findAll() {
-    return this.activitiesService.findAll();
+  async findAll(filters?: { cultivoId?: number; loteId?: number; tipo?: string }) {
+    return this.activitiesService.findAll(filters);
   }
 
   // Internal method for WebSocket: handles finding an activity by ID by calling the service
@@ -142,8 +175,8 @@ export class ActivitiesController {
   // Internal method for WebSocket: handles updating an activity by calling the service
   // Flow: Gateway calls this method -> calls activitiesService.update -> returns updated activity
   @UsePipes(new ValidationPipe())
-  async update(id: number, updateActivityDto: UpdateActivityDto) {
-    return this.activitiesService.update(id, updateActivityDto);
+  async update(id: number, updateActivityDto: UpdateActivityDto, userId?: number) {
+    return this.activitiesService.update(id, updateActivityDto, userId);
   }
 
   // Internal method for WebSocket: handles removing an activity by calling the service

@@ -3,13 +3,16 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import { TipoSensor } from './tipo-sensor.entity';
 import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 import { SensorLectura } from './sensor-lectura.entity';
+import { Lote } from '../../geo/entities/lote.entity';
+import { SubLote } from '../../geo/entities/sublote.entity';
+import { IotGlobalConfig } from './iot-global-config.entity';
 
 @Entity('sensores')
 export class Sensor extends BaseEntity {
   @Column({ name: 'nombre_sensor' })
   nombre: string;
 
-  @Column({ name: 'tipo_sensor_id' })
+  @Column({ name: 'tipo_sensor_id', nullable: true })
   tipoSensorId: number;
 
   @Column()
@@ -18,23 +21,8 @@ export class Sensor extends BaseEntity {
   @Column({ name: 'endpoint_url', nullable: true })
   endpointUrl: string;
 
-  @Column({ name: 'mqtt_broker', nullable: true })
-  mqttBroker: string;
-
-  @Column({ name: 'mqtt_port', nullable: true })
-  mqttPort: number;
-
   @Column({ name: 'mqtt_topic', nullable: true })
   mqttTopic: string;
-
-  @Column({ name: 'mqtt_username', nullable: true })
-  mqttUsername: string;
-
-  @Column({ name: 'mqtt_password', nullable: true })
-  mqttPassword: string;
-
-  @Column({ name: 'mqtt_qos', nullable: true })
-  mqttQos: number;
 
   @Column('float', { name: 'valor_minimo_sensor', nullable: true })
   umbralMin: number;
@@ -47,6 +35,9 @@ export class Sensor extends BaseEntity {
 
   @Column({ name: 'estado_conexion', default: 'DESCONECTADO' })
   estadoConexion: string;
+
+  @Column('text', { name: 'estado', nullable: true })
+  estado: string | null;
 
   @Column({ name: 'ultimo_valor', nullable: true })
   ultimoValor: string;
@@ -62,6 +53,27 @@ export class Sensor extends BaseEntity {
 
   @Column({ nullable: true })
   creadoPorUsuarioId: number;
+
+  @Column({ name: 'global_config_id', nullable: true })
+  globalConfigId: number;
+
+  @ManyToOne(() => IotGlobalConfig, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'global_config_id' })
+  globalConfig: IotGlobalConfig;
+
+  @Column({ name: 'lote_id', nullable: true })
+  loteId: number;
+
+  @Column({ name: 'sub_lote_id', nullable: true })
+  subLoteId: number;
+
+  @ManyToOne(() => Lote)
+  @JoinColumn({ name: 'lote_id' })
+  lote: Lote;
+
+  @ManyToOne(() => SubLote)
+  @JoinColumn({ name: 'sub_lote_id' })
+  subLote: SubLote;
 
   @ManyToOne(() => TipoSensor, (tipo) => tipo.sensores)
   @JoinColumn({ name: 'tipo_sensor_id' })

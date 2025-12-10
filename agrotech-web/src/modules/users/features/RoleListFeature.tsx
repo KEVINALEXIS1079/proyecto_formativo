@@ -1,218 +1,164 @@
-import { useState, forwardRef, useImperativeHandle } from 'react';
-import { Input, Tabs, Tab } from "@heroui/react";
-import { Search } from 'lucide-react';
-import { useRoles, useDeleteRol } from '../hooks/usePermissions';
-import { RolesTable } from '../widgets/RolesTable';
-import { RoleForm } from '../widgets/RoleForm';
-import { RolePermissionsManager } from '../widgets/RolePermissionsManager';
-import { Modal } from '@/shared/components/ui/Modal';
-import { DeleteModal } from '@/shared/components/ui/DeleteModal';
-import Surface from '../ui/Surface';
-import SectionTitle from '../ui/SectionTitle';
-import type { Rol } from '../models/types/permissions.types';
+import { useState, forwardRef, useImperativeHandle, useMemo } from "react";
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+  Tooltip,
+  Chip,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button
+} from "@heroui/react";
+import { Edit, Trash2 } from "lucide-react";
+import { useRoles, useDeleteRol } from "../hooks/usePermissions";
+import RoleModal from "../widgets/RoleModal";
+import { RoleFilters, type RoleFiltersState } from "../widgets/RoleFilters";
+import type { Rol } from "../models/types/permissions.types";
 
 export interface RoleListRef {
   openCreateModal: () => void;
 }
 
-export const RoleListFeature = forwardRef<RoleListRef>((_, ref) => {
-  const { data: roles = [], isLoading } = useRoles();
-  const deleteRolMutation = useDeleteRol();
+export const RoleListFeature = forwardRef<RoleListRef, {}>((_, ref) => {
+  const { data: allRoles = [], isLoading } = useRoles();
+  const deleteRol = useDeleteRol();
+
+  const [filters, setFilters] = useState<RoleFiltersState>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedRol, setSelectedRol] = useState<Rol | undefined>(undefined);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [rolToDelete, setRolToDelete] = useState<Rol | undefined>(undefined);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'info' | 'permissions'>('info');
+  const [selectedRole, setSelectedRole] = useState<Rol | undefined>(undefined);
+  const [roleToDelete, setRoleToDelete] = useState<Rol | null>(null);
 
   useImperativeHandle(ref, () => ({
     openCreateModal: () => {
-      setSelectedRol(undefined);
-      setActiveTab('info');
-      setIsModalOpen(true);
-    },
+      handleCreate();
+    }
   }));
 
-  const filteredRoles = roles.filter((rol) =>
-    rol.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRoles = useMemo(() => {
+    return allRoles.filter(role => {
+      if (!filters.q) return true;
+      const q = filters.q.toLowerCase();
+      return role.nombre.toLowerCase().includes(q) ||
+        (role.descripcion && role.descripcion.toLowerCase().includes(q));
+    });
+  }, [allRoles, filters.q]);
 
-  const handleEdit = (rol: Rol) => {
-    setSelectedRol(rol);
-    setActiveTab('info');
+  const handleCreate = () => {
+    setSelectedRole(undefined);
     setIsModalOpen(true);
   };
 
-  const handleView = (rol: Rol) => {
-    setSelectedRol(rol);
-    setActiveTab('info');
-    setIsViewModalOpen(true);
+  const handleEdit = (rol: Rol) => {
+    setSelectedRole(rol);
+    setIsModalOpen(true);
   };
 
   const handleDeleteClick = (rol: Rol) => {
-    setRolToDelete(rol);
-    setIsDeleteModalOpen(true);
+    setRoleToDelete(rol);
   };
 
-  const handleConfirmDelete = async () => {
-    if (rolToDelete) {
-      try {
-        await deleteRolMutation.mutateAsync(rolToDelete.id);
-        setIsDeleteModalOpen(false);
-        setRolToDelete(undefined);
-      } catch (error) {
-        console.error('Error deleting role:', error);
-        alert('Error al eliminar el rol. Puede que tenga usuarios asignados.');
-      }
+  const confirmDelete = () => {
+    if (roleToDelete) {
+      deleteRol.mutate(roleToDelete.id);
+      setRoleToDelete(null);
     }
   };
 
+  if (isLoading) return <div>Cargando roles...</div>;
+
   return (
     <div className="flex flex-col">
-      <Surface className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div className="col-span-1 md:col-span-4">
-            <SectionTitle>Buscar</SectionTitle>
-            <Input
-              placeholder="Buscar roles..."
-              value={searchTerm}
-              onValueChange={setSearchTerm}
-              startContent={<Search className="text-gray-400" size={16} />}
-              variant="bordered"
-              radius="lg"
-              classNames={{
-                inputWrapper: "h-11 px-4 bg-white/70 dark:bg-white/5 ring-1 ring-black/5 dark:ring-white/10",
-              }}
-            />
-          </div>
-        </div>
-      </Surface>
+      <RoleFilters filters={filters} onChange={setFilters} />
 
-      <RolesTable
-        roles={filteredRoles}
-        isLoading={isLoading}
-        onView={handleView}
-        onEdit={handleEdit}
-        onDelete={handleDeleteClick}
+      <Table
+        aria-label="Tabla de roles"
+        classNames={{
+          wrapper: "min-h-[400px] shadow-sm border border-divider rounded-xl",
+          th: "bg-default-50 text-default-600 font-medium",
+          td: "group-data-[first=true]:first:before:rounded-none group-data-[first=true]:last:before:rounded-none"
+        }}
+      >
+        <TableHeader>
+          <TableColumn>ROL</TableColumn>
+          <TableColumn>DESCRIPCIÓN</TableColumn>
+          <TableColumn>PERMISOS</TableColumn>
+          <TableColumn>ACCIONES</TableColumn>
+        </TableHeader>
+        <TableBody emptyContent={"No hay roles registrados."}>
+          {filteredRoles.map((rol) => (
+            <TableRow key={rol.id}>
+              <TableCell>
+                <div className="flex flex-col">
+                  <p className="font-bold text-medium capitalize">{rol.nombre}</p>
+                </div>
+              </TableCell>
+              <TableCell>
+                <span className="text-small text-default-500">{rol.descripcion || "Sin descripción"}</span>
+              </TableCell>
+              <TableCell>
+                <Chip size="sm" variant="flat" color="secondary">
+                  {rol.permisos?.length || 0} permisos
+                </Chip>
+              </TableCell>
+              <TableCell>
+                <div className="relative flex items-center gap-2">
+                  <Tooltip content="Editar permisos">
+                    <span className="text-lg text-[#17C964] cursor-pointer active:opacity-50 hover:text-[#12A150] transition-colors" onClick={() => handleEdit(rol)}>
+                      <Edit size={18} />
+                    </span>
+                  </Tooltip>
+                  <Tooltip color="danger" content="Eliminar rol">
+                    <span className="text-lg text-danger cursor-pointer active:opacity-50 hover:text-danger-400 transition-colors" onClick={() => handleDeleteClick(rol)}>
+                      <Trash2 size={18} />
+                    </span>
+                  </Tooltip>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
-      />
-
-      {/* Create/Edit Modal */}
-      <Modal
+      <RoleModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedRol(undefined);
-        }}
-        title={selectedRol ? `Editar Rol: ${selectedRol.nombre}` : 'Nuevo Rol'}
-        size={selectedRol ? '3xl' : 'lg'}
-      >
-        {selectedRol ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex w-full flex-col">
-              <Tabs 
-                aria-label="Opciones de rol" 
-                selectedKey={activeTab}
-                onSelectionChange={(key) => setActiveTab(key as 'info' | 'permissions')}
-                color="success"
-                variant="underlined"
-                classNames={{
-                  tabList: "gap-6 w-full relative rounded-none p-0 border-b border-divider",
-                  cursor: "w-full bg-[#17C964]",
-                  tab: "max-w-fit px-0 h-12",
-                  tabContent: "group-data-[selected=true]:text-[#17C964]"
-                }}
-              >
-                <Tab key="info" title="Información General">
-                  <div className="pt-4">
-                    <RoleForm
-                      rol={selectedRol}
-                      onClose={() => setIsModalOpen(false)}
-                      onSuccess={() => setIsModalOpen(false)}
-                    />
-                  </div>
-                </Tab>
-                <Tab key="permissions" title="Permisos">
-                  <div className="pt-4">
-                    <RolePermissionsManager
-                      rol={selectedRol}
-                      onClose={() => setIsModalOpen(false)}
-                    />
-                  </div>
-                </Tab>
-              </Tabs>
-            </div>
-          </div>
-        ) : (
-          <RoleForm
-            onClose={() => setIsModalOpen(false)}
-            onSuccess={() => setIsModalOpen(false)}
-          />
-        )}
-      </Modal>
-
-      {/* View Modal */}
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => {
-          setIsViewModalOpen(false);
-          setSelectedRol(undefined);
-        }}
-        title="Detalles del Rol"
-        size="3xl"
-      >
-        {selectedRol && (
-          <div className="flex flex-col gap-4">
-            <div className="flex w-full flex-col">
-              <Tabs 
-                aria-label="Opciones de rol" 
-                selectedKey={activeTab}
-                onSelectionChange={(key) => setActiveTab(key as 'info' | 'permissions')}
-                color="success"
-                variant="underlined"
-                classNames={{
-                  tabList: "gap-6 w-full relative rounded-none p-0 border-b border-divider",
-                  cursor: "w-full bg-[#17C964]",
-                  tab: "max-w-fit px-0 h-12",
-                  tabContent: "group-data-[selected=true]:text-[#17C964]"
-                }}
-              >
-                <Tab key="info" title="Información General">
-                  <div className="pt-4">
-                    <RoleForm
-                      rol={selectedRol}
-                      readOnly={true}
-                      onClose={() => setIsViewModalOpen(false)}
-                      onSuccess={() => setIsViewModalOpen(false)}
-                    />
-                  </div>
-                </Tab>
-                <Tab key="permissions" title="Permisos">
-                  <div className="pt-4">
-                    <RolePermissionsManager
-                      rol={selectedRol}
-                      readOnly={true}
-                      onClose={() => setIsViewModalOpen(false)}
-                    />
-                  </div>
-                </Tab>
-              </Tabs>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      <DeleteModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Eliminar Rol"
-        description={`¿Estás seguro de eliminar el rol ${rolToDelete?.nombre}? Esta acción no se puede deshacer.`}
-        isLoading={deleteRolMutation.isPending}
+        onClose={() => setIsModalOpen(false)}
+        roleToEdit={selectedRole}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={!!roleToDelete} onClose={() => setRoleToDelete(null)}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">Confirmar eliminación</ModalHeader>
+          <ModalBody>
+            <p>
+              ¿Estás seguro de eliminar el rol <strong>"{roleToDelete?.nombre}"</strong>?
+            </p>
+            <p className="text-sm text-default-500 mt-2">
+              Esta acción no se puede deshacer.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={() => setRoleToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button
+              color="danger"
+              onPress={confirmDelete}
+              isLoading={deleteRol.isPending}
+            >
+              Eliminar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 });
 
-RoleListFeature.displayName = 'RoleListFeature';
+RoleListFeature.displayName = "RoleListFeature";

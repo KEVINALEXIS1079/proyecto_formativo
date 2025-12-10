@@ -1,6 +1,6 @@
 import { api, connectSocket } from "@/shared/api/client";
 import { adaptLote, adaptSublote } from "../model/mappers";
-import type { Lote, Sublote } from "../model/types";
+import type { Lote, Sublote, CreateLoteDTO, UpdateLoteDTO, CreateSubloteDTO, UpdateSubloteDTO } from "../model/types";
 import type { Socket } from "socket.io-client";
 
 function normalizeListResp(data: any): Lote[] {
@@ -36,34 +36,35 @@ class LotesService {
     if (params?.limit) query.limit = params.limit;
     if (params?.q) query.q = params.q;
 
-    const { data } = await api.get("/lotes", { params: query });
+    const { data } = await api.get("/geo/lotes", { params: query });
     return normalizeListResp(data);
   }
 
   async getLoteById(id: number): Promise<Lote> {
-    const { data } = await api.get(`/lotes/${id}`);
+    const { data } = await api.get(`/geo/lotes/${id}`);
     return adaptLote(data);
   }
 
-  async createLote(payload: { nombre: string; descripcion?: string }): Promise<Lote> {
-    const { data } = await api.post("/lotes", payload);
+  async createLote(payload: Partial<CreateLoteDTO>): Promise<Lote> {
+    // We allow payload to be partial or match DTO, but ultimately it depends on backend validation
+    const { data } = await api.post("/geo/lotes", payload);
     this.emit("lotes:created", data);
     return adaptLote(data);
   }
 
-  async updateLote(id: number, payload: { nombre?: string; descripcion?: string }): Promise<Lote> {
-    const { data } = await api.patch(`/lotes/${id}`, payload);
+  async updateLote(id: number, payload: Partial<UpdateLoteDTO>): Promise<Lote> {
+    const { data } = await api.patch(`/geo/lotes/${id}`, payload);
     this.emit("lotes:updated", data);
     return adaptLote(data);
   }
 
   async removeLote(id: number): Promise<void> {
-    await api.delete(`/lotes/${id}`);
+    await api.delete(`/geo/lotes/${id}`);
     this.emit("lotes:removed", { id_lote_pk: id });
   }
 
   async restoreLote(id: number): Promise<Lote> {
-    const { data } = await api.patch(`/lotes/restore/${id}`);
+    const { data } = await api.patch(`/geo/lotes/restore/${id}`);
     this.emit("lotes:restored", data);
     return adaptLote(data);
   }
@@ -78,15 +79,32 @@ class LotesService {
     if (params?.limit) query.limit = params.limit;
     if (params?.q) query.q = params.q;
 
-    const { data } = await api.get(`/sublotes`, { params: { ...query, loteId } });
+    const { data } = await api.get(`/geo/sublotes`, { params: { ...query, loteId } });
     return normalizeSublotesResp(data);
+  }
+
+  async createSublote(payload: Partial<CreateSubloteDTO>): Promise<Sublote> {
+    const { data } = await api.post("/geo/sublotes", payload);
+    this.emit("sublotes:created", data);
+    return adaptSublote(data);
+  }
+
+  async updateSublote(id: number, payload: Partial<UpdateSubloteDTO>): Promise<Sublote> {
+    const { data } = await api.patch(`/geo/sublotes/${id}`, payload);
+    this.emit("sublotes:updated", data);
+    return adaptSublote(data);
+  }
+
+  async removeSublote(id: number): Promise<void> {
+    await api.delete(`/geo/sublotes/${id}`);
+    this.emit("sublotes:removed", { id_sublote_pk: id });
   }
 
   // === WEBSOCKET ===
 
   connect(): Socket {
     if (!this.socket || this.socket.disconnected) {
-      this.socket = connectSocket("/lotes");
+      this.socket = connectSocket("/geo");
     }
     return this.socket;
   }

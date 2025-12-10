@@ -37,30 +37,30 @@ class CategoriasInsumoService {
     if (params?.limit) query.limit = params.limit;
     if (params?.q) query.q = params.q;
 
-    const { data } = await api.get("/categorias-insumo", { params: query });
+    const { data } = await api.get("/insumos/categorias", { params: query });
     return normalizeListResp(data);
   }
 
   async get(id: number): Promise<CategoriaInsumo> {
-    const { data } = await api.get(`/categorias-insumo/${id}`);
+    const { data } = await api.get(`/insumos/categorias/${id}`);
     return adaptCategoriaInsumo(data);
   }
 
   async create(payload: CreateCategoriaInsumoInput): Promise<{ message: string; id: number }> {
     const body = mapCreateDtoToApi(payload);
-    const { data } = await api.post("/categorias-insumo", body);
+    const { data } = await api.post("/insumos/categorias", body);
     const id = data?.id ?? data?.id_categoria_insumo_pk ?? 0;
     return { message: data?.message ?? "Categoría creada", id };
   }
 
   async update(id: number, payload: UpdateCategoriaInsumoInput): Promise<{ message: string }> {
     const body = mapUpdateDtoToApi(payload);
-    const { data } = await api.patch(`/categorias-insumo/${id}`, body);
+    const { data } = await api.patch(`/insumos/categorias/${id}`, body);
     return { message: data?.message ?? "Categoría actualizada" };
   }
 
   async remove(id: number): Promise<boolean> {
-    await api.delete(`/categorias-insumo/${id}`);
+    await api.delete(`/insumos/categorias/${id}`);
     return true;
   }
 }

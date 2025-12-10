@@ -30,11 +30,20 @@ export class Cultivo extends BaseEntity {
   @JoinColumn({ name: 'sublote_id' })
   subLote: SubLote;
 
+  @Column({ name: 'img_cultivo', nullable: true })
+  imgCultivo?: string;
+
+
+
+
   @Column({ type: 'date', nullable: true })
   fechaSiembra: Date;
 
   @Column({ type: 'date', nullable: true })
   fechaFinalizacion: Date;
+
+  @Column({ type: 'float', default: 0 })
+  costoTotal: number;
 
   @Column({ default: 'activo' })
   estado: string;

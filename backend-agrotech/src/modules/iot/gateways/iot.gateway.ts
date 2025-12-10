@@ -5,7 +5,13 @@ import {
   WebSocketServer,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef } from '@nestjs/common';
+import {
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { IotService } from '../services/iot.service';
 import {
@@ -112,5 +118,14 @@ export class IotGateway {
   // RF34: Emitir lectura en tiempo real
   emitLectura(lectura: any) {
     this.server.emit('nuevaLectura', lectura);
+  }
+
+  emitAlert(alerta: any) {
+    this.server.emit('sensorAlert', alerta);
+  }
+
+  // Emitir sensor actualizado en tiempo real
+  emitSensor(sensor: any) {
+    this.server.emit('sensorUpdated', sensor);
   }
 }

@@ -1,17 +1,16 @@
 import type { Permiso } from '../models/types/permissions.types';
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button } from "@heroui/react";
-import { Edit, Trash2, Eye } from 'lucide-react';
+import { Trash2, Edit } from 'lucide-react';
 import Surface from '../ui/Surface';
 
 interface PermissionsTableProps {
   permisos: Permiso[];
   isLoading: boolean;
-  onView?: (permiso: Permiso) => void;
-  onEdit?: (permiso: Permiso) => void;
+  onManage?: (permiso: Permiso) => void;
   onDelete?: (permiso: Permiso) => void;
 }
 
-export const PermissionsTable = ({ permisos, isLoading, onView, onEdit, onDelete }: PermissionsTableProps) => {
+export const PermissionsTable = ({ permisos, isLoading, onManage, onDelete }: PermissionsTableProps) => {
   if (isLoading) {
     return <div className="p-4 text-center">Cargando permisos...</div>;
   }
@@ -39,24 +38,13 @@ export const PermissionsTable = ({ permisos, isLoading, onView, onEdit, onDelete
               <TableCell className="text-gray-500">{permiso.descripcion || '-'}</TableCell>
               <TableCell>
                 <div className="flex justify-end gap-2">
-                  {onView && (
-                    <Button
-                      size="sm"
-                      variant="light"
-                      isIconOnly
-                      className="text-gray-600"
-                      onPress={() => onView(permiso)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {onEdit && (
+                  {onManage && (
                     <Button
                       size="sm"
                       variant="light"
                       isIconOnly
                       className="text-[#17C964]"
-                      onPress={() => onEdit(permiso)}
+                      onPress={() => onManage(permiso)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>

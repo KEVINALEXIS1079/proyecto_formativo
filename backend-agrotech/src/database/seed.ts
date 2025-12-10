@@ -2,6 +2,7 @@ import { AppDataSource } from './config/data-source';
 import { seedModules } from './seeds/modules.seed';
 import { seedRolesAndAdmin } from './seeds/roles-admin.seed';
 import { seedPermisos } from './seeds/permisos.seed';
+import { seedReportData } from './seeds/report-data.seed';
 
 async function runSeed() {
   try {
@@ -19,6 +20,9 @@ async function runSeed() {
 
     // 3. Módulos (Users depend on roles)
     await seedModules(AppDataSource);
+
+    // 4. Report Data (Dummy data for verification)
+    await seedReportData(AppDataSource);
 
     console.log('Seed completado exitosamente.');
 

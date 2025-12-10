@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button, Card, CardBody, CardHeader, Input, Select, SelectItem } from "@heroui/react";
-import { Calendar, Download } from "lucide-react";
+import { Calendar, Download, FileSpreadsheet } from "lucide-react";
 import { useCultivosList } from "../../cultivos/hooks/useCultivos";
 import { useReporteCostosRentabilidad } from "../hooks/useReportes";
 import { ReporteChart } from "../ui/widgets/ReporteChart";
+import { downloadCSV } from "@/shared/utils/csvExport";
 
 export default function ReporteCultivoPage() {
   const [cultivoId, setCultivoId] = useState<number | undefined>();
@@ -23,18 +24,50 @@ export default function ReporteCultivoPage() {
     ...cultivos.map((c) => ({ key: c.id.toString(), label: c.nombre })),
   ];
 
+  const handleExportCSV = () => {
+    if (!reporte) return;
+
+    const csvData = [{
+      cultivo: cultivos.find(c => c.id === cultivoId)?.nombre || 'N/A',
+      fecha_desde: fechaDesde || 'N/A',
+      fecha_hasta: fechaHasta || 'N/A',
+      costo_insumos: reporte.costo_insumos,
+      costo_mano_obra: reporte.costo_mano_obra,
+      costo_maquinaria: reporte.costo_maquinaria,
+      costo_total: reporte.costo_insumos + reporte.costo_mano_obra + reporte.costo_maquinaria,
+      ingresos_ventas: reporte.ingresos_ventas,
+      utilidad: reporte.utilidad,
+      margen_porcentaje: reporte.ingresos_ventas > 0
+        ? ((reporte.utilidad / reporte.ingresos_ventas) * 100).toFixed(2)
+        : '0'
+    }];
+
+    downloadCSV(csvData, `reporte-cultivo-${cultivoId || 'todos'}`);
+  };
+
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">Reporte de Costos y Rentabilidad por Cultivo</h2>
-        <Button
-          color="primary"
-          startContent={<Download className="h-4 w-4" />}
-          onPress={() => window.print()}
-        >
-          Exportar
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            color="success"
+            variant="flat"
+            startContent={<FileSpreadsheet className="h-4 w-4" />}
+            onPress={handleExportCSV}
+            isDisabled={!reporte}
+          >
+            Exportar CSV
+          </Button>
+          <Button
+            color="primary"
+            startContent={<Download className="h-4 w-4" />}
+            onPress={() => window.print()}
+          >
+            Imprimir
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}

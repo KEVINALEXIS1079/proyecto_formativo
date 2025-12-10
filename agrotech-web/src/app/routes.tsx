@@ -8,34 +8,39 @@ import { Login, Register, Recover, Code, ChangePassword } from "@/modules/auth";
 import ProtectedLayout from "@/app/layout/ProtectedLayout";
 
 // Páginas privadas
-import Home from "@/modules/landing/pages/HomePage";
+import Home from "@/modules/home/pages/HomePage";
 
-import { ActividadesListPage, ActividadEditPage, ActividadDetailPage } from "@/modules/actividades/pages";
-import ActividadCreatePage from "@/modules/actividades/pages/ActividadCreatePage";
+import { ListaPage, CrearPage, EditarPage } from "@/modules/actividad/pages";
 
 import { UsersPage } from "@/modules/users/pages/UsersPage";
+import RolesPage from "@/modules/users/pages/RolesPage";
 
-import { CultivosListPage, CultivoCreatePage, CultivoEditPage, CultivoDetailPage } from "@/modules/cultivos/pages/indexPageCultivos";
+import {
+  CultivosListPage,
+  CultivoCreatePage,
+  CultivoEditPage,
+  CultivoDetailPage,
+} from "@/modules/cultivos/pages/indexPageCultivos";
 
-import { EpaListPage, EpaCreatePage, EpaEditPage, EpaDetailPage, TipoEpaPage, TipoCultivoEpaPage } from "@/modules/fitosanitario/pages";
+// COMERCIAL (Antes Finanzas)
+import ComercialPage from "@/modules/comercial/pages/ComercialPage";
 
-import { FinanzasPage, ListaPageFinanzas, CrearPageFinanzas, EditarPageFinanzas } from "@/modules/finanzas/pages/indexPageFinanzas";
-import VentasListPage from "@/modules/finanzas/pages/VentasListPage";
-import VentaCreatePage from "@/modules/finanzas/pages/VentaCreatePage";
-import VentaDetailPage from "@/modules/finanzas/pages/VentaDetailPage";
+import {
+  PageReportes,
+  ListaPageReporte,
+  CrearPageReporte,
+  EditarPageReporte,
+  ReporteCultivoPage,
+  ReporteLotePage,
+} from "@/modules/reportes/pages/indexPageReportes";
 
-import { PageReportes, ListaPageReporte, CrearPageReporte, EditarPageReporte, ReporteCultivoPage, ReporteLotePage } from "@/modules/reportes/pages/indexPageReportes";
-
-import {SensoresLivePage} from "@/modules/iot/Sensor/pages/indexPageIot";
-import  TipoSensorPage from "@/modules/iot/TipoSensor/pages/indexPageTipoSensor";
-
-import  CrearPageTipoCultivo  from "@/modules/cultivo/tipoCultivo/pages/crearPage";
-
-import {CrearPageSublote, ListaPageSublote, EditarPageSublote} from "@/modules/cultivo/sublote/pages/IndexPageSublote";
-
-import {CrearPageLote, ListaPageLote, EditarPageLote} from "@/modules/cultivo/lote/pages/indexPageLote";
+import IoTPage from "@/modules/iot/pages/IoTPage";
+import { IoTDashboard } from "@/modules/iot/pages/IoTDashboard";
+import { LotsAnalyticsPage } from "@/modules/iot/pages/LotsAnalyticsPage";
 
 import { ProfilePage } from "@/modules/profile/pages/ProfilePage";
+
+import { EpaListPage, EpaCreatePage, EpaEditPage, EpaDetailPage, TipoEpaPage, TipoCultivoEpaPage } from "@/modules/fitosanitario/pages";
 
 import InventarioPage from "@/modules/inventario/pages/InventarioPage";
 import CrearInsumoPage from "@/modules/inventario/pages/CrearInsumoPage";
@@ -57,7 +62,6 @@ import {
   RequireRecoveryCode,
 } from "@/app/guards";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
-
 
 export default function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -136,26 +140,17 @@ export default function AppRoutes() {
         <Route path="/home" element={<Home />} />
 
         {/* Actividades */}
-        <Route path="/actividades" element={<ActividadesListPage />} />
-        <Route path="/actividades/crear" element={<ActividadCreatePage />} />
-        <Route path="/actividades/:id" element={<ActividadDetailPage />} />
-        <Route path="/actividades/:id/editar" element={<ActividadEditPage />} />
+        <Route path="/actividades" element={<ListaPage />} />
+        <Route path="/actividades/crear" element={<CrearPage />} />
+        {/* <Route path="/actividades/:id" element={<ActividadDetailPage />} /> */}
+        <Route path="/actividades/:id/editar" element={<EditarPage />} />
 
         {/* Cultivos */}
         <Route path="/cultivos/crear" element={<CultivoCreatePage />} />
+        <Route path="/cultivos" element={<CultivosListPage />} />
         <Route path="/cultivos/editar/:id" element={<CultivoEditPage />} />
         <Route path="/cultivos/detalle/:id" element={<CultivoDetailPage />} />
-        <Route path="/tipo-cultivo/crear" element={<CrearPageTipoCultivo />} />
-        
-        {/* Lotes */}
-        <Route path="/lotes/crear" element={<CrearPageLote />} />
-        <Route path="/lotes/listar" element={<ListaPageLote />} />
-        <Route path="/lotes/editar/:id_lote" element={< EditarPageLote/>} />
-
-        {/* Sublotes */}
-        <Route path="/sublotes/crear" element={<CrearPageSublote />} />
-        <Route path="/sublotes/listar" element={< ListaPageSublote/>} />
-        <Route path="/sublotes/editar/:id_sublote" element={< EditarPageSublote/>} />
+        {/* <Route path="/tipo-cultivo/crear" element={<CrearPageTipoCultivo />} /> */}
 
         {/* Fitosanitario */}
         <Route path="/fitosanitario" element={<EpaListPage />} />
@@ -163,16 +158,16 @@ export default function AppRoutes() {
         <Route path="/fitosanitario/:id" element={<EpaDetailPage />} />
         <Route path="/fitosanitario/:id/editar" element={<EpaEditPage />} />
         <Route path="/fitosanitario/tipos" element={<TipoEpaPage />} />
-        <Route path="/fitosanitario/tipo-cultivos" element={<TipoCultivoEpaPage />} />
+        <Route
+          path="/fitosanitario/tipo-cultivos"
+          element={<TipoCultivoEpaPage />}
+        />
 
-        {/* Finanzas */}
-        <Route path="/finanzas" element={<FinanzasPage />} />
-        <Route path="/lista-finanzas" element={<ListaPageFinanzas />} />
-        <Route path="/crear-finanzas" element={<CrearPageFinanzas />} />
-        <Route path="/editar-finanzas" element={<EditarPageFinanzas />} />
-        <Route path="/finanzas/ventas" element={<VentasListPage />} />
-        <Route path="/finanzas/ventas/crear" element={<VentaCreatePage />} />
-        <Route path="/finanzas/ventas/:id" element={<VentaDetailPage />} />
+        {/* Comercial (Antes Finanzas) - Unified Module */}
+        <Route path="/comercial" element={<ComercialPage />} />
+        {/* Redirect old routes */}
+        <Route path="/finanzas/*" element={<Navigate to="/comercial" replace />} />
+        <Route path="/lotes/*" element={<Navigate to="/comercial" replace />} />
 
         {/* Inventario */}
         <Route path="/inventario" element={<InventarioPage />} />
@@ -182,8 +177,14 @@ export default function AppRoutes() {
         <Route path="/inventario/categorias" element={<CategoriasPage />} />
         <Route path="/inventario/proveedores" element={<ProveedoresPage />} />
         <Route path="/inventario/almacenes" element={<AlmacenesPage />} />
-        <Route path="/inventario/insumos-eliminados" element={<InsumosEliminadosPage />} />
-        <Route path="/inventario/historial-movimientos" element={<HistorialMovimientosPage />} />
+        <Route
+          path="/inventario/insumos-eliminados"
+          element={<InsumosEliminadosPage />}
+        />
+        <Route
+          path="/inventario/historial-movimientos"
+          element={<HistorialMovimientosPage />}
+        />
 
         {/* Reportes */}
         <Route path="/reportes" element={<PageReportes />} />
@@ -195,17 +196,19 @@ export default function AppRoutes() {
 
         {/* Usuarios */}
         <Route path="/usuarios" element={<UsersPage />} />
+        <Route path="/usuarios/roles" element={<RolesPage />} />
 
         {/* Perfil */}
         <Route path="/perfil" element={<ProfilePage />} />
 
         {/* IoT */}
-        <Route path="/SensoresLivePage" element={<SensoresLivePage />} />
-        <Route path="/TipoSensorPage" element={<TipoSensorPage />} />
+        <Route path="/iot" element={<IoTPage />}>
+          <Route index element={<IoTDashboard />} />
+          <Route path="analytics" element={<LotsAnalyticsPage />} />
+        </Route>
 
         {/* Geo */}
         <Route path="/geo" element={<GeoPage />} />
-
       </Route>
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/start" replace />} />

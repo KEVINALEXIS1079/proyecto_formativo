@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsNotEmpty, IsNumber, IsDateString, ValidateIf } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateCultivoDto {
   @IsNotEmpty({ message: 'El nombre del cultivo es requerido' })
@@ -15,10 +16,12 @@ export class CreateCultivoDto {
 
   // XOR: loteId O subLoteId
   @ValidateIf((o) => !o.subLoteId)
+  @Type(() => Number)
   @IsNumber({}, { message: 'El ID del lote debe ser un número' })
   loteId?: number;
 
   @ValidateIf((o) => !o.loteId)
+  @Type(() => Number)
   @IsNumber({}, { message: 'El ID del sublote debe ser un número' })
   subLoteId?: number;
 
@@ -33,4 +36,8 @@ export class CreateCultivoDto {
   @IsOptional()
   @IsString({ message: 'El estado debe ser un texto' })
   estado?: string;
+
+  @IsOptional()
+  @IsString({ message: 'La imagen debe ser una URL' })
+  imgCultivo?: string;
 }

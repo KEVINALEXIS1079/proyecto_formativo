@@ -37,6 +37,7 @@ function normalizeListResp(data: any): MovimientoInventario[] {
     (Array.isArray(data?.data) && data.data) ||
     (Array.isArray(data?.movimientos) && data.movimientos) ||
     [];
+  console.log('Raw movimientos data before mapping:', raw);
   return (raw as any[]).map(adaptMovimiento);
 }
 
@@ -46,44 +47,50 @@ class MovimientosService {
     limit?: number;
     q?: string;
     idInsumo?: number;
+    tipoMovimiento?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
   }): Promise<MovimientoInventario[]> {
     const query: Record<string, any> = {};
     if (params?.page) query.page = params.page;
     if (params?.limit) query.limit = params.limit;
     if (params?.q) query.q = params.q;
     if (params?.idInsumo) query.insumoId = params.idInsumo;
+    if (params?.tipoMovimiento) query.tipoMovimiento = params.tipoMovimiento;
+    if (params?.fechaDesde) query.fechaDesde = params.fechaDesde;
+    if (params?.fechaHasta) query.fechaHasta = params.fechaHasta;
 
-    const { data } = await api.get("/movimientos-inventario", { params: query });
+    const { data } = await api.get("/insumos/movimientos", { params: query });
     return normalizeListResp(data);
   }
 
   async get(id: number): Promise<MovimientoInventario> {
-    const { data } = await api.get(`/movimientos-inventario/${id}`);
+    const { data } = await api.get(`/insumos/movimientos/${id}`);
     return adaptMovimiento(data);
   }
 
   async create(payload: CreateMovimientoInput): Promise<{ message: string; id: number }> {
     const body = mapCreateDtoToApi(payload);
-    const { data } = await api.post("/movimientos-inventario", body);
+    const { data } = await api.post("/insumos/movimientos", body);
     const id = data?.id ?? data?.id_movimiento_pk ?? 0;
     return { message: data?.message ?? "Movimiento creado", id };
   }
 
   async update(id: number, payload: UpdateMovimientoInput): Promise<{ message: string }> {
     const body = mapUpdateDtoToApi(payload);
-    const { data } = await api.patch(`/movimientos-inventario/${id}`, body);
+    const { data } = await api.patch(`/insumos/movimientos/${id}`, body);
     return { message: data?.message ?? "Movimiento actualizado" };
   }
 
   async remove(id: number): Promise<boolean> {
-    await api.delete(`/movimientos-inventario/${id}`);
+    await api.delete(`/insumos/movimientos/${id}`);
     return true;
   }
 }
 
 export const movimientosService = new MovimientosService();
 
-export const listMovimientos = (params?: { page?: number; limit?: number; q?: string; idInsumo?: number }) =>
+export const listMovimientos = (params?: { page?: number; limit?: number; q?: string; idInsumo?: number; tipoMovimiento?: string; fechaDesde?: string; fechaHasta?: string }) =>
   movimientosService.list(params);
 export const getMovimiento = (id: number) => movimientosService.get(id);
 export const createMovimiento = (payload: CreateMovimientoInput) => movimientosService.create(payload);

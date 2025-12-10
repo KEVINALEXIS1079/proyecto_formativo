@@ -13,11 +13,18 @@ import {
   Req,
   UnauthorizedException,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
+import * as fs from 'fs';
 import { InventoryService } from '../services/inventory.service';
+import { MovimientoInsumoService } from '../services/movimiento-insumo.service';
+import { DepreciationService } from '../services/depreciation.service';
 import { CreateInsumoDto } from '../dtos/create-insumo.dto';
 import { UpdateInsumoDto } from '../dtos/update-insumo.dto';
+import { CreateActivoFijoDto } from '../dtos/create-activo-fijo.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -25,7 +32,11 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 @Controller('insumos')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class InventoryController {
-  constructor(private readonly inventoryService: InventoryService) {}
+  constructor(
+    private readonly inventoryService: InventoryService,
+    private readonly movimientoInsumoService: MovimientoInsumoService,
+    private readonly depreciationService: DepreciationService, // Injection
+  ) { }
 
   private extractUserId(request: Request | any): number {
     const userId = request?.user?.id ?? request?.user?.userId;
@@ -35,6 +46,97 @@ export class InventoryController {
       );
     }
     return userId;
+  }
+
+  // ==================== ACTIVOS FIJOS ====================
+
+  @Get('activos-fijos')
+  @RequirePermissions('inventario.ver')
+  async findAllActivosFijos() {
+    // Filtramos insumos que sean NO_CONSUMIBLE
+    return this.inventoryService.findAllInsumos({ tipoInsumo: 'NO_CONSUMIBLE' });
+  }
+
+  @Post('activos-fijos')
+  @RequirePermissions('inventario.crear')
+  @UseInterceptors(FileInterceptor('imagen'))
+  @UsePipes(new ValidationPipe())
+  async createActivoFijo(
+    @Req() req: Request,
+    @Body() dto: CreateActivoFijoDto,
+    @UploadedFile() file?: Express.Multer.File
+  ) {
+    try {
+      const userId = this.extractUserId(req);
+
+      // Convertir DTO a lo que espera createInsumo, marcando como NO_CONSUMIBLE
+      const insumoData: any = {
+        ...dto,
+        tipoInsumo: 'NO_CONSUMIBLE',
+        presentacionTipo: 'UNIDAD', // Valores por defecto para campos obligatorios de Insumo
+        presentacionCantidad: 1,
+        presentacionUnidad: 'UND',
+        unidadUso: 'HORA',
+        tipoMateria: 'solido', // Debe ser 'solido' o 'liquido' según el enum
+        factorConversionUso: 1,
+        stockPresentacion: 1,
+        stockUso: 1,
+        precioUnitarioPresentacion: dto.costoAdquisicion,
+        precioUnitarioUso: 0, // Se calcula con depreciación
+        valorInventario: dto.costoAdquisicion,
+        estado: 'DISPONIBLE'
+      };
+
+      // Crear el insumo primero
+      const createdInsumo = await this.inventoryService.createInsumo(insumoData, userId);
+
+      // Si hay archivo, subirlo
+      if (file) {
+        const fs = require('fs').promises;
+        const path = require('path');
+
+        // Crear directorio si no existe
+        const uploadDir = 'uploads/insumos';
+        await fs.mkdir(uploadDir, { recursive: true });
+
+        // Generar nombre único para el archivo
+        const filename = `${Date.now()}-${file.originalname}`;
+        const filePath = path.join(uploadDir, filename);
+
+        // Guardar el archivo
+        await fs.writeFile(filePath, file.buffer);
+
+        // Actualizar el insumo con la ruta de la imagen
+        await this.inventoryService.updateInsumo(createdInsumo.id, {
+          fotoUrl: filePath.replace(/\\/g, '/')
+        });
+
+        // Asignar url al objeto retornado
+        createdInsumo.fotoUrl = filePath.replace(/\\/g, '/');
+      }
+
+      return createdInsumo;
+    } catch (error) {
+      console.error('Error creating activo fijo:', error);
+      throw error;
+    }
+  }
+
+  @Post('activos-fijos/:id/mantenimiento')
+  @RequirePermissions('inventario.editar')
+  async registrarMantenimiento(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { costo?: number; descripcion?: string }
+  ) {
+    return this.inventoryService.registrarMantenimiento(id, data);
+  }
+
+  @Patch('activos-fijos/:id/finalizar-mantenimiento')
+  @RequirePermissions('inventario.editar')
+  async finalizarMantenimiento(
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    return this.inventoryService.finalizarMantenimiento(id);
   }
 
   // ==================== HTTP ENDPOINTS ====================
@@ -49,8 +151,25 @@ export class InventoryController {
 
   @Get()
   @RequirePermissions('inventario.ver')
-  async findAllInsumosHttp() {
-    return this.findAllInsumos();
+  async findAllInsumosHttp(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+    @Query('categoriaId') categoriaId?: string,
+    @Query('proveedorId') proveedorId?: string,
+    @Query('almacenId') almacenId?: string,
+    @Query('tipoInsumo') tipoInsumo?: string,
+  ) {
+    const filters: any = {};
+    if (page) filters.page = parseInt(page);
+    if (limit) filters.limit = parseInt(limit);
+    if (q) filters.q = q;
+    if (tipoInsumo) filters.tipoInsumo = tipoInsumo;
+    if (categoriaId) filters.categoriaId = parseInt(categoriaId);
+    if (proveedorId) filters.proveedorId = parseInt(proveedorId);
+    if (almacenId) filters.almacenId = parseInt(almacenId);
+
+    return this.findAllInsumos(filters);
   }
 
   // ==================== MOVIMIENTOS ====================
@@ -65,9 +184,58 @@ export class InventoryController {
   @Get('movimientos')
   @RequirePermissions('inventario.ver')
   async findMovimientosByInsumo(
-    @Query('insumoId', ParseIntPipe) insumoId: number,
+    @Query('insumoId') insumoId?: string,
+    @Query('tipoMovimiento') tipoMovimiento?: string,
+    @Query('fechaDesde') fechaDesde?: string,
+    @Query('fechaHasta') fechaHasta?: string,
   ) {
-    return this.inventoryService.findMovimientosByInsumo(insumoId);
+    console.log('DEBUG: findMovimientosByInsumo called with params:', { insumoId, tipoMovimiento, fechaDesde, fechaHasta });
+    const filters: any = {};
+
+    if (insumoId) {
+      const parsedId = parseInt(insumoId);
+      if (isNaN(parsedId)) {
+        console.error('DEBUG: Invalid insumoId, not a number:', insumoId);
+        throw new Error('insumoId must be a valid number');
+      }
+      filters.insumoId = parsedId;
+    }
+    if (tipoMovimiento) filters.tipo = tipoMovimiento;
+    if (fechaDesde) filters.fechaDesde = new Date(fechaDesde);
+    if (fechaHasta) filters.fechaHasta = new Date(fechaHasta);
+
+    console.log('DEBUG: Filters applied:', filters);
+    const result = await this.inventoryService.findAllMovimientos(filters);
+    console.log('DEBUG: Movimientos result:', result);
+    return result;
+  }
+
+  @Get('movimientos/:id')
+  @RequirePermissions('inventario.ver')
+  async findOneMovimiento(@Param('id', ParseIntPipe) id: number) {
+    return this.movimientoInsumoService.findOne(id);
+  }
+
+  @Get(':id/has-movimientos')
+  @RequirePermissions('inventario.ver')
+  async hasMovimientosByInsumo(@Param('id', ParseIntPipe) id: number) {
+    return this.inventoryService.hasMovimientosByInsumo(id);
+  }
+
+  @Delete('movimientos/:id')
+  @RequirePermissions('inventario.eliminar')
+  async deleteMovimiento(@Param('id', ParseIntPipe) id: number) {
+    return this.inventoryService.deleteMovimiento(id);
+  }
+
+  @Patch('movimientos/:id')
+  @RequirePermissions('inventario.editar')
+  @UsePipes(new ValidationPipe())
+  async updateMovimiento(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: any,
+  ) {
+    return this.inventoryService.updateMovimiento(id, data);
   }
 
   // ==================== CATÁLOGOS ====================
@@ -75,19 +243,40 @@ export class InventoryController {
   @Get('almacenes')
   @RequirePermissions('inventario.ver')
   async findAllAlmacenes() {
+    console.log('DEBUG: Recibida request GET /insumos/almacenes');
     return this.inventoryService.findAllAlmacenes();
+  }
+
+  @Get('almacenes/:id')
+  @RequirePermissions('inventario.ver')
+  async findOneAlmacen(@Param('id', ParseIntPipe) id: number) {
+    return this.inventoryService.findOneAlmacen(id);
   }
 
   @Post('almacenes')
   @RequirePermissions('inventario.crear')
-  async createAlmacen(@Body() data: { nombre: string; ubicacion?: string }) {
-    return this.inventoryService.createAlmacen(data);
+  async createAlmacen(@Body() data: { nombre: string; descripcion?: string }) {
+    console.log('DEBUG: Datos recibidos en createAlmacen:', data);
+    // Mapear descripcion correctamente
+    const mappedData = {
+      nombre: data.nombre,
+      descripcion: data.descripcion,
+    };
+
+    return this.inventoryService.createAlmacen(mappedData);
   }
 
   @Get('proveedores')
   @RequirePermissions('inventario.ver')
   async findAllProveedores() {
+    console.log('DEBUG: Recibida request GET /insumos/proveedores');
     return this.inventoryService.findAllProveedores();
+  }
+
+  @Get('proveedores/:id')
+  @RequirePermissions('inventario.ver')
+  async findOneProveedor(@Param('id', ParseIntPipe) id: number) {
+    return this.inventoryService.findOneProveedor(id);
   }
 
   @Post('proveedores')
@@ -95,7 +284,42 @@ export class InventoryController {
   async createProveedor(
     @Body() data: { nombre: string; contacto?: string; telefono?: string },
   ) {
+    console.log('DEBUG: Datos recibidos en createProveedor:', data);
     return this.inventoryService.createProveedor(data);
+  }
+
+  @Patch('proveedores/:id')
+  @RequirePermissions('inventario.editar')
+  async updateProveedor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { nombre?: string; contacto?: string; telefono?: string },
+  ) {
+    console.log('DEBUG: Actualizando proveedor', id, 'con datos:', data);
+    return this.inventoryService.updateProveedor(id, data);
+  }
+
+  @Delete('proveedores/:id')
+  @RequirePermissions('inventario.eliminar')
+  async removeProveedor(@Param('id', ParseIntPipe) id: number) {
+    console.log('DEBUG: Eliminando proveedor', id);
+    return this.inventoryService.removeProveedor(id);
+  }
+
+  @Patch('almacenes/:id')
+  @RequirePermissions('inventario.editar')
+  async updateAlmacen(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { nombre?: string; descripcion?: string },
+  ) {
+    console.log('DEBUG: Actualizando almacén', id, 'con datos:', data);
+    return this.inventoryService.updateAlmacen(id, data);
+  }
+
+  @Delete('almacenes/:id')
+  @RequirePermissions('inventario.eliminar')
+  async removeAlmacen(@Param('id', ParseIntPipe) id: number) {
+    console.log('DEBUG: Eliminando almacén', id);
+    return this.inventoryService.removeAlmacen(id);
   }
 
   @Get('categorias')
@@ -107,9 +331,40 @@ export class InventoryController {
   @Post('categorias')
   @RequirePermissions('inventario.crear')
   async createCategoria(
-    @Body() data: { nombre: string; descripcion?: string },
+    @Body() data: any,
   ) {
-    return this.inventoryService.createCategoria(data);
+    console.log('Datos recibidos en controlador createCategoria:', data);
+
+    // Mapear nombre_categoria_insumo a nombre para compatibilidad
+    const mappedData = {
+      nombre: data.nombre_categoria_insumo || data.nombre,
+      descripcion: data.descripcion,
+    };
+
+    return this.inventoryService.createCategoria(mappedData);
+  }
+
+  @Get('categorias/:id')
+  @RequirePermissions('inventario.ver')
+  async findOneCategoria(@Param('id', ParseIntPipe) id: number) {
+    return this.inventoryService.findOneCategoria(id);
+  }
+
+  @Patch('categorias/:id')
+  @RequirePermissions('inventario.editar')
+  async updateCategoria(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { nombre?: string; descripcion?: string },
+  ) {
+    console.log('DEBUG: Actualizando categoría', id, 'con datos:', data);
+    return this.inventoryService.updateCategoria(id, data);
+  }
+
+  @Delete('categorias/:id')
+  @RequirePermissions('inventario.eliminar')
+  async removeCategoria(@Param('id', ParseIntPipe) id: number) {
+    console.log('DEBUG: Eliminando categoría', id);
+    return this.inventoryService.removeCategoria(id);
   }
 
   // ==================== INSUMOS BY ID (must be after specific routes) ====================
@@ -126,14 +381,43 @@ export class InventoryController {
   async updateInsumoHttp(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateInsumoDto,
+    @Req() req: Request,
   ) {
-    return this.updateInsumo(id, dto);
+    const userId = this.extractUserId(req);
+    return this.updateInsumo(id, dto, userId);
   }
 
   @Delete(':id')
   @RequirePermissions('inventario.eliminar')
   async removeInsumoHttp(@Param('id', ParseIntPipe) id: number) {
     return this.removeInsumo(id);
+  }
+
+  @Post(':id/upload-image')
+  @RequirePermissions('inventario.editar')
+  @UseInterceptors(FileInterceptor('image'))
+  async uploadImage(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    // Validar que el insumo existe
+    await this.findInsumoById(id);
+
+    // Generar nombre único para el archivo
+    const filename = `${Date.now()}-${file.originalname}`;
+    const filePath = `uploads/insumos/${filename}`;
+
+    // Guardar el archivo
+    await fs.promises.writeFile(filePath, file.buffer);
+
+    // Generar URL relativa
+    const fotoUrl = `/uploads/insumos/${filename}`;
+
+    // Actualizar el insumo en la base de datos
+    await this.updateInsumo(id, { fotoUrl });
+
+    // Retornar el insumo actualizado
+    return this.findInsumoById(id);
   }
 
   // ==================== INSUMOS ====================
@@ -160,8 +444,8 @@ export class InventoryController {
   // Internal method for WebSocket: handles updating an insumo by calling the service
   // Flow: Gateway calls this method -> calls inventoryService.updateInsumo -> returns updated insumo
   @UsePipes(new ValidationPipe())
-  async updateInsumo(id: number, updateInsumoDto: UpdateInsumoDto) {
-    return this.inventoryService.updateInsumo(id, updateInsumoDto);
+  async updateInsumo(id: number, updateInsumoDto: UpdateInsumoDto, usuarioId?: number) {
+    return this.inventoryService.updateInsumo(id, updateInsumoDto, usuarioId);
   }
 
   // Internal method for WebSocket: handles removing an insumo by calling the service

@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useCreateInsumo } from "../hooks/useCreateInsumo";
 import { useUploadInsumoImage } from "../hooks/useUploadInsumoImage";
 import { ArrowLeft } from "lucide-react";
-import InsumoForm from "../ui/widgets/InsumoForm";
+import { toast } from "react-hot-toast";
+import { InsumoForm } from "../widgets/InsumoForm";
+import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
 import type { CreateInsumoInput } from "../model/types";
 
 export default function CrearInsumoPage() {
@@ -13,23 +15,30 @@ export default function CrearInsumoPage() {
   const createMutation = useCreateInsumo();
   const uploadMutation = useUploadInsumoImage();
 
-  const handleSubmit = (data: CreateInsumoInput | any) => {
-    createMutation.mutate(data, {
-      onSuccess: (result) => {
-        const insumoId = result.id;
-        if (selectedFile) {
-          uploadMutation.mutate(
-            { id: insumoId, file: selectedFile },
-            {
-              onSuccess: () => {
-                navigate(`/inventario/${insumoId}`);
-              },
-            }
-          );
-        } else {
-          navigate(`/inventario/${insumoId}`);
-        }
-      },
+  const handleSubmit = async (data: CreateInsumoInput | any): Promise<{id?: number}> => {
+    return new Promise((resolve, reject) => {
+      createMutation.mutate(data, {
+        onSuccess: (result) => {
+          toast.success("Insumo creado correctamente");
+          const insumoId = result.id;
+          if (selectedFile) {
+            uploadMutation.mutate(
+              { id: insumoId, file: selectedFile },
+              {
+                onSuccess: () => {
+                  navigate(`/inventario/${insumoId}`);
+                  resolve({ id: insumoId });
+                },
+                onError: reject,
+              }
+            );
+          } else {
+            navigate(`/inventario/${insumoId}`);
+            resolve({ id: insumoId });
+          }
+        },
+        onError: reject,
+      });
     });
   };
 
@@ -53,13 +62,19 @@ export default function CrearInsumoPage() {
         </button>
         <h1 className="text-3xl font-bold">Crear Insumo</h1>
       </div>
-      <InsumoForm
-        initialValues={initialValues}
-        onSubmit={handleSubmit}
-        onFileChange={handleFileChange}
-        isLoading={createMutation.isPending || uploadMutation.isPending}
-        submitLabel="Crear"
-      />
+      <Modal isOpen={true} size="4xl" onOpenChange={() => navigate(-1)}>
+        <ModalContent>
+          <ModalHeader>Nuevo Insumo</ModalHeader>
+          <ModalBody>
+            <InsumoForm
+              insumo={undefined}
+              onClose={() => navigate(-1)}
+              onSuccess={handleSubmit}
+              isEdit={false}
+            />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -1,18 +1,42 @@
-import type { ReporteCostosRentabilidad, ReporteFilters } from "../model/types";
-import { mapReporteFromApi } from "../model/mappers";
+import type { ReporteCostosRentabilidad, ReporteFilters, ReporteCompleto } from "../model/types";
 import { api } from "@/shared/api/client";
 
 class ReportesService {
   async getCostosRentabilidad(filters?: ReporteFilters): Promise<ReporteCostosRentabilidad> {
-    const params = new URLSearchParams();
-    if (filters?.id_cultivo) params.append('id_cultivo', filters.id_cultivo.toString());
-    if (filters?.id_lote) params.append('id_lote', filters.id_lote.toString());
-    if (filters?.fecha_desde) params.append('fecha_desde', filters.fecha_desde);
-    if (filters?.fecha_hasta) params.append('fecha_hasta', filters.fecha_hasta);
+    // Mock data with realistic values
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    const query = params.toString() ? `?${params.toString()}` : '';
-    const { data } = await api.get(`/reportes/costos-rentabilidad${query}`);
-    return mapReporteFromApi(data);
+    const mockData: ReporteCostosRentabilidad = {
+      costo_insumos: 2950000,
+      costo_mano_obra: 2400000,
+      costo_maquinaria: 1200000,
+      ingresos_ventas: 15700000,
+      utilidad: 0,
+    };
+
+    const costoTotal = mockData.costo_insumos + mockData.costo_mano_obra + mockData.costo_maquinaria;
+    mockData.utilidad = mockData.ingresos_ventas - costoTotal;
+
+    return mockData;
+  }
+
+  async getReporteCompleto(filters?: ReporteFilters): Promise<ReporteCompleto> {
+    // Construir parámetros de query
+    const params = new URLSearchParams();
+    if (filters?.fechaDesde) params.append('fechaDesde', filters.fechaDesde);
+    if (filters?.fechaHasta) params.append('fechaHasta', filters.fechaHasta);
+
+    // cultivoId es requerido
+    if (!filters?.cultivoId) {
+      throw new Error('cultivoId es requerido para generar el reporte');
+    }
+
+    // Llamar al endpoint real del backend
+    const response = await api.get(
+      `/reports/crops/${filters.cultivoId}/complete?${params.toString()}`
+    );
+
+    return response.data;
   }
 }
 

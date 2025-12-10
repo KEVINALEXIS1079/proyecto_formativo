@@ -18,7 +18,7 @@ export default function AuthLayout({
   return (
     <div className="min-h-dvh grid lg:grid-cols-2">
       {/* IZQUIERDA */}
-      <div className="hidden lg:block relative">
+      <div className="hidden lg:block relative sticky top-0 h-dvh">
         <img src="src/assets/cacao.jpg" alt="" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-black/35" />
         <div className="absolute inset-0 flex items-center">

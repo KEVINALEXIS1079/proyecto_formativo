@@ -288,6 +288,18 @@ export async function seedPermisos(dataSource: DataSource) {
       clave: 'produccion.crear',
       descripcion: 'Crear registros de producción',
     },
+    {
+      modulo: 'produccion',
+      accion: 'editar',
+      clave: 'produccion.editar',
+      descripcion: 'Editar registros de producción',
+    },
+    {
+      modulo: 'produccion',
+      accion: 'eliminar',
+      clave: 'produccion.eliminar',
+      descripcion: 'Eliminar registros de producción',
+    },
 
     // Wiki
     {

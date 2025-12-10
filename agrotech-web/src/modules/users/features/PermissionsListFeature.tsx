@@ -1,9 +1,9 @@
-import { useState, forwardRef, useImperativeHandle } from 'react';
-import { Input, Select, SelectItem } from "@heroui/react";
+import { useState, forwardRef, useImperativeHandle, useRef } from 'react';
+import { Input, Select, SelectItem, Button } from "@heroui/react";
 import { Search } from 'lucide-react';
 import { usePermisos, useDeletePermiso } from '../hooks/usePermissions';
 import { PermissionsTable } from '../widgets/PermissionsTable';
-import { PermissionForm } from '../widgets/PermissionForm';
+import { PermissionForm, type PermissionFormRef } from '../widgets/PermissionForm';
 import { Modal } from '@/shared/components/ui/Modal';
 import { DeleteModal } from '@/shared/components/ui/DeleteModal';
 import Surface from '../ui/Surface';
@@ -20,10 +20,12 @@ export const PermissionsListFeature = forwardRef<PermissionsListRef>((_, ref) =>
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedModule, setSelectedModule] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedPermiso, setSelectedPermiso] = useState<Permiso | undefined>(undefined);
   const [permisoToDelete, setPermisoToDelete] = useState<Permiso | undefined>(undefined);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const permissionFormRef = useRef<PermissionFormRef>(null);
 
   useImperativeHandle(ref, () => ({
     openCreateModal: () => {
@@ -37,24 +39,20 @@ export const PermissionsListFeature = forwardRef<PermissionsListRef>((_, ref) =>
 
   const filteredPermisos = permisos.filter((permiso) => {
     const term = searchTerm.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       permiso.modulo.toLowerCase().includes(term) ||
       permiso.accion.toLowerCase().includes(term) ||
       permiso.clave.toLowerCase().includes(term);
-    
+
     const matchesModule = selectedModule ? permiso.modulo === selectedModule : true;
 
     return matchesSearch && matchesModule;
   });
 
-  const handleEdit = (permiso: Permiso) => {
+  const handleManage = (permiso: Permiso) => {
     setSelectedPermiso(permiso);
+    setIsEditMode(false); // Start in view mode
     setIsModalOpen(true);
-  };
-
-  const handleView = (permiso: Permiso) => {
-    setSelectedPermiso(permiso);
-    setIsViewModalOpen(true);
   };
 
   const handleDeleteClick = (permiso: Permiso) => {
@@ -130,36 +128,58 @@ export const PermissionsListFeature = forwardRef<PermissionsListRef>((_, ref) =>
       <PermissionsTable
         permisos={filteredPermisos}
         isLoading={isLoading}
-        onView={handleView}
-        onEdit={handleEdit}
+        onManage={handleManage}
         onDelete={handleDeleteClick}
       />
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={selectedPermiso ? 'Editar Permiso' : 'Nuevo Permiso'}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedPermiso(undefined);
+          setIsEditMode(false);
+        }}
+        title={selectedPermiso ? (isEditMode ? 'Editar Permiso' : 'Gestionar Permiso') : 'Nuevo Permiso'}
+        footer={selectedPermiso ? (
+          !isEditMode ? (
+            <>
+              <Button variant="flat" onPress={() => setIsModalOpen(false)}>
+                Cerrar
+              </Button>
+              <Button color="success" className="text-black font-semibold" onPress={() => setIsEditMode(true)}>
+                Editar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="light" onPress={() => setIsEditMode(false)}>
+                Cancelar
+              </Button>
+              <Button
+                color="success"
+                className="text-black font-semibold"
+                onPress={async () => {
+                  try {
+                    await permissionFormRef.current?.save();
+                    setIsEditMode(false);
+                  } catch (error) {
+                    console.error('Error saving:', error);
+                  }
+                }}
+              >
+                Guardar Cambios
+              </Button>
+            </>
+          )
+        ) : undefined}
       >
         <PermissionForm
+          ref={permissionFormRef}
           permiso={selectedPermiso}
+          readOnly={!isEditMode && !!selectedPermiso}
           onClose={() => setIsModalOpen(false)}
           onSuccess={() => setIsModalOpen(false)}
         />
-      </Modal>
-
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        title="Detalles del Permiso"
-      >
-        {selectedPermiso && (
-          <PermissionForm
-            permiso={selectedPermiso}
-            readOnly={true}
-            onClose={() => setIsViewModalOpen(false)}
-            onSuccess={() => setIsViewModalOpen(false)}
-          />
-        )}
       </Modal>
 
       <DeleteModal

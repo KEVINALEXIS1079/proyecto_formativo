@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivitiesService } from './services/activities.service';
+import { ImageUploadService } from '../../common/services/image-upload.service';
 import { ActivitiesGateway } from './gateways/activities.gateway';
 import { ActivitiesController } from './controllers/activities.controller';
 import { Actividad } from './entities/actividad.entity';
@@ -9,6 +10,9 @@ import { ActividadServicio } from './entities/actividad-servicio.entity';
 import { ActividadEvidencia } from './entities/actividad-evidencia.entity';
 import { ActividadInsumoUso } from './entities/actividad-insumo-uso.entity';
 import { ActividadInsumo } from './entities/actividad-insumo.entity';
+import { ActividadHistorial } from './entities/actividad-historial.entity';
+import { ActividadInsumoReserva } from './entities/actividad-insumo-reserva.entity';
+import { ActividadHerramienta } from './entities/actividad-herramienta.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GeoModule } from '../geo/geo.module';
@@ -26,7 +30,9 @@ import { AuthModule } from '../auth/auth.module';
       ActividadServicio,
       ActividadEvidencia,
       ActividadInsumoUso,
-      ActividadInsumo,
+      ActividadHistorial,
+      ActividadInsumoReserva,
+      ActividadHerramienta,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -43,6 +49,11 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [ActivitiesController],
-  providers: [ActivitiesService, ActivitiesGateway, ActivitiesController],
+  providers: [
+    ActivitiesService,
+    ActivitiesGateway,
+    ActivitiesController,
+    ImageUploadService,
+  ],
 })
-export class ActivitiesModule {}
+export class ActivitiesModule { }

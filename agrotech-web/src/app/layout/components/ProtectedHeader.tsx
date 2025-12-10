@@ -1,7 +1,6 @@
 // src/app/layout/components/ProtectedHeader.tsx
 import { useNavigate } from "react-router-dom";
 import {
-  Input,
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
@@ -10,41 +9,33 @@ import {
   User as UserCard,
   Avatar,
 } from "@heroui/react";
-import { Search, UserRound, LogOut, Mail } from "lucide-react";
+import { UserRound, LogOut, Mail } from "lucide-react";
 import HeaderNotifications from "./HeaderNotifications";
 
 type Notification = { id: string; title: string; body?: string; unread?: boolean; time?: string };
 type UserInfo = { name: string; email: string; avatarUrl?: string; role?: string };
 
 export default function ProtectedHeader({
-  title,
   user,
   loading = false,
   notifications = [],
+  notificationsLoading = false,
   onLogout,
 }: {
-  title: string;
   user?: UserInfo | null;
   loading?: boolean;
   notifications?: Notification[];
+  notificationsLoading?: boolean;
   onLogout: () => void;
 }) {
   const navigate = useNavigate();
 
   return (
-    <header className="h-16 px-4 md:px-6 flex items-center gap-3 bg-white sticky top-0 z-30 shadow-sm">
+    <header className="h-16 px-4 md:px-6 flex items-center gap-3 bg-white sticky top-0 z-50 shadow-sm">
       <img src="/LogoTic.png" alt="TIC" className="h-10 md:h-12 w-auto object-contain" />
-      <h1 className="text-lg font-semibold hidden sm:block">{title}</h1>
 
       <div className="ml-auto flex items-center gap-3">
-        <Input
-          size="sm"
-          className="w-48 sm:w-64 md:w-80"
-          placeholder="Buscar"
-          startContent={<Search className="h-4 w-4 text-default-500" />}
-        />
-
-        <HeaderNotifications items={notifications} />
+        <HeaderNotifications items={notifications} loading={notificationsLoading} />
 
         <Dropdown placement="bottom-end">
           <DropdownTrigger>

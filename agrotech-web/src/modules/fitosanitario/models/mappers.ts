@@ -1,125 +1,204 @@
-import type { Epa, CreateEpaInput, UpdateEpaInput, TipoEpaLite, TipoCultivoEpaLite, TipoEpa, TipoCultivoEpa, CreateTipoEpaInput, UpdateTipoEpaInput, CreateTipoCultivoEpaInput, UpdateTipoCultivoEpaInput } from './types';
+import type { Epa, CreateEpaInput, UpdateEpaInput, TipoEpaLite, TipoCultivoEpaLite, TipoEpa, TipoCultivoEpa, CreateTipoEpaInput, UpdateTipoEpaInput, CreateTipoCultivoEpaInput, UpdateTipoCultivoEpaInput, TipoEpaEnum } from './types';
 
 /* mappers DTO <-> tipos UI */
 
 export const mapEpaFromBackend = (raw: any): Epa => {
-  return {
-    id: raw.id_epa_pk,
-    nombre: raw.nombre_epa,
-    descripcion: raw.descripcion_epa,
+  console.log("=== MAPPING EPA FROM BACKEND ===");
+  console.log("Raw data:", JSON.stringify(raw, null, 2));
+
+  const mapped = {
+    id: raw.id,
+    nombre: raw.nombre,
+    descripcion: raw.descripcion,
     sintomas: raw.sintomas,
-    manejoYControl: raw.manejo_y_control || raw.manejo_control, // Fallback
-    mesesProbables: raw.meses_probables,
+    manejoYControl: raw.manejoYControl,
+    mesesProbables: raw.mesesProbables,
     temporadas: raw.temporadas,
-    notasEstacionalidad: raw.notas_estacionalidad,
-    fotosSintomas: raw.fotos_sintomas,
-    fotosGenerales: raw.fotos_generales,
+    notasEstacionalidad: raw.notasEstacionalidad,
+    fotosSintomas: raw.fotosSintomas || [],
+    fotosGenerales: raw.fotosGenerales || [],
     tags: raw.tags,
-    imagenesUrls: raw.imagenes_urls || raw.fotos_generales, // Fallback
+    imagenesUrls: raw.fotosGenerales || raw.fotosSintomas || [], // Usar fotosGenerales o fotosSintomas
     tipoEpa: {
-      id: raw.tipoEpa?.id_tipo_epa_pk ?? 0,
-      nombre: raw.tipoEpa?.nombre_tipo_epa ?? raw.tipo_epa, // Fallback si viene como string
+      id: raw.tipoEpa?.id || 0,
+      nombre: raw.tipoEpa?.nombre || raw.tipoEpa || "", // Fallback si viene como string
+      descripcion: raw.tipoEpa?.descripcion || "",
+      tipoEpaEnum: (raw.tipoEpa?.tipoEpaEnum || raw.tipoEpa || "enfermedad").toLowerCase() as TipoEpaEnum,
     },
     tipoCultivoEpa: {
-      id: raw.tipoCultivoEpa?.id_tipo_cultivo_epa_pk ?? 0,
-      nombre: raw.tipoCultivoEpa?.nombre_tipo_cultivo_epa ?? "",
+      id: raw.epaTipoCultivos?.[0]?.tipoCultivoWiki?.id || 0,
+      nombre: raw.epaTipoCultivos?.[0]?.tipoCultivoWiki?.nombre || "",
     },
-    estado: raw.estado,
+    estado: raw.estado || "activo",
   };
+
+  console.log("Mapped EPA:", JSON.stringify(mapped, null, 2));
+  return mapped;
 };
 
 export const mapTipoEpaLiteFromBackend = (raw: any): TipoEpaLite => {
   return {
-    id: raw.id_tipo_epa_pk,
-    nombre: raw.nombre_tipo_epa,
+    id: raw.id,
+    nombre: raw.nombre,
   };
 };
 
 export const mapTipoCultivoEpaLiteFromBackend = (raw: any): TipoCultivoEpaLite => {
   return {
-    id: raw.id_tipo_cultivo_epa_pk,
-    nombre: raw.nombre_tipo_cultivo_epa,
+    id: raw.id,
+    nombre: raw.nombre,
   };
 };
 
 export const mapTipoEpaFromBackend = (raw: any): TipoEpa => {
   return {
-    id: raw.id_tipo_epa_pk,
-    nombre: raw.nombre_tipo_epa,
+    id: raw.id,
+    nombre: raw.nombre,
     descripcion: raw.descripcion,
-    tipoEpaEnum: raw.tipo_epa_enum,
+    tipoEpaEnum: raw.tipoEpaEnum as TipoEpaEnum,
   };
 };
 
 export const mapTipoCultivoEpaFromBackend = (raw: any): TipoCultivoEpa => {
   return {
-    id: raw.id_tipo_cultivo_epa_pk,
-    nombre: raw.nombre_tipo_cultivo_epa,
+    id: raw.id,
+    nombre: raw.nombre,
     descripcion: raw.descripcion,
   };
 };
 
-export const mapCreateEpaInputToBackend = (input: CreateEpaInput): any => {
-  return {
-    nombre_epa: input.nombre,
-    descripcion_epa: input.descripcion,
-    estado: input.estado,
-    id_tipo_epa_fk: input.tipoEpaId,
-    id_tipo_cultivo_epa_fk: input.tipoCultivoEpaId,
-    id_cultivo_fk: input.cultivoId,
-    sintomas: input.sintomas,
-    manejo_y_control: input.manejoYControl,
-    meses_probables: input.mesesProbables,
-    temporadas: input.temporadas,
-    notas_estacionalidad: input.notasEstacionalidad,
-    tags: input.tags,
-    // imagenes_urls: input.imagenesUrls, // Se maneja via fotos_generales usualmente
+// Necesitamos acceder a los tipos EPA para mapear correctamente
+// Esta función se usará desde el componente donde tenemos acceso a los tipos
+export const createMapCreateEpaInputToBackend = (tiposEpa: Array<{id: number, tipoEpaEnum: string}>) => {
+  return (input: CreateEpaInput): any => {
+    console.log("=== MAPPER DEBUG ===");
+    console.log("Input recibido:", JSON.stringify(input, null, 2));
+    console.log("Tipos EPA disponibles:", tiposEpa);
+
+    const mappedData = {
+      nombre: input.nombre?.trim(),
+      tipoEpa: (input.tipoEpa || 'enfermedad').toLowerCase(),
+      descripcion: input.descripcion?.trim(),
+      sintomas: input.sintomas?.trim(),
+      manejo: input.manejoYControl?.trim(),
+      mesesProbables: input.mesesProbables,
+      temporadas: input.temporadas,
+      fotosSintomas: [], // Por ahora vacío, se puede agregar después
+      fotosGenerales: [], // Se manejará con archivos
+      tags: input.tags,
+      tiposCultivoIds: input.tipoCultivoEpaId ? [input.tipoCultivoEpaId] : [],
+    };
+
+    console.log("Datos mapeados para backend:", JSON.stringify(mappedData, null, 2));
+    return mappedData;
   };
 };
 
+// Versión simplificada para compatibilidad - más robusta
+export const mapCreateEpaInputToBackend = (input: CreateEpaInput): any => {
+  console.log("=== FALLBACK MAPPER DEBUG ===");
+  console.log("Input recibido:", JSON.stringify(input, null, 2));
+
+  // Validaciones básicas
+  if (!input.nombre?.trim()) {
+    throw new Error("El nombre es obligatorio");
+  }
+
+  if (!input.descripcion?.trim()) {
+    throw new Error("La descripción es obligatoria");
+  }
+
+  if (!input.tipoEpa) {
+    throw new Error("El tipo de EPA es obligatorio");
+  }
+
+  if (!input.tipoCultivoEpaId) {
+    throw new Error("El tipo de cultivo es obligatorio");
+  }
+
+  const mappedData: any = {
+    nombre: input.nombre.trim(),
+    tipoEpa: 'ENFERMEDAD', // Default en mayúsculas
+    descripcion: input.descripcion.trim(),
+  };
+
+  // Solo agregar campos opcionales si tienen valores
+  if (input.sintomas?.trim()) {
+    mappedData.sintomas = input.sintomas.trim();
+  }
+  if (input.manejoYControl?.trim()) {
+    mappedData.manejo = input.manejoYControl.trim();
+  }
+  if (input.mesesProbables && input.mesesProbables.length > 0) {
+    mappedData.mesesProbables = input.mesesProbables;
+  }
+  if (input.temporadas && input.temporadas.length > 0) {
+    mappedData.temporadas = input.temporadas;
+  }
+  if (input.tags && input.tags.length > 0) {
+    mappedData.tags = input.tags;
+  }
+  if (input.tipoCultivoEpaId) {
+    mappedData.tiposCultivoIds = [input.tipoCultivoEpaId];
+  }
+
+  // Campos siempre presentes para archivos
+  mappedData.fotosSintomas = [];
+  mappedData.fotosGenerales = [];
+
+  console.log("Datos mapeados (fallback):", JSON.stringify(mappedData, null, 2));
+  return mappedData;
+};
+
 export const mapUpdateEpaInputToBackend = (input: UpdateEpaInput): any => {
+  console.log("=== UPDATE EPA MAPPER DEBUG ===");
+  console.log("Input received:", JSON.stringify(input, null, 2));
+
   const out: any = {};
-  if (input.nombre !== undefined) out.nombre_epa = input.nombre;
-  if (input.descripcion !== undefined) out.descripcion_epa = input.descripcion;
-  if (input.estado !== undefined) out.estado = input.estado;
-  if (input.tipoEpaId !== undefined) out.id_tipo_epa_fk = input.tipoEpaId;
-  if (input.tipoCultivoEpaId !== undefined) out.id_tipo_cultivo_epa_fk = input.tipoCultivoEpaId;
-  if (input.cultivoId !== undefined) out.id_cultivo_fk = input.cultivoId;
+
+  // Mapear campos con los nombres correctos que espera el backend
+  if (input.nombre !== undefined) out.nombre = input.nombre;
+  if (input.descripcion !== undefined) out.descripcion = input.descripcion;
   if (input.sintomas !== undefined) out.sintomas = input.sintomas;
-  if (input.manejoYControl !== undefined) out.manejo_y_control = input.manejoYControl;
-  if (input.mesesProbables !== undefined) out.meses_probables = input.mesesProbables;
+  if (input.manejoYControl !== undefined) out.manejo = input.manejoYControl; // El backend espera 'manejo'
+  if (input.mesesProbables !== undefined) out.mesesProbables = input.mesesProbables;
   if (input.temporadas !== undefined) out.temporadas = input.temporadas;
-  if (input.notasEstacionalidad !== undefined) out.notas_estacionalidad = input.notasEstacionalidad;
   if (input.tags !== undefined) out.tags = input.tags;
+
+  // Para tipos EPA y cultivo, ahora se envían desde el formulario de edición
+  if (input.tipoEpa !== undefined) out.tipoEpa = input.tipoEpa;
+  if (input.tipoCultivoEpaId !== undefined) out.tipoCultivoEpaId = input.tipoCultivoEpaId;
+
+  console.log("Mapped output:", JSON.stringify(out, null, 2));
   return out;
 };
 
 export const mapCreateTipoEpaInputToBackend = (input: CreateTipoEpaInput): any => {
   return {
-    nombre_tipo_epa: input.nombre,
+    nombre: input.nombre,
     descripcion: input.descripcion,
-    tipo_epa_enum: input.tipoEpaEnum,
+    tipoEpaEnum: input.tipoEpaEnum,
   };
 };
 
 export const mapUpdateTipoEpaInputToBackend = (input: UpdateTipoEpaInput): any => {
   const out: any = {};
-  if (input.nombre !== undefined) out.nombre_tipo_epa = input.nombre;
+  if (input.nombre !== undefined) out.nombre = input.nombre;
   if (input.descripcion !== undefined) out.descripcion = input.descripcion;
-  if (input.tipoEpaEnum !== undefined) out.tipo_epa_enum = input.tipoEpaEnum;
+  if (input.tipoEpaEnum !== undefined) out.tipoEpaEnum = input.tipoEpaEnum;
   return out;
 };
 
 export const mapCreateTipoCultivoEpaInputToBackend = (input: CreateTipoCultivoEpaInput): any => {
   return {
-    nombre_tipo_cultivo_epa: input.nombre,
-    descripcion: input.descripcion,
+    nombre: input.nombre?.trim(),
+    descripcion: input.descripcion?.trim(),
   };
 };
 
 export const mapUpdateTipoCultivoEpaInputToBackend = (input: UpdateTipoCultivoEpaInput): any => {
   const out: any = {};
-  if (input.nombre !== undefined) out.nombre_tipo_cultivo_epa = input.nombre;
-  if (input.descripcion !== undefined) out.descripcion = input.descripcion;
+  if (input.nombre !== undefined) out.nombre = input.nombre.trim();
+  if (input.descripcion !== undefined) out.descripcion = input.descripcion.trim();
   return out;
 };

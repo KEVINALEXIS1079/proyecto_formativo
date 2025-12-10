@@ -17,7 +17,10 @@ import { MovimientoInsumo } from '../inventory/entities/movimiento-insumo.entity
 import { Cultivo } from '../cultivos/entities/cultivo.entity';
 import { Sensor } from '../iot/entities/sensor.entity';
 import { SensorLectura } from '../iot/entities/sensor-lectura.entity';
+import { SensorAlerta } from '../iot/entities/sensor-alert.entity';
+import { IotGlobalConfig } from '../iot/entities/iot-global-config.entity';
 import { AuthModule } from '../auth/auth.module';
+import { LoteProduccion } from '../production/entities/lote-produccion.entity';
 
 @Module({
   imports: [
@@ -32,11 +35,14 @@ import { AuthModule } from '../auth/auth.module';
       MovimientoInsumo,
       Cultivo,
       Sensor,
-      SensorLectura
+      SensorLectura,
+      SensorAlerta,
+      IotGlobalConfig,
+      LoteProduccion,
     ])
   ],
   controllers: [FinancialReportsController, CropReportsController, IotReportsController],
   providers: [FinancialReportsService, CropReportsService, IotReportsService, CsvExportService],
   exports: [FinancialReportsService, CropReportsService, IotReportsService, CsvExportService]
 })
-export class ReportsModule {}
+export class ReportsModule { }

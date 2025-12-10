@@ -1,1 +1,0 @@
-export default function ListaPageFinanzas() { return <div className='p-6'>Finanzas Lista</div> }

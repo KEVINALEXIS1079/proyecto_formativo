@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { UserStatus } from '../models/types/user.types';
 import type { User, CreateUserDto } from '../models/types/user.types';
 import { useCreateUser, useUpdateUser, useChangeUserRole, useUploadAvatar } from '../hooks/useUsers';
@@ -6,20 +6,26 @@ import { useRoles } from '../hooks/usePermissions';
 import { Input, Select, SelectItem, Button, Avatar } from "@heroui/react";
 import { Camera } from 'lucide-react';
 
+export interface UserFormRef {
+  save: () => Promise<void>;
+}
+
 interface UserFormProps {
   user?: User | null;
   readOnly?: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onToggleEdit?: () => void;
+  onCancelEdit?: () => void;
 }
 
-export const UserForm = ({ user, readOnly = false, onClose, onSuccess }: UserFormProps) => {
+export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly = false, onClose, onSuccess, onToggleEdit, onCancelEdit }, ref) => {
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const changeRoleMutation = useChangeUserRole();
   const uploadAvatarMutation = useUploadAvatar();
   const { data: roles, isLoading: isLoadingRoles } = useRoles();
-  
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -66,6 +72,14 @@ export const UserForm = ({ user, readOnly = false, onClose, onSuccess }: UserFor
     }
   };
 
+  // Expose save method to parent via ref
+  useImperativeHandle(ref, () => ({
+    save: async () => {
+      const event = new Event('submit', { bubbles: true, cancelable: true });
+      await handleSubmit(event as any);
+    }
+  }));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -83,7 +97,7 @@ export const UserForm = ({ user, readOnly = false, onClose, onSuccess }: UserFor
       if (user) {
         // Update Profile
         const updateData = cleanData(formData);
-        
+
         // Remove rolId from updateData as it's handled separately
         // @ts-ignore
         delete updateData.rolId;
@@ -208,16 +222,16 @@ export const UserForm = ({ user, readOnly = false, onClose, onSuccess }: UserFor
         </div>
 
         {!user && !readOnly && (
-           <div className="sm:col-span-6">
-             <Input
-                type="password"
-                label="Contraseña"
-                name="password"
-                isRequired={!user}
-                value={formData.password}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
-                isDisabled={readOnly}
-              />
+          <div className="sm:col-span-6">
+            <Input
+              type="password"
+              label="Contraseña"
+              name="password"
+              isRequired={!user}
+              value={formData.password}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, password: value }))}
+              isDisabled={readOnly}
+            />
           </div>
         )}
 
@@ -260,23 +274,35 @@ export const UserForm = ({ user, readOnly = false, onClose, onSuccess }: UserFor
 
       <div className="flex justify-end gap-3 mt-6">
         {readOnly ? (
-          <Button
-            color="success"
-            onPress={onClose}
-          >
-            Cerrar
-          </Button>
+          <>
+            <Button
+              variant="flat"
+              onPress={onClose}
+            >
+              Cerrar
+            </Button>
+            {onToggleEdit && (
+              <Button
+                color="success"
+                className="text-black font-semibold"
+                onPress={onToggleEdit}
+              >
+                Editar
+              </Button>
+            )}
+          </>
         ) : (
           <>
             <Button
               variant="light"
-              onPress={onClose}
+              onPress={user && onCancelEdit ? onCancelEdit : onClose}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               color="success"
+              className="text-black font-semibold"
               isLoading={isLoading}
             >
               {isLoading ? 'Guardando...' : 'Guardar Cambios'}
@@ -286,4 +312,4 @@ export const UserForm = ({ user, readOnly = false, onClose, onSuccess }: UserFor
       </div>
     </form>
   );
-};
+});

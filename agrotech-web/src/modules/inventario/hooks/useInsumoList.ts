@@ -12,7 +12,7 @@ type InsumosListResp = {
 };
 
 export function useInsumoList(params?: { page?: number; limit?: number; q?: string; categoriaId?: number; proveedorId?: number; almacenId?: number }) {
-  return useQuery<InsumosListResp>({
+  const query = useQuery<InsumosListResp>({
     queryKey: [...QK_INSUMOS_LIST, params],
     queryFn: async () => {
       const data = await listInsumos(params);
@@ -28,4 +28,9 @@ export function useInsumoList(params?: { page?: number; limit?: number; q?: stri
     },
     staleTime: 15_000,
   });
+
+  return {
+    ...query,
+    refetch: query.refetch,
+  };
 }

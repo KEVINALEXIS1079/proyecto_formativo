@@ -4,14 +4,14 @@ import type { Almacen, CreateAlmacenInput, UpdateAlmacenInput } from "../model/t
 
 function mapCreateDtoToApi(dto: CreateAlmacenInput) {
   return {
-    nombre_almacen: dto.nombre,
+    nombre: dto.nombre,
     descripcion: dto.descripcion,
   };
 }
 
 function mapUpdateDtoToApi(dto: UpdateAlmacenInput) {
   const out: any = {};
-  if (dto.nombre !== undefined) out.nombre_almacen = dto.nombre;
+  if (dto.nombre !== undefined) out.nombre = dto.nombre;
   if (dto.descripcion !== undefined) out.descripcion = dto.descripcion;
   return out;
 }
@@ -37,30 +37,31 @@ class AlmacenesService {
     if (params?.limit) query.limit = params.limit;
     if (params?.q) query.q = params.q;
 
-    const { data } = await api.get("/almacenes", { params: query });
+    const { data } = await api.get("/insumos/almacenes", { params: query });
     return normalizeListResp(data);
   }
 
   async get(id: number): Promise<Almacen> {
-    const { data } = await api.get(`/almacenes/${id}`);
+    const { data } = await api.get(`/insumos/almacenes/${id}`);
     return adaptAlmacen(data);
   }
 
   async create(payload: CreateAlmacenInput): Promise<{ message: string; id: number }> {
     const body = mapCreateDtoToApi(payload);
-    const { data } = await api.post("/almacenes", body);
+    console.log("DEBUG: Enviando a API almacenes:", body);
+    const { data } = await api.post("/insumos/almacenes", body);
     const id = data?.id ?? data?.id_almacen_pk ?? 0;
     return { message: data?.message ?? "Almacén creado", id };
   }
 
   async update(id: number, payload: UpdateAlmacenInput): Promise<{ message: string }> {
     const body = mapUpdateDtoToApi(payload);
-    const { data } = await api.patch(`/almacenes/${id}`, body);
+    const { data } = await api.patch(`/insumos/almacenes/${id}`, body);
     return { message: data?.message ?? "Almacén actualizado" };
   }
 
   async remove(id: number): Promise<boolean> {
-    await api.delete(`/almacenes/${id}`);
+    await api.delete(`/insumos/almacenes/${id}`);
     return true;
   }
 }

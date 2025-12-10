@@ -7,6 +7,9 @@ export class Categoria extends BaseEntity {
   @Column()
   nombre: string;
 
+  @Column({ nullable: true })
+  descripcion?: string;
+
   @OneToMany(() => Insumo, (insumo) => insumo.categoria)
   insumos: Insumo[];
 }

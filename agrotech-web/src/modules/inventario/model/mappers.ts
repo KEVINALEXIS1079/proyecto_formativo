@@ -2,62 +2,77 @@ import type { CategoriaInsumo, Proveedor, Almacen, Insumo, MovimientoInventario 
 
 export function adaptCategoriaInsumo(raw: any): CategoriaInsumo {
   return {
-    id: raw.id_categoria_insumo_pk,
-    nombre: raw.nombre_categoria_insumo,
+    id: raw.id,
+    nombre: raw.nombre,
     descripcion: raw.descripcion,
   };
 }
 
 export function adaptProveedor(raw: any): Proveedor {
   return {
-    id: raw.id_proveedor_pk,
-    nombre: raw.nombre_proveedor,
+    id: raw.id,
+    nombre: raw.nombre,
   };
 }
 
 export function adaptAlmacen(raw: any): Almacen {
   return {
-    id: raw.id_almacen_pk,
-    nombre: raw.nombre_almacen,
+    id: raw.id,
+    nombre: raw.nombre,
     descripcion: raw.descripcion,
   };
 }
 
 export function adaptInsumo(raw: any): Insumo {
   return {
-    id: raw.id_insumo_pk,
-    nombre: raw.nombre_insumo,
-    descripcion: raw.descripcion_insumo,
-    imagenUrl: raw.imagen_url,
-    presentacionTipo: raw.presentacion_tipo,
-    presentacionCantidad: raw.presentacion_cantidad,
-    presentacionUnidad: raw.presentacion_unidad,
-    unidadBase: raw.unidad_base,
-    factorConversion: raw.factor_conversion,
-    stockPresentaciones: raw.stock_presentaciones,
-    stockTotalBase: raw.stock_total_base,
-    stockTotalPresentacion: raw.stock_total_presentacion,
-    precioUnitario: raw.precio_unitario_actual,
-    precioTotal: raw.precio_total,
-    fechaIngreso: raw.fecha_ingreso,
-    categoria: adaptCategoriaInsumo(raw.categoria),
-    proveedor: adaptProveedor(raw.proveedor),
-    almacen: adaptAlmacen(raw.almacen),
+    id: raw.id,
+    nombre: raw.nombre,
+    descripcion: raw.descripcion,
+    imagenUrl: raw.fotoUrl,
+    tipoMateria: raw.tipoMateria?.toLowerCase() || 'solido', // Asegurar minúsculas y valor por defecto
+    presentacionTipo: raw.presentacionTipo,
+    presentacionCantidad: raw.presentacionCantidad,
+    presentacionUnidad: raw.presentacionUnidad,
+    unidadBase: raw.unidadUso,
+    factorConversion: raw.factorConversionUso,
+    stockPresentaciones: raw.stockPresentacion,
+    stockTotalBase: raw.stockUso,
+    stockTotalPresentacion: raw.stockPresentacion,
+    precioUnitarioPresentacion: raw.precioUnitarioPresentacion,
+    precioUnitarioUso: raw.precioUnitarioUso,
+    precioTotal: raw.valorInventario,
+    fechaIngreso: raw.fechaRegistro,
+    categoria: raw.categoria ? adaptCategoriaInsumo(raw.categoria) : { id: 0, nombre: 'Sin categoría', descripcion: '' },
+    proveedor: raw.proveedor ? adaptProveedor(raw.proveedor) : { id: 0, nombre: 'Sin proveedor' },
+    almacen: raw.almacen ? adaptAlmacen(raw.almacen) : { id: 0, nombre: 'Sin almacén', descripcion: '' },
   };
 }
 
 export function adaptMovimiento(raw: any): MovimientoInventario {
+  // Adaptar usuario responsable con datos completos
+  const usuarioResponsable = raw.usuario ? {
+    id: raw.usuario.id,
+    nombreUsuario: raw.usuario.nombreUsuario || raw.usuario.nombre || raw.usuario.name || 'Usuario',
+    identificacion: raw.usuario.identificacion || raw.usuario.documento || 'N/A',
+    email: raw.usuario.email || 'N/A'
+  } : {
+    id: raw.usuarioId || raw.usuario_id || 0,
+    nombreUsuario: raw.usuarioNombre || raw.usuario_nombre || 'Usuario',
+    identificacion: raw.usuarioIdentificacion || raw.usuario_identificacion || 'N/A',
+    email: raw.usuarioEmail || raw.usuario_email || 'N/A'
+  };
+
   return {
-    id: raw.id_movimiento_pk,
-    tipoMovimiento: raw.tipo_movimiento,
-    cantidadPresentaciones: raw.cantidad_presentaciones,
-    cantidadBase: raw.cantidad_base,
-    valorMovimiento: raw.valor_movimiento,
-    descripcion: raw.descripcion,
-    fechaMovimiento: raw.fecha_movimiento,
-    origen: raw.origen,
-    usuarioResponsable: raw.usuario_responsable, // TODO: adaptar si necesario
-    insumo: adaptInsumo(raw.insumo),
-    id_actividad_fk: raw.id_actividad_fk,
+    id: raw.id,
+    tipoMovimiento: raw.tipo || raw.tipo_movimiento,
+    cantidadPresentaciones: raw.cantidadPresentacion || raw.cantidad_presentaciones || 0,
+    cantidadBase: raw.cantidadUso || raw.cantidad_uso || 0,
+    valorMovimiento: raw.costoTotal || raw.costo_total || 0,
+    descripcion: raw.descripcion || '',
+    fechaMovimiento: raw.fechaMovimiento || raw.fecha_movimiento || raw.createdAt || raw.created_at,
+    origen: raw.almacenOrigenId || raw.almacen_origen_id ? 'Traslado' : 'Directo',
+    usuarioResponsable,
+    insumo: raw.insumo ? adaptInsumo(raw.insumo) : undefined,
+    id_actividad_fk: raw.actividadId || raw.actividad_id,
   };
 }

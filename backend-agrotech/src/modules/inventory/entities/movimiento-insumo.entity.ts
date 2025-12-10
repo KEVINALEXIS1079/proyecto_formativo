@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Insumo } from './insumo.entity';
 import { Usuario } from '../../users/entities/usuario.entity';
+import { Actividad } from '../../activities/entities/actividad.entity';
 
 @Entity('movimientos_insumos')
 export class MovimientoInsumo extends BaseEntity {
@@ -51,4 +52,8 @@ export class MovimientoInsumo extends BaseEntity {
   @ManyToOne(() => Usuario)
   @JoinColumn({ name: 'usuarioId' })
   usuario: Usuario;
+
+  @ManyToOne(() => Actividad)
+  @JoinColumn({ name: 'actividadId' })
+  actividad: Actividad;
 }

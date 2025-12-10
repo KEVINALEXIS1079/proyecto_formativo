@@ -12,7 +12,7 @@ export class ImageUploadService {
 
   constructor(private readonly configService: ConfigService) {
     this.uploadDest = this.configService.get<string>('UPLOAD_DEST', 'uploads');
-    this.maxSize = this.configService.get<number>('UPLOAD_MAX_SIZE', 5 * 1024 * 1024); // 5MB default
+    this.maxSize = this.configService.get<number>('UPLOAD_MAX_SIZE', 50 * 1024 * 1024); // 50MB default
 
     // Crear directorio de uploads si no existe
     const uploadPath = path.join(process.cwd(), this.uploadDest);

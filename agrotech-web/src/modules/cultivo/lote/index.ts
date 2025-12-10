@@ -1,1 +1,0 @@
-export * as loteApi from './api/lotes.service'; export * as loteModel from './model/types';

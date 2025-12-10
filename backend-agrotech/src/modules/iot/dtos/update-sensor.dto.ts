@@ -1,4 +1,27 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateSensorDto } from './create-sensor.dto';
+import { IsBoolean, IsInt, IsOptional, IsString, IsNumber } from 'class-validator';
 
-export class UpdateSensorDto extends PartialType(CreateSensorDto) {}
+export class UpdateSensorDto {
+  @IsString()
+  @IsOptional()
+  nombre?: string;
+
+  @IsString()
+  @IsOptional()
+  mqttTopic?: string;
+
+  @IsInt()
+  @IsOptional()
+  globalConfigId?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  activo?: boolean;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El umbral mínimo debe ser un número' })
+  umbralMin?: number | null;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El umbral máximo debe ser un número' })
+  umbralMax?: number | null;
+}

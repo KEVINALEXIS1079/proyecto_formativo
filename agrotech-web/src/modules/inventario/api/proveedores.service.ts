@@ -4,13 +4,13 @@ import type { Proveedor, CreateProveedorInput, UpdateProveedorInput } from "../m
 
 function mapCreateDtoToApi(dto: CreateProveedorInput) {
   return {
-    nombre_proveedor: dto.nombre,
+    nombre: dto.nombre,
   };
 }
 
 function mapUpdateDtoToApi(dto: UpdateProveedorInput) {
   const out: any = {};
-  if (dto.nombre !== undefined) out.nombre_proveedor = dto.nombre;
+  if (dto.nombre !== undefined) out.nombre = dto.nombre;
   return out;
 }
 
@@ -35,30 +35,31 @@ class ProveedoresService {
     if (params?.limit) query.limit = params.limit;
     if (params?.q) query.q = params.q;
 
-    const { data } = await api.get("/proveedores", { params: query });
+    const { data } = await api.get("/insumos/proveedores", { params: query });
     return normalizeListResp(data);
   }
 
   async get(id: number): Promise<Proveedor> {
-    const { data } = await api.get(`/proveedores/${id}`);
+    const { data } = await api.get(`/insumos/proveedores/${id}`);
     return adaptProveedor(data);
   }
 
   async create(payload: CreateProveedorInput): Promise<{ message: string; id: number }> {
     const body = mapCreateDtoToApi(payload);
-    const { data } = await api.post("/proveedores", body);
+    console.log("DEBUG: Enviando a API proveedores:", body);
+    const { data } = await api.post("/insumos/proveedores", body);
     const id = data?.id ?? data?.id_proveedor_pk ?? 0;
     return { message: data?.message ?? "Proveedor creado", id };
   }
 
   async update(id: number, payload: UpdateProveedorInput): Promise<{ message: string }> {
     const body = mapUpdateDtoToApi(payload);
-    const { data } = await api.patch(`/proveedores/${id}`, body);
+    const { data } = await api.patch(`/insumos/proveedores/${id}`, body);
     return { message: data?.message ?? "Proveedor actualizado" };
   }
 
   async remove(id: number): Promise<boolean> {
-    await api.delete(`/proveedores/${id}`);
+    await api.delete(`/insumos/proveedores/${id}`);
     return true;
   }
 }

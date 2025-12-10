@@ -11,11 +11,11 @@ interface ProfileHeaderProps {
   onEdit?: () => void;
 }
 
-export function ProfileHeader({ 
-  fullName, 
-  email, 
-  roleName, 
-  avatarSrc, 
+export function ProfileHeader({
+  fullName,
+  email,
+  roleName,
+  avatarSrc,
   onAvatarChange,
   isEditMode = false,
   onEdit
@@ -39,15 +39,15 @@ export function ProfileHeader({
           <Avatar
             src={avatarSrc}
             name={fullName}
-            className="w-24 h-24 text-large"
+            className="w-24 h-24 text-large text-black"
             isBordered
-            color="primary"
+            color="success"
           />
           {isEditMode && onAvatarChange && (
             <Button
               isIconOnly
               size="sm"
-              className="absolute -bottom-1 -right-1 bg-primary text-black"
+              className="absolute -bottom-1 -right-1 bg-success text-black"
               onPress={handleAvatarClick}
               aria-label="Cambiar foto"
             >
@@ -60,7 +60,7 @@ export function ProfileHeader({
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
             {fullName}
             {roleName && (
-              <Chip color="primary" variant="flat" startContent={<UserRoundCog className="w-3.5 h-3.5" />}>
+              <Chip color="success" variant="flat" className="text-black" startContent={<UserRoundCog className="w-3.5 h-3.5" />}>
                 {roleName}
               </Chip>
             )}
@@ -70,8 +70,8 @@ export function ProfileHeader({
       </div>
 
       {!isEditMode && onEdit && (
-        <Button 
-          color="success" 
+        <Button
+          color="success"
           className="text-black font-semibold"
           onPress={onEdit}
           startContent={<Edit className="w-4 h-4" />}

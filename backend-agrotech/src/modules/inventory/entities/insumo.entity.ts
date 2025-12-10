@@ -64,6 +64,41 @@ export class Insumo extends BaseEntity {
   @Column({ nullable: true })
   creadoPorUsuarioId: number;
 
+  // NUEVOS CAMPOS PARA ACTIVOS FIJOS Y DEPRECIACIÓN
+  @Column({ default: 'CONSUMIBLE' })
+  tipoInsumo: string; // 'CONSUMIBLE' | 'NO_CONSUMIBLE'
+
+  // Para NO CONSUMIBLES (Activos Fijos)
+  @Column('float', { nullable: true })
+  costoAdquisicion: number; // Costo inicial del activo
+
+  @Column('float', { nullable: true })
+  valorResidual: number; // Valor al final de vida útil
+
+  @Column('float', { nullable: true })
+  vidaUtilHoras: number; // Vida útil estimada en horas/usos
+
+  @Column('float', { default: 0 })
+  horasUsadas: number; // Horas/usos acumulados
+
+  @Column('float', { default: 0 })
+  stockReservado: number; // Stock comprometido en actividades pendientes
+
+  @Column('float', { default: 0 })
+  depreciacionAcumulada: number; // Depreciación total acumulada
+
+  @Column({ default: 'DISPONIBLE' })
+  estado: string; // 'DISPONIBLE' | 'EN_USO' | 'MANTENIMIENTO' | 'DADO_DE_BAJA'
+
+  @Column({ type: 'date', nullable: true })
+  fechaAdquisicion: Date;
+
+  @Column({ type: 'date', nullable: true })
+  fechaUltimoMantenimiento: Date;
+
+  @Column({ type: 'date', nullable: true })
+  fechaBaja: Date;
+
   @ManyToOne(() => Almacen, (almacen) => almacen.insumos)
   @JoinColumn({ name: 'almacenId' })
   almacen: Almacen;

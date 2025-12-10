@@ -1,7 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards, UsePipes, ValidationPipe, ParseIntPipe, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import type { Request } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import * as fs from 'fs';
 import { WikiService } from '../services/wiki.service';
 import { CreateEpaDto } from '../dtos/create-epa.dto';
 import { UpdateEpaDto } from '../dtos/update-epa.dto';
+import { TipoEpa } from '../entities/tipo-epa.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -9,7 +17,11 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 @Controller('epas')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class WikiController {
-  constructor(private readonly wikiService: WikiService) {}
+  constructor(
+    private readonly wikiService: WikiService,
+    @InjectRepository(TipoEpa)
+    private readonly tipoEpaRepo: Repository<TipoEpa>,
+  ) {}
 
   // Internal method for WebSocket: handles finding all EPAs with optional filters by calling the service
   // Flow: Gateway calls this method -> calls wikiService.findAll -> returns EPA list
@@ -25,9 +37,9 @@ export class WikiController {
 
   // Internal method for WebSocket: handles creating an EPA by calling the service
   // Flow: Gateway calls this method -> calls wikiService.create -> returns created EPA
-  @UsePipes(new ValidationPipe())
-  async create(createEpaDto: CreateEpaDto) {
-    return this.wikiService.create(createEpaDto);
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async create(createEpaDto: CreateEpaDto, userId?: number) {
+    return this.wikiService.create(createEpaDto, userId);
   }
 
   // Internal method for WebSocket: handles updating an EPA by calling the service
@@ -53,15 +65,63 @@ export class WikiController {
 
   @Post()
   @RequirePermissions('wiki.crear')
-  @UsePipes(new ValidationPipe())
-  async createEpaHttp(@Body() createEpaDto: CreateEpaDto) {
-    return this.create(createEpaDto);
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'fotosSintomas', maxCount: 10 },
+    { name: 'fotosGenerales', maxCount: 10 },
+  ], {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadDir = 'uploads/epas';
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + extname(file.originalname));
+      },
+    }),
+  }))
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async createEpaHttp(
+    @Body() createEpaDto: CreateEpaDto,
+    @UploadedFiles() files: { fotosSintomas?: Express.Multer.File[], fotosGenerales?: Express.Multer.File[] },
+    @Req() req: Request
+  ) {
+    const userId = (req?.user as any)?.id ?? (req?.user as any)?.userId ?? 1;
+
+    // Populate fotosSintomas and fotosGenerales with file paths
+    if (files?.fotosSintomas) {
+      createEpaDto.fotosSintomas = files.fotosSintomas.map(file => file.path.replace(/\\/g, '/'));
+    }
+    if (files?.fotosGenerales) {
+      createEpaDto.fotosGenerales = files.fotosGenerales.map(file => file.path.replace(/\\/g, '/'));
+    }
+
+    return this.create(createEpaDto, userId);
   }
 
   @Get()
   @RequirePermissions('wiki.ver')
-  async findAllEpasHttp() {
-    return this.findAll();
+  async findAllEpasHttp(
+    @Query('q') q?: string,
+    @Query('tipoId') tipoId?: number,
+    @Query('tipoCultivoEpaId') tipoCultivoEpaId?: number,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    console.log('Query parameters - q:', q, 'tipoId:', tipoId, 'tipoCultivoEpaId:', tipoCultivoEpaId);
+    let tipoEpa: string | undefined;
+    if (tipoId) {
+      const tipoEpaEntity = await this.tipoEpaRepo.findOne({ where: { id: tipoId } });
+      if (tipoEpaEntity) {
+        tipoEpa = tipoEpaEntity.tipoEpaEnum;
+      }
+    }
+    const options = { q, tipoEpa, tipoCultivoWikiId: tipoCultivoEpaId };
+    console.log('Options object:', options);
+    return this.findAll(options);
   }
 
   @Get(':id')
@@ -72,8 +132,42 @@ export class WikiController {
 
   @Patch(':id')
   @RequirePermissions('wiki.editar')
-  @UsePipes(new ValidationPipe())
-  async updateEpaHttp(@Param('id', ParseIntPipe) id: number, @Body() updateEpaDto: UpdateEpaDto) {
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'fotosSintomas', maxCount: 10 },
+    { name: 'fotosGenerales', maxCount: 10 },
+  ], {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadDir = 'uploads/epas';
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + extname(file.originalname));
+      },
+    }),
+  }))
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async updateEpaHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateEpaDto: UpdateEpaDto,
+    @UploadedFiles() files: { fotosSintomas?: Express.Multer.File[], fotosGenerales?: Express.Multer.File[] }
+  ) {
+    console.log('=== CONTROLLER UPDATE DEBUG ===');
+    console.log('ID:', id);
+    console.log('Body received:', JSON.stringify(updateEpaDto, null, 2));
+
+    // Populate fotosSintomas and fotosGenerales with file paths
+    if (files?.fotosSintomas) {
+      updateEpaDto.fotosSintomas = files.fotosSintomas.map(file => file.path.replace(/\\/g, '/'));
+    }
+    if (files?.fotosGenerales) {
+      updateEpaDto.fotosGenerales = files.fotosGenerales.map(file => file.path.replace(/\\/g, '/'));
+    }
+
     return this.update(id, updateEpaDto);
   }
 

@@ -6,6 +6,16 @@ export function useReporteCostosRentabilidad(filters?: ReporteFilters) {
   return useQuery({
     queryKey: ["reportes", "costos-rentabilidad", filters],
     queryFn: () => reportesService.getCostosRentabilidad(filters),
-    enabled: !!filters, // Solo ejecutar si hay filtros
+    enabled: !!filters?.cultivoId,
+    staleTime: 30000,
+  });
+}
+
+export function useReporteCompleto(filters?: ReporteFilters) {
+  return useQuery({
+    queryKey: ["reportes", "completo", filters],
+    queryFn: () => reportesService.getReporteCompleto(filters),
+    enabled: !!filters?.cultivoId,
+    staleTime: 30000,
   });
 }

@@ -1,4 +1,4 @@
-import { Card, CardBody, CardHeader, Chip, Button } from "@heroui/react";
+ import { Card, CardBody, CardHeader, Chip, Button } from "@heroui/react";
 import { useState, useMemo } from "react";
 import type { Epa } from "../models/types";
 
@@ -10,7 +10,7 @@ export default function EpaDetail({ epa }: { epa: Epa }) {
 
   const formatMeses = (meses?: number[]) => {
     if (!meses || meses.length === 0) return "No especificado";
-    
+
     const nombresMeses = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
       "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
@@ -45,72 +45,87 @@ export default function EpaDetail({ epa }: { epa: Epa }) {
   }, [images, currentImageIndex]);
 
   return (
-    <div className="space-y-6">
-      {/* Header con imagen y información básica */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex flex-col md:flex-row items-start gap-4 w-full">
-            {images.length > 0 ? (
-              <div className="relative w-full md:w-auto flex justify-center">
-                <div className="relative w-full md:w-48 h-48">
-                    <img
+    <div className="space-y-8">
+      {/* Header con información principal */}
+      <Card className="shadow-lg">
+        <CardHeader className="pb-6">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Sección de imagen */}
+            <div className="flex-shrink-0">
+              {images.length > 0 ? (
+                <div className="relative w-56 h-56 mx-auto lg:mx-0">
+                  <img
                     src={currentImageUrl || ""}
                     alt={epa?.nombre}
-                    className="w-full h-full object-cover rounded-lg"
+                    className="w-full h-full object-cover rounded-2xl shadow-lg"
                     onError={(e) => {
-                        e.currentTarget.style.display = 'none';
+                      e.currentTarget.style.display = 'none';
                     }}
-                    />
-                    {hasMultipleImages && (
+                  />
+                  {hasMultipleImages && (
                     <>
-                        <Button
+                      <Button
                         isIconOnly
                         size="sm"
                         variant="flat"
-                        className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-black/50 text-white"
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-black/70 text-white hover:bg-black/90 rounded-full"
                         onClick={prevImage}
-                        >
+                      >
                         ‹
-                        </Button>
-                        <Button
+                      </Button>
+                      <Button
                         isIconOnly
                         size="sm"
                         variant="flat"
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-black/50 text-white"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-black/70 text-white hover:bg-black/90 rounded-full"
                         onClick={nextImage}
-                        >
+                      >
                         ›
-                        </Button>
-                        <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                      </Button>
+                      <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 bg-black/70 text-white text-sm px-4 py-2 rounded-full font-medium">
                         {currentImageIndex + 1} / {images.length}
-                        </div>
+                      </div>
                     </>
-                    )}
+                  )}
                 </div>
+              ) : (
+                <div className="w-56 h-56 bg-gradient-to-br from-default-50 to-default-100 rounded-2xl flex items-center justify-center text-default-400 border-2 border-dashed border-default-200 shadow-md">
+                  <div className="text-center">
+                    <div className="text-base font-medium">Sin imagen</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sección de información */}
+            <div className="flex-1 space-y-6">
+              <div>
+                <h1 className="text-4xl font-bold text-default-900 mb-3">{epa?.nombre}</h1>
+                <p className="text-lg text-default-600 leading-relaxed">{epa?.descripcion}</p>
               </div>
-            ) : (
-              <div className="w-full md:w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 text-sm">
-                Sin imagen
-              </div>
-            )}
-            <div className="flex-1 w-full">
-              <h1 className="text-2xl font-bold mb-2">{epa?.nombre}</h1>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Chip color="primary" variant="flat">
+
+              <div className="flex flex-wrap gap-4">
+                <Chip
+                  color="primary"
+                  variant="flat"
+                  size="lg"
+                  className="font-semibold px-4 py-2"
+                >
                   {epa?.tipoEpa?.nombre}
                 </Chip>
-                <Chip color="secondary" variant="flat">
+                <Chip
+                  color="secondary"
+                  variant="flat"
+                  size="lg"
+                  className="font-semibold px-4 py-2"
+                >
                   {epa?.tipoCultivoEpa?.nombre}
                 </Chip>
               </div>
-              
+
               {epa?.tags && epa.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                    {epa.tags.map((tag, idx) => (
-                        <Chip key={idx} size="sm" variant="bordered" className="text-default-500 border-default-300">
-                            #{tag}
-                        </Chip>
-                    ))}
+                <div className="text-sm text-default-600">
+                  <span className="font-medium">Etiquetas:</span> {epa.tags.join(", ")}
                 </div>
               )}
             </div>
@@ -118,84 +133,85 @@ export default function EpaDetail({ epa }: { epa: Epa }) {
         </CardHeader>
       </Card>
 
-      {/* Descripción */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Descripción</h2>
-        </CardHeader>
-        <CardBody>
-          <p className="text-default-700 leading-relaxed whitespace-pre-wrap">
-            {epa?.descripcion || "No hay descripción disponible."}
-          </p>
-        </CardBody>
-      </Card>
+      {/* Información detallada organizada */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Columna izquierda */}
+        <div className="space-y-8">
+          {/* Descripción */}
+          <div>
+            <h2 className="text-xl font-semibold text-default-900 mb-3">
+              Descripción
+            </h2>
+            <p className="text-default-700 leading-relaxed whitespace-pre-wrap">
+              {epa?.descripcion || "No hay descripción disponible."}
+            </p>
+          </div>
 
-      {/* Síntomas */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Síntomas</h2>
-        </CardHeader>
-        <CardBody>
-          <p className="text-default-700 leading-relaxed whitespace-pre-wrap">
-            {epa?.sintomas || "No hay información sobre síntomas."}
-          </p>
-          {epa?.fotosSintomas && epa.fotosSintomas.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {epa.fotosSintomas.map((url, idx) => (
-                      <img 
-                        key={idx} 
-                        src={resolveImageUrl(url) || ""} 
-                        alt={`Síntoma ${idx + 1}`} 
-                        className="w-full h-24 object-cover rounded-lg border border-default-200"
-                      />
-                  ))}
+          {/* Síntomas */}
+          <div>
+            <h2 className="text-xl font-semibold text-default-900 mb-3">
+              Síntomas
+            </h2>
+            <p className="text-default-700 leading-relaxed whitespace-pre-wrap mb-4">
+              {epa?.sintomas || "No hay información sobre síntomas."}
+            </p>
+            {epa?.fotosSintomas && epa.fotosSintomas.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {epa.fotosSintomas.map((url, idx) => (
+                  <img
+                    key={idx}
+                    src={resolveImageUrl(url) || ""}
+                    alt={`Síntoma ${idx + 1}`}
+                    className="w-full h-24 object-cover rounded-lg border border-default-200 shadow-sm hover:shadow-md transition-shadow"
+                  />
+                ))}
               </div>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* Manejo/Control */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Manejo y Control</h2>
-        </CardHeader>
-        <CardBody>
-          <p className="text-default-700 leading-relaxed whitespace-pre-wrap">
-            {epa?.manejoYControl || "No hay información sobre manejo y control."}
-          </p>
-        </CardBody>
-      </Card>
-
-      {/* Información Temporal */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Información Temporal</h2>
-        </CardHeader>
-        <CardBody>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-medium text-default-900 mb-2">Meses de Riesgo</h3>
-              <p className="text-default-700">
-                {formatMeses(epa?.mesesProbables)}
-              </p>
-            </div>
-            <div>
-              <h3 className="font-medium text-default-900 mb-2">Temporadas</h3>
-              <p className="text-default-700">
-                {epa?.temporadas?.join(", ") || "No especificado"}
-              </p>
-            </div>
-            {epa?.notasEstacionalidad && (
-                <div className="col-span-1 md:col-span-2">
-                    <h3 className="font-medium text-default-900 mb-2">Notas de Estacionalidad</h3>
-                    <p className="text-default-700 italic">
-                        {epa.notasEstacionalidad}
-                    </p>
-                </div>
             )}
           </div>
-        </CardBody>
-      </Card>
+        </div>
+
+        {/* Columna derecha */}
+        <div className="space-y-8">
+          {/* Manejo y Control */}
+          <div>
+            <h2 className="text-xl font-semibold text-default-900 mb-3">
+              Manejo y Control
+            </h2>
+            <p className="text-default-700 leading-relaxed whitespace-pre-wrap">
+              {epa?.manejoYControl || "No hay información sobre manejo y control."}
+            </p>
+          </div>
+
+          {/* Información Temporal */}
+          <div>
+            <h2 className="text-xl font-semibold text-default-900 mb-3">
+              Información Temporal
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium text-default-900 mb-2">Meses de Riesgo</h3>
+                <p className="text-default-700">
+                  {formatMeses(epa?.mesesProbables)}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-medium text-default-900 mb-2">Temporadas</h3>
+                <p className="text-default-700">
+                  {epa?.temporadas?.join(", ") || "No especificado"}
+                </p>
+              </div>
+              {epa?.notasEstacionalidad && (
+                <div>
+                  <h3 className="font-medium text-default-900 mb-2">Notas de Estacionalidad</h3>
+                  <p className="text-default-700 italic">
+                    {epa.notasEstacionalidad}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

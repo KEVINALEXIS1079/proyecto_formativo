@@ -6,19 +6,20 @@ function mapCreateDtoToApi(dto: CreateInsumoInput) {
   return {
     nombre: dto.nombre,
     descripcion: dto.descripcion,
-    imagen_url: dto.imagenUrl,
-    presentacion_tipo: dto.presentacionTipo,
-    presentacion_cantidad: dto.presentacionCantidad,
-    presentacion_unidad: dto.presentacionUnidad,
-    unidad_base: dto.unidadBase,
-    factor_conversion: dto.factorConversion,
-    stock_presentaciones: dto.stockPresentaciones,
-    precio_unitario_actual: dto.precioUnitario,
-    fecha_ingreso: dto.fechaIngreso,
-    id_categoria_insumo_fk: dto.idCategoria,
-    id_proveedor_fk: dto.idProveedor,
-    id_almacen_fk: dto.idAlmacen,
-    descripcion_operacion: dto.descripcionOperacion,
+    tipoMateria: dto.tipoMateria?.toLowerCase() || 'solido', // Asegurar que esté en minúsculas
+    presentacionTipo: dto.presentacionTipo,
+    presentacionCantidad: dto.presentacionCantidad,
+    presentacionUnidad: dto.presentacionUnidad,
+    unidadBase: dto.unidadBase,
+    factorConversion: dto.factorConversion,
+    stockPresentacion: dto.stockPresentaciones,
+    precioUnitarioPresentacion: dto.precioUnitario,
+    fechaRegistro: dto.fechaIngreso, // Mapear fechaIngreso a fechaRegistro
+    almacenId: dto.idAlmacen,
+    categoriaId: dto.idCategoria,
+    proveedorId: dto.idProveedor,
+    descripcionOperacion: dto.descripcionOperacion,
+    creadoPorUsuarioId: dto.creadoPorUsuarioId, // Para el movimiento de inventario inicial
   };
 }
 
@@ -26,19 +27,27 @@ function mapUpdateDtoToApi(dto: UpdateInsumoInput) {
   const out: any = {};
   if (dto.nombre !== undefined) out.nombre = dto.nombre;
   if (dto.descripcion !== undefined) out.descripcion = dto.descripcion;
-  if (dto.imagenUrl !== undefined) out.imagen_url = dto.imagenUrl;
-  if (dto.presentacionTipo !== undefined) out.presentacion_tipo = dto.presentacionTipo;
-  if (dto.presentacionCantidad !== undefined) out.presentacion_cantidad = dto.presentacionCantidad;
-  if (dto.presentacionUnidad !== undefined) out.presentacion_unidad = dto.presentacionUnidad;
-  if (dto.unidadBase !== undefined) out.unidad_base = dto.unidadBase;
-  if (dto.factorConversion !== undefined) out.factor_conversion = dto.factorConversion;
-  if (dto.stockPresentaciones !== undefined) out.stock_presentaciones = dto.stockPresentaciones;
-  if (dto.precioUnitario !== undefined) out.precio_unitario_actual = dto.precioUnitario;
-  if (dto.fechaIngreso !== undefined) out.fecha_ingreso = dto.fechaIngreso;
-  if (dto.idCategoria !== undefined) out.id_categoria_insumo_fk = dto.idCategoria;
-  if (dto.idProveedor !== undefined) out.id_proveedor_fk = dto.idProveedor;
-  if (dto.idAlmacen !== undefined) out.id_almacen_fk = dto.idAlmacen;
-  if (dto.descripcionOperacion !== undefined) out.descripcion_operacion = dto.descripcionOperacion;
+  if (dto.tipoMateria !== undefined) {
+    out.tipoMateria = dto.tipoMateria?.toLowerCase() || 'solido';
+    console.log('DEBUG: Mapeando tipoMateria:', dto.tipoMateria, '->', out.tipoMateria);
+  }
+  if (dto.imagenUrl !== undefined) out.fotoUrl = dto.imagenUrl;
+  if (dto.presentacionTipo !== undefined) out.presentacionTipo = dto.presentacionTipo;
+  if (dto.presentacionCantidad !== undefined) out.presentacionCantidad = dto.presentacionCantidad;
+  if (dto.presentacionUnidad !== undefined) out.presentacionUnidad = dto.presentacionUnidad;
+  if (dto.unidadBase !== undefined) out.unidadUso = dto.unidadBase;
+  if (dto.factorConversion !== undefined) out.factorConversionUso = dto.factorConversion;
+  if (dto.stockPresentaciones !== undefined) out.stockPresentacion = dto.stockPresentaciones;
+  if (dto.precioUnitario !== undefined) out.precioUnitarioPresentacion = dto.precioUnitario;
+  if (dto.fechaIngreso !== undefined) out.fechaRegistro = dto.fechaIngreso;
+  if (dto.idCategoria !== undefined) out.categoriaId = dto.idCategoria;
+  if (dto.idProveedor !== undefined) out.proveedorId = dto.idProveedor;
+  if (dto.idAlmacen !== undefined) {
+    out.almacenId = dto.idAlmacen;
+    console.log('DEBUG: Mapeando idAlmacen:', dto.idAlmacen, 'a almacenId:', out.almacenId);
+  }
+  if (dto.descripcionOperacion !== undefined) out.descripcionOperacion = dto.descripcionOperacion;
+  console.log('DEBUG: mapUpdateDtoToApi - Input:', dto, 'Output:', out);
   return out;
 }
 
@@ -80,7 +89,6 @@ class InsumosService {
 
   async create(payload: CreateInsumoInput): Promise<{ message: string; id: number }> {
     const body = mapCreateDtoToApi(payload);
-    console.log("Payload enviado a API:", body);
     const { data } = await api.post("/insumos", body);
     const id = data?.id ?? data?.id_insumo_pk ?? 0;
     return { message: data?.message ?? "Insumo creado", id };
@@ -106,6 +114,11 @@ class InsumosService {
     const { data } = await api.get(`/insumos/history/all`);
     return data;
   }
+
+  async hasMovimientos(id: number): Promise<boolean> {
+    const { data } = await api.get(`/insumos/${id}/has-movimientos`);
+    return data;
+  }
 }
 
 export const insumosService = new InsumosService();
@@ -120,8 +133,41 @@ export const getInsumoHistory = (id: number) => insumosService.getHistory(id);
 export const getAllInsumoHistory = () => insumosService.getAllHistory();
 export const uploadInsumoImage = (id: number, file: File) => {
   const formData = new FormData();
-  formData.append('imagen', file);
-  return api.post(`/insumos/${id}/upload-image`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  formData.append('image', file);
+  return api.post(`/insumos/${id}/upload-image`, formData);
+};
+export const hasMovimientos = (id: number) => insumosService.hasMovimientos(id);
+
+export const createActivoFijo = (data: any, file?: File) => {
+  if (file) {
+    const formData = new FormData();
+    Object.keys(data).forEach(key => {
+      if (data[key] !== undefined && data[key] !== null) {
+        formData.append(key, data[key]);
+      }
+    });
+    formData.append('imagen', file);
+    return api.post('/insumos/activos-fijos', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
+  return api.post('/insumos/activos-fijos', data);
+};
+
+export const getActivosFijos = async () => {
+  const { data } = await api.get('/insumos/activos-fijos');
+  return normalizeListResp(data);
+};
+
+export const registrarMantenimiento = (id: number, data: { costo?: number; descripcion?: string }) => {
+  return api.post(`/insumos/activos-fijos/${id}/mantenimiento`, data);
+};
+
+export const finalizarMantenimiento = (id: number) => {
+  return api.patch(`/insumos/activos-fijos/${id}/finalizar-mantenimiento`);
+};
+
+export const getMovimientosByInsumo = async (insumoId: number) => {
+  const { data } = await api.get('/insumos/movimientos', { params: { insumoId } });
+  return data;
 };

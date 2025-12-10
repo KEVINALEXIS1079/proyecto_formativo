@@ -1,27 +1,34 @@
 import { api, connectSocket } from "@/shared/api/client";
 import { adaptCultivo } from "../model/mappers";
-import type { Cultivo, CreateCultivoInput, UpdateCultivoInput } from "../model/types";
+import type { Cultivo, CreateCultivoInput, UpdateCultivoInput, CultivoHistorial } from "../model/types";
 import type { Socket } from "socket.io-client";
 
 function mapCreateDtoToApi(dto: CreateCultivoInput) {
-  const formData = new FormData();
-  formData.append('nombre_cultivo', dto.nombre);
-  if (dto.descripcion) formData.append('descripcion_cultivo', dto.descripcion);
-  formData.append('id_tipo_cultivo_fk', dto.idTipoCultivo.toString());
-  if (dto.idSublote) formData.append('id_sublote_fk', dto.idSublote.toString());
-  if (dto.img) formData.append('imagen', dto.img);
-  return formData;
+  const hasSub = dto.idSublote !== undefined && dto.idSublote !== null;
+  return {
+    nombreCultivo: dto.nombre,
+    tipoCultivo: dto.tipoCultivo,
+    descripcion: dto.descripcion,
+    loteId: hasSub ? undefined : dto.idLote !== undefined ? Number(dto.idLote) : undefined,
+    subLoteId: hasSub ? Number(dto.idSublote) : undefined,
+    estado: dto.estado,
+  };
 }
 
 function mapUpdateDtoToApi(dto: UpdateCultivoInput) {
-  const formData = new FormData();
-  if (dto.nombre !== undefined) formData.append('nombre_cultivo', dto.nombre);
-  if (dto.descripcion !== undefined) formData.append('descripcion_cultivo', dto.descripcion);
-  if (dto.idTipoCultivo !== undefined) formData.append('id_tipo_cultivo_fk', dto.idTipoCultivo.toString());
-  if (dto.idSublote !== undefined) formData.append('id_sublote_fk', dto.idSublote.toString());
-  if (dto.estado !== undefined) formData.append('estado_cultivo', dto.estado);
-  if (dto.img) formData.append('imagen', dto.img);
-  return formData;
+  const body: any = {};
+  if (dto.nombre !== undefined) body.nombreCultivo = dto.nombre;
+  if (dto.tipoCultivo !== undefined) body.tipoCultivo = dto.tipoCultivo;
+  if (dto.descripcion !== undefined) body.descripcion = dto.descripcion;
+  if (dto.idSublote !== undefined) {
+    body.subLoteId = dto.idSublote === null ? null : Number(dto.idSublote); // puede ser null para limpiar
+    if (dto.idSublote !== null) body.loteId = undefined;
+  }
+  if (dto.idLote !== undefined) body.loteId = dto.idLote === null ? null : Number(dto.idLote);
+  if (dto.estado !== undefined) body.estado = dto.estado;
+  if (dto.motivo !== undefined) body.motivo = dto.motivo;
+  if ((dto as any).img !== undefined) body.img = (dto as any).img;
+  return body;
 }
 
 function normalizeListResp(data: any): Cultivo[] {
@@ -41,7 +48,7 @@ class CultivosService {
     limit?: number;
     q?: string;
     loteId?: number;
-    tipoCultivoId?: number;
+    tipoCultivo?: string;
     estado?: string;
   }): Promise<Cultivo[]> {
     const query: Record<string, any> = {};
@@ -49,7 +56,7 @@ class CultivosService {
     if (params?.limit) query.limit = params.limit;
     if (params?.q) query.q = params.q;
     if (params?.loteId) query.loteId = params.loteId;
-    if (params?.tipoCultivoId) query.tipoCultivoId = params.tipoCultivoId;
+    if (params?.tipoCultivo) query.tipoCultivo = params.tipoCultivo;
     if (params?.estado) query.estado = params.estado;
 
     const { data } = await api.get("/cultivos", { params: query });
@@ -61,12 +68,26 @@ class CultivosService {
     return adaptCultivo(data);
   }
 
+  async listHistorial(params?: { limit?: number; cultivoId?: number }): Promise<CultivoHistorial[]> {
+    const paramsObj: Record<string, any> = {};
+    if (params?.limit) paramsObj.limit = params.limit;
+    if (params?.cultivoId) paramsObj.cultivoId = params.cultivoId;
+    const { data } = await api.get("/cultivos/historial", { params: Object.keys(paramsObj).length ? paramsObj : undefined });
+    return Array.isArray(data) ? data : data?.items || [];
+  }
+
   async create(payload: CreateCultivoInput): Promise<{ message: string; id: number }> {
+    const hasFile = payload.img instanceof File;
     const body = mapCreateDtoToApi(payload);
-    const { data } = await api.post("/cultivos", body, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const reqBody = hasFile ? new FormData() : body;
+    if (hasFile && reqBody instanceof FormData) {
+      Object.entries(body).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) reqBody.append(k, String(v));
+      });
+      reqBody.append("img", payload.img as File);
+    }
+    const { data } = await api.post("/cultivos", reqBody, {
+      headers: hasFile ? { "Content-Type": "multipart/form-data" } : undefined,
     });
     this.emit("cultivos:created", data);
     const id = data?.id ?? data?.id_cultivo_pk ?? 0;
@@ -74,32 +95,22 @@ class CultivosService {
   }
 
   async update(id: number, payload: UpdateCultivoInput): Promise<{ message: string }> {
+    const hasFile = (payload as any).img instanceof File;
     const body = mapUpdateDtoToApi(payload);
-    const { data } = await api.patch(`/cultivos/${id}`, body, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const reqBody = hasFile ? new FormData() : body;
+    if (hasFile && reqBody instanceof FormData) {
+      Object.entries(body).forEach(([k, v]) => {
+        if (v === undefined) return;
+        // Enviar null como string vacía para que el backend pueda interpretarlo como null
+        reqBody.append(k, v === null ? "" : String(v));
+      });
+      reqBody.append("img", (payload as any).img as File);
+    }
+    const { data } = await api.patch(`/cultivos/${id}`, reqBody, {
+      headers: hasFile ? { "Content-Type": "multipart/form-data" } : undefined,
     });
     this.emit("cultivos:updated", data);
     return { message: data?.message ?? "Cultivo actualizado" };
-  }
-
-  async remove(id: number): Promise<boolean> {
-    await api.delete(`/cultivos/${id}`);
-    this.emit("cultivos:deleted", { id_cultivo_pk: id });
-    return true;
-  }
-
-  async finalizar(id: number): Promise<{ message: string }> {
-    const { data } = await api.patch(`/cultivos/${id}/finalizar`);
-    this.emit("cultivos:updated", data);
-    return { message: data?.message ?? "Cultivo finalizado" };
-  }
-
-  async restore(id: number): Promise<Cultivo> {
-    const { data } = await api.patch(`/cultivos/restore/${id}`);
-    this.emit("cultivos:restored", data);
-    return adaptCultivo(data);
   }
 
   // === WEBSOCKET ===
@@ -144,24 +155,11 @@ class CultivosService {
   onUpdated(cb: (cultivo: any) => void) {
     this.on("cultivos:updated", cb);
   }
-  onDeleted(cb: (data: any) => void) {
-    this.on("cultivos:deleted", cb);
-  }
-  onRestored(cb: (cultivo: any) => void) {
-    this.on("cultivos:restored", cb);
-  }
-
   offCreated(cb?: (cultivo: any) => void) {
     this.off("cultivos:created", cb);
   }
   offUpdated(cb?: (cultivo: any) => void) {
     this.off("cultivos:updated", cb);
-  }
-  offDeleted(cb?: (data: any) => void) {
-    this.off("cultivos:deleted", cb);
-  }
-  offRestored(cb?: (cultivo: any) => void) {
-    this.off("cultivos:restored", cb);
   }
 }
 
@@ -172,6 +170,4 @@ export const listCultivos = (params?: { page?: number; limit?: number; q?: strin
 export const getCultivo = (id: number) => cultivosService.get(id);
 export const createCultivo = (payload: CreateCultivoInput) => cultivosService.create(payload);
 export const updateCultivo = (id: number, payload: UpdateCultivoInput) => cultivosService.update(id, payload);
-export const removeCultivo = (id: number) => cultivosService.remove(id);
-export const finalizarCultivo = (id: number) => cultivosService.finalizar(id);
-export const restoreCultivo = (id: number) => cultivosService.restore(id);
+export const listHistorial = (params?: { limit?: number }) => cultivosService.listHistorial(params);

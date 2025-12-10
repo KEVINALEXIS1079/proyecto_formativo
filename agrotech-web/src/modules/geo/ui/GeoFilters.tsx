@@ -2,7 +2,7 @@ import { Input } from "@heroui/react";
 import { Search } from "lucide-react";
 import Surface from "./Surface";
 import SectionTitle from "./SectionTitle";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface GeoFiltersProps {
   q: string;
@@ -14,8 +14,8 @@ interface GeoFiltersProps {
 export default function GeoFilters({ q, setQ, placeholder = "Buscar...", children }: GeoFiltersProps) {
   return (
     <Surface className="mb-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-        <div className="col-span-1 md:col-span-2">
+      <div className="flex flex-col md:flex-row gap-4 items-end flex-wrap">
+        <div className="w-full md:w-auto min-w-[250px] flex-1">
           <SectionTitle>Buscar</SectionTitle>
           <Input
             placeholder={placeholder}

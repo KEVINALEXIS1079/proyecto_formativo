@@ -19,6 +19,7 @@ import { IotModule } from '../modules/iot/iot.module';
 import { SeedsModule } from '../database/seeds/seeds.module';
 import { ReportsModule } from '../modules/reports/reports.module';
 import { FinanceModule } from '../modules/finance/finance.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { FinanceModule } from '../modules/finance/finance.module';
     ReportsModule,
     ReportsModule,
     FinanceModule,
+    ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'uploads'),
       serveRoot: '/uploads',

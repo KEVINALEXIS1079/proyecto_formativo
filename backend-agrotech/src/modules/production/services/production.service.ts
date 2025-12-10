@@ -24,10 +24,10 @@ export class ProductionService {
     @InjectRepository(VentaDetalle) private ventaDetalleRepo: Repository<VentaDetalle>,
     @InjectRepository(Pago) private pagoRepo: Repository<Pago>,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   // ==================== PRODUCTO AGRO ====================
-  
+
   // RF35: CRUD ProductoAgro
   async findAllProductos() {
     return this.productoRepo.find();
@@ -56,7 +56,7 @@ export class ProductionService {
   }
 
   // ==================== LOTE PRODUCCION ====================
-  
+
   // RF36: CRUD LoteProduccion
   async findAllLotesProduccion(filters?: { productoAgroId?: number; cultivoId?: number }) {
     const queryBuilder = this.loteProduccionRepo.createQueryBuilder('lote')
@@ -85,30 +85,46 @@ export class ProductionService {
     actividadCosechaId: number;
     cantidadKg: number;
     fecha: Date;
-  }) {
-    // Por ahora asumimos productoAgroId = 1 (debe venir de config o del cultivo)
-    const loteProduccion = this.loteProduccionRepo.create({
-      productoAgroId: 1, // TODO: Obtener del cultivo
+    costoCultivo?: number; // Costo acumulado real del cultivo
+  }, manager?: any) {
+    const repoLote = manager ? manager.getRepository(LoteProduccion) : this.loteProduccionRepo;
+    const repoMov = manager ? manager.getRepository(MovimientoProduccion) : this.movimientoRepo;
+
+    // Calcular costo unitario real
+    let costoTotal = 0;
+    let costoUnitario = 0;
+
+    if (data.costoCultivo && data.cantidadKg > 0) {
+      costoTotal = data.costoCultivo;
+      costoUnitario = costoTotal / data.cantidadKg;
+    }
+
+    const loteProduccion = repoLote.create({
+      productoAgroId: 1, // Default por ahora, idealmente vendría del cultivo
       cultivoId: data.cultivoId,
       actividadCosechaId: data.actividadCosechaId,
       cantidadKg: data.cantidadKg,
-      stockDisponibleKg: data.cantidadKg, // El stock inicial es igual a la cantidad cosechada
-      costoUnitarioKg: 0, // TODO: Calcular desde costos del cultivo
-      costoTotal: 0,
-      precioSugeridoKg: 0, // TODO: Calcular
+      stockDisponibleKg: data.cantidadKg,
+      costoUnitarioKg: costoUnitario,
+      costoTotal: costoTotal,
+      precioSugeridoKg: costoUnitario * 1.35, // Margen sugerido 35%
+      fechaExpiracion: new Date(data.fecha.getTime() + 1000 * 60 * 60 * 24 * 30), // +30 días default
     });
 
-    const saved = await this.loteProduccionRepo.save(loteProduccion);
+    const saved = await repoLote.save(loteProduccion);
 
     // RF37: Crear movimiento de ingreso
-    await this.movimientoRepo.save({
+    const movimiento = repoMov.create({
       loteProduccionId: saved.id,
       tipo: 'INGRESO_COSECHA',
       cantidadKg: data.cantidadKg,
-      costoUnitarioKg: 0,
-      costoTotal: 0,
+      costoUnitarioKg: costoUnitario,
+      costoTotal: costoTotal,
       descripcion: `Ingreso por cosecha - Actividad ${data.actividadCosechaId}`,
+      fecha: data.fecha
     });
+
+    await repoMov.save(movimiento);
 
     return saved;
   }
@@ -134,7 +150,7 @@ export class ProductionService {
   }
 
   // ==================== CLIENTES ====================
-  
+
   // RF38: CRUD Cliente
   async findAllClientes() {
     return this.clienteRepo.find();
@@ -146,7 +162,7 @@ export class ProductionService {
   }
 
   // ==================== VENTAS POS ====================
-  
+
   // RF39: Crear venta POS
   async createVenta(data: {
     clienteId?: number;

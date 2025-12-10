@@ -1,13 +1,16 @@
-import { 
-  IsString, 
-  IsOptional, 
-  IsNotEmpty, 
-  IsNumber, 
-  IsDateString, 
+import {
+  IsString,
+  IsOptional,
+  IsNotEmpty,
+  IsNumber,
+  IsDateString,
   IsEnum,
   Min,
-  ValidateIf
+  ValidateIf,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export enum TipoActividad {
   CREACION = 'CREACION',
@@ -26,6 +29,80 @@ export enum SubtipoActividad {
   OTRA = 'OTRA',
 }
 
+export class CreateActivityResponsableDto {
+  @IsNotEmpty()
+  @IsNumber()
+  usuarioId: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  horas?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  precioHora?: number;
+}
+
+export class CreateActivityInsumoDto {
+  @IsNotEmpty()
+  @IsNumber()
+  insumoId: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  cantidadUso: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  costoUnitarioUso: number;
+
+  @IsOptional()
+  @IsString()
+  descripcion?: string;
+}
+
+export class CreateActivityServicioDto {
+  @IsNotEmpty()
+  @IsString()
+  nombreServicio: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  horas: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  precioHora: number;
+}
+
+export class CreateActivityEvidenciaDto {
+  @IsNotEmpty()
+  @IsString()
+  descripcion: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imagenes: string[];
+}
+
+export class CreateActivityHerramientaDto {
+  @IsNotEmpty()
+  @IsNumber()
+  activoFijoId: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  horasUso: number;
+}
+
 export class CreateActivityDto {
   @IsNotEmpty({ message: 'El nombre de la actividad es requerido' })
   @IsString({ message: 'El nombre debe ser un texto' })
@@ -41,9 +118,9 @@ export class CreateActivityDto {
   @IsEnum(SubtipoActividad, { message: 'El subtipo debe ser válido' })
   subtipo: SubtipoActividad;
 
-  @IsNotEmpty({ message: 'El ID del cultivo es requerido' })
+  @IsOptional()
   @IsNumber({}, { message: 'El ID del cultivo debe ser un número' })
-  cultivoId: number;
+  cultivoId?: number;
 
   @IsOptional()
   @IsNumber({}, { message: 'El ID del lote debe ser un número' })
@@ -60,6 +137,10 @@ export class CreateActivityDto {
   @IsOptional()
   @IsString({ message: 'La descripción debe ser un texto' })
   descripcion?: string;
+
+  @IsOptional()
+  @IsString({ message: 'El estado debe ser un texto' })
+  estado?: string; // 'Pendiente' | 'Finalizada'
 
   // MANO DE OBRA (RF17)
   @IsOptional()
@@ -82,8 +163,33 @@ export class CreateActivityDto {
   @Min(0, { message: 'Los kg no pueden ser negativos' })
   kgRecolectados?: number;
 
-  // SIEMBRA (RF21)
-  @ValidateIf((o) => o.subtipo === SubtipoActividad.SIEMBRA)
-  @IsDateString({}, { message: 'La fecha de siembra debe ser válida' })
-  fechaSiembra?: string;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityResponsableDto)
+  responsables?: CreateActivityResponsableDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityInsumoDto)
+  insumos?: CreateActivityInsumoDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityServicioDto)
+  servicios?: CreateActivityServicioDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityEvidenciaDto)
+  evidencias?: CreateActivityEvidenciaDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateActivityHerramientaDto)
+  herramientas?: CreateActivityHerramientaDto[];
 }

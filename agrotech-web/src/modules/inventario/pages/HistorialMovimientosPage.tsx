@@ -55,9 +55,9 @@ export default function HistorialMovimientosPage() {
         id: `mov-${mov.id}`,
         type: 'movimiento' as const,
         fecha: mov.fechaMovimiento,
-        insumo: mov.insumo.nombre,
-        insumoId: mov.insumo.id,
-        accion: mov.tipoMovimiento === 'ajuste' ? 'actualizado' : mov.tipoMovimiento,
+        insumo: mov.insumo?.nombre || 'N/A',
+        insumoId: mov.insumo?.id || 0,
+        accion: mov.tipoMovimiento === 'AJUSTE' ? 'actualizado' : mov.tipoMovimiento,
         responsable: mov.usuarioResponsable?.nombre || 'Sistema',
         descripcion: mov.descripcion,
         detalles: {

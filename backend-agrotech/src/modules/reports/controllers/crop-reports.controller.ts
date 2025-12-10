@@ -8,7 +8,7 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 @Controller('reports/crops')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class CropReportsController {
-  constructor(private readonly cropService: CropReportsService) {}
+  constructor(private readonly cropService: CropReportsService) { }
 
   @Get(':id/summary')
   @RequirePermissions('cultivos.ver')
@@ -59,6 +59,16 @@ export class CropReportsController {
     res.header('Content-Type', 'text/csv');
     res.header('Content-Disposition', `attachment; filename=crop_${id}_${type || 'summary'}.csv`);
     res.send(csv);
+  }
+
+  @Get(':id/complete')
+  @RequirePermissions('cultivos.ver')
+  async getCompleteReport(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('fechaDesde') fechaDesde?: string,
+    @Query('fechaHasta') fechaHasta?: string
+  ) {
+    return this.cropService.getCompleteReport(id, fechaDesde, fechaHasta);
   }
 
   @Get(':id/consistency')

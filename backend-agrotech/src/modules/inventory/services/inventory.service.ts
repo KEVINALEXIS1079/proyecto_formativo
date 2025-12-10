@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, EntityManager } from 'typeorm';
 import { Insumo } from '../entities/insumo.entity';
 import { MovimientoInsumo } from '../entities/movimiento-insumo.entity';
 import { Almacen } from '../entities/almacen.entity';
@@ -12,6 +12,9 @@ import { Proveedor } from '../entities/proveedor.entity';
 import { Categoria } from '../entities/categoria.entity';
 import { CreateInsumoDto } from '../dtos/create-insumo.dto';
 import { UpdateInsumoDto } from '../dtos/update-insumo.dto';
+import { MovimientoInsumoService } from './movimiento-insumo.service';
+import { UsoHerramienta } from '../entities/uso-herramienta.entity';
+import { DepreciationService } from './depreciation.service';
 
 @Injectable()
 export class InventoryService {
@@ -22,7 +25,10 @@ export class InventoryService {
     @InjectRepository(Almacen) private almacenRepo: Repository<Almacen>,
     @InjectRepository(Proveedor) private proveedorRepo: Repository<Proveedor>,
     @InjectRepository(Categoria) private categoriaRepo: Repository<Categoria>,
-  ) {}
+    @InjectRepository(UsoHerramienta) private usoHerramientaRepo: Repository<UsoHerramienta>,
+    private movimientoInsumoService: MovimientoInsumoService,
+    private depreciationService: DepreciationService,
+  ) { }
 
   // RF24: Crear insumo con cálculos automáticos
   async createInsumo(data: CreateInsumoDto, usuarioId: number) {
@@ -30,6 +36,12 @@ export class InventoryService {
     let unidadUso = data.unidadUso;
     if (!unidadUso) {
       unidadUso = data.tipoMateria === 'solido' ? 'g' : 'cm3';
+    }
+
+    // Validar valores negativos
+    if ((data.stockPresentacion && data.stockPresentacion < 0) ||
+      (data.precioUnitarioPresentacion && data.precioUnitarioPresentacion < 0)) {
+      throw new BadRequestException('El stock y precio no pueden ser negativos');
     }
 
     // Calcular factor de conversión automático según tipo de materia y unidad de presentación
@@ -92,6 +104,7 @@ export class InventoryService {
       stockPresentacion,
       precioUnitarioUso,
       valorInventario,
+      fechaRegistro: new Date(),
       creadoPorUsuarioId: usuarioId,
     });
 
@@ -101,12 +114,15 @@ export class InventoryService {
     if (stockUso > 0) {
       await this.movimientoRepo.save({
         insumoId: saved.id,
-        tipoMovimiento: 'INGRESO',
+        tipo: 'INICIAL',
         cantidadUso: stockUso,
-        precioUnitario: precioUnitarioUso,
-        valorTotal: valorInventario,
-        fecha: new Date(),
         descripcion: 'Stock inicial',
+        usuarioId: usuarioId,
+        cantidadPresentacion: stockPresentacion,
+        costoUnitarioPresentacion: precioUnitarioPresentacion,
+        costoUnitarioUso: precioUnitarioUso,
+        costoTotal: valorInventario,
+        valorInventarioResultante: valorInventario,
       });
     }
 
@@ -116,6 +132,8 @@ export class InventoryService {
   async findAllInsumos(filters?: {
     categoriaId?: number;
     almacenId?: number;
+    proveedorId?: number;
+    tipoInsumo?: string;
     q?: string;
   }) {
     const queryBuilder = this.insumoRepo
@@ -124,6 +142,12 @@ export class InventoryService {
       .leftJoinAndSelect('insumo.almacen', 'almacen')
       .leftJoinAndSelect('insumo.proveedor', 'proveedor')
       .where('insumo.deletedAt IS NULL');
+
+    if (filters?.tipoInsumo) {
+      queryBuilder.andWhere('insumo.tipoInsumo = :tipoInsumo', {
+        tipoInsumo: filters.tipoInsumo,
+      });
+    }
 
     if (filters?.categoriaId) {
       queryBuilder.andWhere('insumo.categoriaId = :categoriaId', {
@@ -137,6 +161,12 @@ export class InventoryService {
       });
     }
 
+    if (filters?.proveedorId) {
+      queryBuilder.andWhere('insumo.proveedorId = :proveedorId', {
+        proveedorId: filters.proveedorId,
+      });
+    }
+
     if (filters?.q) {
       queryBuilder.andWhere(
         '(insumo.nombre ILIKE :q OR insumo.descripcion ILIKE :q)',
@@ -147,8 +177,9 @@ export class InventoryService {
     return queryBuilder.getMany();
   }
 
-  async findInsumoById(id: number) {
-    const insumo = await this.insumoRepo.findOne({
+  async findInsumoById(id: number, manager?: EntityManager) {
+    const repo = manager ? manager.getRepository(Insumo) : this.insumoRepo;
+    const insumo = await repo.findOne({
       where: { id },
       relations: ['categoria', 'almacen', 'proveedor'],
     });
@@ -157,8 +188,9 @@ export class InventoryService {
     return insumo;
   }
 
-  async updateInsumo(id: number, data: UpdateInsumoDto) {
+  async updateInsumo(id: number, data: UpdateInsumoDto, usuarioId?: number) {
     const insumo = await this.findInsumoById(id);
+    const almacenAnteriorId = insumo.almacenId;
 
     // Si se actualizan campos de presentación o stock, recalcular
     if (
@@ -173,31 +205,132 @@ export class InventoryService {
       const precioUnitarioUso =
         data.precioUnitarioUso ?? insumo.precioUnitarioUso ?? 0;
 
-      // Recalcular valores derivados
-      data.stockUso = stockPresentacion * presentacionCantidad;
+      if (stockPresentacion < 0 || precioUnitarioUso < 0) {
+        throw new BadRequestException('El stock y precio no pueden ser negativos');
+      }
+
+      // Recalcular factorConversionUso si cambió presentacionCantidad
+      let factorConversionUso = insumo.factorConversionUso;
+      if (data.presentacionCantidad !== undefined) {
+        // Recalcular factor de conversión como en create
+        const presentacionUnidad =
+          insumo.presentacionUnidad?.toLowerCase() || '';
+        if (insumo.tipoMateria === 'solido') {
+          if (
+            presentacionUnidad === 'kg' ||
+            presentacionUnidad === 'kilogramo'
+          ) {
+            factorConversionUso = presentacionCantidad * 1000;
+          } else if (
+            presentacionUnidad === 'g' ||
+            presentacionUnidad === 'gramo'
+          ) {
+            factorConversionUso = presentacionCantidad;
+          } else {
+            factorConversionUso = presentacionCantidad;
+          }
+        } else if (insumo.tipoMateria === 'liquido') {
+          if (presentacionUnidad === 'l' || presentacionUnidad === 'litro') {
+            factorConversionUso = presentacionCantidad * 1000;
+          } else if (
+            presentacionUnidad === 'ml' ||
+            presentacionUnidad === 'mililitro'
+          ) {
+            factorConversionUso = presentacionCantidad;
+          } else if (
+            presentacionUnidad === 'cm3' ||
+            presentacionUnidad === 'cm³'
+          ) {
+            factorConversionUso = presentacionCantidad;
+          } else {
+            factorConversionUso = presentacionCantidad;
+          }
+        } else {
+          factorConversionUso = presentacionCantidad;
+        }
+        data.factorConversionUso = factorConversionUso;
+      }
+
+      // Recalcular valores derivados usando factorConversionUso correcto
+      data.stockUso =
+        stockPresentacion * (data.factorConversionUso ?? factorConversionUso);
       data.valorInventario = data.stockUso * precioUnitarioUso;
-      data.factorConversionUso = presentacionCantidad;
     }
 
     Object.assign(insumo, data);
-    return this.insumoRepo.save(insumo);
+    const saved = await this.insumoRepo.save(insumo);
+
+    // Si cambió el almacén, crear movimiento de traslado
+    if (
+      data.almacenId !== undefined &&
+      data.almacenId !== almacenAnteriorId &&
+      usuarioId
+    ) {
+      await this.movimientoInsumoService.create({
+        insumoId: id,
+        tipo: 'TRASLADO',
+        cantidadUso: 0, // No cambia stock
+        costoUnitarioUso: insumo.precioUnitarioUso,
+        descripcion: data.descripcionOperacion || `Traslado de almacén`,
+        usuarioId,
+        almacenOrigenId: almacenAnteriorId,
+        almacenDestinoId: data.almacenId,
+      });
+    }
+
+    return saved;
   }
 
   async removeInsumo(id: number) {
     const insumo = await this.findInsumoById(id);
+
+    // DEBUG: Verificar dependencias antes de eliminar
+    console.log(`DEBUG: Intentando eliminar insumo ${id} - ${insumo.nombre}`);
+    console.log(`DEBUG: Stock actual: ${insumo.stockUso} ${insumo.unidadUso}`);
+    console.log(`DEBUG: Valor inventario: ${insumo.valorInventario}`);
+
+    // Verificar si tiene movimientos
+    const hasMovimientos = await this.hasMovimientosByInsumo(id);
+    console.log(`DEBUG: Tiene movimientos: ${hasMovimientos}`);
+
+    // Verificar si tiene stock
+    const hasStock = insumo.stockUso > 0;
+    console.log(`DEBUG: Tiene stock: ${hasStock}`);
+
+    // TODO: Agregar validaciones aquí si es necesario
+
     return this.insumoRepo.softRemove(insumo);
   }
 
+  async registrarMantenimiento(id: number, data: { costo?: number; descripcion?: string }) {
+    const insumo = await this.findInsumoById(id);
+    insumo.estado = 'MANTENIMIENTO';
+    insumo.fechaUltimoMantenimiento = new Date();
+    // Aquí se podría registrar el costo y descripción en un historial de mantenimiento si existiera la entidad
+    return this.insumoRepo.save(insumo);
+  }
+
+  async finalizarMantenimiento(id: number) {
+    const insumo = await this.findInsumoById(id);
+    insumo.estado = 'DISPONIBLE';
+    // Resetear fecha de mantenimiento o guardar historial
+    return this.insumoRepo.save(insumo);
+  }
+
   // RF25: Movimientos de insumo
-  async createMovimiento(data: {
-    insumoId: number;
-    tipo: string;
-    cantidadPresentacion?: number;
-    cantidadUso: number;
-    costoUnitarioUso: number;
-    descripcion?: string;
-    actividadId?: number;
-  }) {
+  async createMovimiento(
+    data: {
+      insumoId: number;
+      tipo: string;
+      cantidadPresentacion?: number;
+      cantidadUso: number;
+      costoUnitarioUso: number;
+      descripcion?: string;
+      actividadId?: number;
+      usuarioId?: number;
+    },
+    manager?: EntityManager,
+  ) {
     const insumo = await this.findInsumoById(data.insumoId);
 
     // RF26: Validar que no quede stock negativo (stockUso y stockPresentacion)
@@ -261,7 +394,10 @@ export class InventoryService {
       valorInventarioResultante,
     });
 
-    await this.movimientoRepo.save(movimiento);
+    const repoMovimiento = manager ? manager.getRepository(MovimientoInsumo) : this.movimientoRepo;
+    const repoInsumo = manager ? manager.getRepository(Insumo) : this.insumoRepo;
+
+    await repoMovimiento.save(movimiento);
 
     // Actualizar stock del insumo
     if (data.tipo === 'INGRESO' || data.tipo === 'INGRESO_COMPRA') {
@@ -296,7 +432,7 @@ export class InventoryService {
     // Recalcular valorInventario basado en stock y precio actuales
     insumo.valorInventario = insumo.stockUso * insumo.precioUnitarioUso;
 
-    await this.insumoRepo.save(insumo);
+    await repoInsumo.save(insumo);
 
     return movimiento;
   }
@@ -306,25 +442,194 @@ export class InventoryService {
     insumoId: number,
     cantidadUso: number,
     actividadId: number,
+    usuarioId: number,
+    descripcion?: string,
+    manager?: EntityManager,
   ) {
-    const insumo = await this.findInsumoById(insumoId);
+    const insumo = await this.findInsumoById(insumoId, manager);
 
     return this.createMovimiento({
       insumoId,
       tipo: 'CONSUMO',
       cantidadUso,
       costoUnitarioUso: insumo.precioUnitarioUso,
-      descripcion: `Consumo en actividad ${actividadId}`,
+      descripcion: descripcion || `Consumo en actividad ${actividadId}`,
       actividadId,
+      usuarioId,
+    }, manager);
+  }
+  async registrarUsoHerramienta(
+    insumoId: number,
+    horasUso: number,
+    actividadId: number,
+    manager?: EntityManager
+  ) {
+    const insumo = await this.findInsumoById(insumoId, manager);
+
+    // Calcular depreciación
+    const depreciacion = this.depreciationService.calcularDepreciacionPorUso(
+      insumo.costoAdquisicion || 0,
+      insumo.valorResidual || 0,
+      insumo.vidaUtilHoras || 1
+    ) * horasUso;
+
+    // Crear registro de uso
+    const uso = this.usoHerramientaRepo.create({
+      actividadId,
+      insumoId,
+      horasUsadas: horasUso,
+      depreciacionGenerada: depreciacion,
+      valorEnLibrosAntes: insumo.costoAdquisicion - (insumo.depreciacionAcumulada || 0),
+      valorEnLibrosDespues: insumo.costoAdquisicion - (insumo.depreciacionAcumulada || 0) - depreciacion,
+      fechaUso: new Date(),
     });
+
+    if (manager) {
+      await manager.save(uso);
+    } else {
+      await this.usoHerramientaRepo.save(uso);
+    }
+
+    // Actualizar insumo
+    insumo.horasUsadas = (insumo.horasUsadas || 0) + horasUso;
+    insumo.depreciacionAcumulada = (insumo.depreciacionAcumulada || 0) + depreciacion;
+
+    if (manager) {
+      return manager.save(insumo);
+    } else {
+      return this.insumoRepo.save(insumo);
+    }
   }
 
   // RF25: Historial de movimientos
   async findMovimientosByInsumo(insumoId: number) {
     return this.movimientoRepo.find({
       where: { insumoId },
+      relations: ['insumo', 'usuario', 'actividad'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async findAllMovimientos(filters?: {
+    insumoId?: number;
+    tipo?: string;
+    fechaDesde?: Date;
+    fechaHasta?: Date;
+  }) {
+    return this.movimientoInsumoService.findAllGeneral(filters);
+  }
+
+  // Verificar si un insumo tiene movimientos
+  async hasMovimientosByInsumo(insumoId: number): Promise<boolean> {
+    const count = await this.movimientoRepo.count({
+      where: { insumoId },
+    });
+    return count > 0;
+  }
+
+  // Eliminar movimiento y revertir cambios en stock
+  async deleteMovimiento(id: number) {
+    const movimiento = await this.movimientoRepo.findOne({
+      where: { id },
+      relations: ['insumo'],
+    });
+
+    if (!movimiento) {
+      throw new NotFoundException(`Movimiento ${id} not found`);
+    }
+
+    const insumo = movimiento.insumo;
+
+    // Revertir cambios en stock
+    if (movimiento.tipo === 'INGRESO' || movimiento.tipo === 'INGRESO_COMPRA') {
+      insumo.stockUso -= movimiento.cantidadUso;
+      if (movimiento.cantidadPresentacion) {
+        insumo.stockPresentacion -= movimiento.cantidadPresentacion;
+      }
+    } else if (movimiento.tipo === 'CONSUMO' || movimiento.tipo === 'SALIDA') {
+      insumo.stockUso += movimiento.cantidadUso;
+      if (movimiento.cantidadPresentacion) {
+        insumo.stockPresentacion += movimiento.cantidadPresentacion;
+      }
+    }
+
+    // Recalcular valorInventario
+    insumo.valorInventario = insumo.stockUso * insumo.precioUnitarioUso;
+
+    await this.insumoRepo.save(insumo);
+    await this.movimientoRepo.remove(movimiento);
+
+    return movimiento;
+  }
+
+  // Actualizar movimiento y recalcular stock
+  async updateMovimiento(
+    id: number,
+    data: {
+      tipo?: string;
+      cantidadPresentacion?: number;
+      cantidadUso?: number;
+      costoUnitarioUso?: number;
+      descripcion?: string;
+      actividadId?: number;
+    },
+  ) {
+    const movimiento = await this.movimientoRepo.findOne({
+      where: { id },
+      relations: ['insumo'],
+    });
+
+    if (!movimiento) {
+      throw new NotFoundException(`Movimiento ${id} not found`);
+    }
+
+    const insumo = movimiento.insumo;
+
+    // Revertir cambios actuales en stock
+    if (movimiento.tipo === 'INGRESO' || movimiento.tipo === 'INGRESO_COMPRA') {
+      insumo.stockUso -= movimiento.cantidadUso;
+      if (movimiento.cantidadPresentacion) {
+        insumo.stockPresentacion -= movimiento.cantidadPresentacion;
+      }
+    } else if (movimiento.tipo === 'CONSUMO' || movimiento.tipo === 'SALIDA') {
+      insumo.stockUso += movimiento.cantidadUso;
+      if (movimiento.cantidadPresentacion) {
+        insumo.stockPresentacion += movimiento.cantidadPresentacion;
+      }
+    }
+
+    // Actualizar el movimiento con nuevos datos
+    Object.assign(movimiento, data);
+
+    // Calcular cantidadPresentacion si no se proporciona
+    if (
+      data.cantidadPresentacion === undefined &&
+      data.cantidadUso !== undefined
+    ) {
+      movimiento.cantidadPresentacion =
+        data.cantidadUso / (insumo.factorConversionUso || 1);
+    }
+
+    // Aplicar nuevos cambios en stock
+    if (movimiento.tipo === 'INGRESO' || movimiento.tipo === 'INGRESO_COMPRA') {
+      insumo.stockUso += movimiento.cantidadUso;
+      if (movimiento.cantidadPresentacion) {
+        insumo.stockPresentacion += movimiento.cantidadPresentacion;
+      }
+    } else if (movimiento.tipo === 'CONSUMO' || movimiento.tipo === 'SALIDA') {
+      insumo.stockUso -= movimiento.cantidadUso;
+      if (movimiento.cantidadPresentacion) {
+        insumo.stockPresentacion -= movimiento.cantidadPresentacion;
+      }
+    }
+
+    // Recalcular valorInventario
+    insumo.valorInventario = insumo.stockUso * insumo.precioUnitarioUso;
+
+    await this.insumoRepo.save(insumo);
+    await this.movimientoRepo.save(movimiento);
+
+    return movimiento;
   }
 
   // RF24: Calcular factor de conversión
@@ -346,9 +651,40 @@ export class InventoryService {
     return this.almacenRepo.find();
   }
 
-  async createAlmacen(data: { nombre: string; ubicacion?: string }) {
+  async findOneAlmacen(id: number) {
+    console.log(`DEBUG: Buscando almacén con ID: ${id}`);
+    const almacen = await this.almacenRepo.findOne({
+      where: { id },
+      relations: ['insumos'],
+    });
+
+    if (!almacen) {
+      console.error(`DEBUG: Almacén ${id} no encontrado`);
+      throw new NotFoundException(`Almacén ${id} no encontrado`);
+    }
+
+    console.log(`DEBUG: Almacén encontrado:`, almacen.nombre);
+    return almacen;
+  }
+
+  async createAlmacen(data: { nombre: string; descripcion?: string }) {
+    console.log('DEBUG: Creando almacén con datos:', data);
     const almacen = this.almacenRepo.create(data);
-    return this.almacenRepo.save(almacen);
+    const saved = await this.almacenRepo.save(almacen);
+    console.log('DEBUG: Almacén creado exitosamente:', saved);
+    return saved;
+  }
+
+  async updateAlmacen(
+    id: number,
+    data: { nombre?: string; descripcion?: string },
+  ) {
+    console.log('DEBUG: Actualizando almacén', id, 'con datos:', data);
+    const almacen = await this.findOneAlmacen(id);
+    Object.assign(almacen, data);
+    const saved = await this.almacenRepo.save(almacen);
+    console.log('DEBUG: Almacén actualizado exitosamente:', saved);
+    return saved;
   }
 
   // Proveedores
@@ -356,13 +692,44 @@ export class InventoryService {
     return this.proveedorRepo.find();
   }
 
+  async findOneProveedor(id: number) {
+    console.log(`DEBUG: Buscando proveedor con ID: ${id}`);
+    const proveedor = await this.proveedorRepo.findOne({
+      where: { id },
+      relations: ['insumos'],
+    });
+
+    if (!proveedor) {
+      console.error(`DEBUG: Proveedor ${id} no encontrado`);
+      throw new NotFoundException(`Proveedor ${id} no encontrado`);
+    }
+
+    console.log(`DEBUG: Proveedor encontrado:`, proveedor.nombre);
+    return proveedor;
+  }
+
   async createProveedor(data: {
     nombre: string;
     contacto?: string;
     telefono?: string;
   }) {
+    console.log('DEBUG: Creando proveedor con datos:', data);
     const proveedor = this.proveedorRepo.create(data);
-    return this.proveedorRepo.save(proveedor);
+    const saved = await this.proveedorRepo.save(proveedor);
+    console.log('DEBUG: Proveedor creado exitosamente:', saved);
+    return saved;
+  }
+
+  async updateProveedor(
+    id: number,
+    data: { nombre?: string; contacto?: string; telefono?: string },
+  ) {
+    console.log('DEBUG: Actualizando proveedor', id, 'con datos:', data);
+    const proveedor = await this.findOneProveedor(id);
+    Object.assign(proveedor, data);
+    const saved = await this.proveedorRepo.save(proveedor);
+    console.log('DEBUG: Proveedor actualizado exitosamente:', saved);
+    return saved;
   }
 
   // Categorías
@@ -370,8 +737,164 @@ export class InventoryService {
     return this.categoriaRepo.find();
   }
 
+  async findOneCategoria(id: number) {
+    const categoria = await this.categoriaRepo.findOne({
+      where: { id },
+      relations: ['insumos'],
+    });
+
+    if (!categoria) {
+      throw new NotFoundException(`Categoría ${id} no encontrada`);
+    }
+
+    return categoria;
+  }
+
   async createCategoria(data: { nombre: string; descripcion?: string }) {
+    console.log('Creando categoría con datos:', data);
     const categoria = this.categoriaRepo.create(data);
-    return this.categoriaRepo.save(categoria);
+    const saved = await this.categoriaRepo.save(categoria);
+    console.log('Categoría creada exitosamente:', saved);
+    return saved;
+  }
+
+  async updateCategoria(
+    id: number,
+    data: { nombre?: string; descripcion?: string },
+  ) {
+    console.log('DEBUG: Actualizando categoría', id, 'con datos:', data);
+    const categoria = await this.findOneCategoria(id);
+    Object.assign(categoria, data);
+    const saved = await this.categoriaRepo.save(categoria);
+    console.log('DEBUG: Categoría actualizada exitosamente:', saved);
+    return saved;
+  }
+
+  async removeCategoria(id: number) {
+    console.log('DEBUG: Eliminando categoría', id);
+    const categoria = await this.findOneCategoria(id);
+
+    // Verificar si tiene insumos asociados
+    if (categoria.insumos && categoria.insumos.length > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar la categoría porque tiene ${categoria.insumos.length} insumo(s) asociado(s)`,
+      );
+    }
+
+    return this.categoriaRepo.softRemove(categoria);
+  }
+
+  async removeAlmacen(id: number) {
+    console.log('DEBUG: Eliminando almacén', id);
+    const almacen = await this.findOneAlmacen(id);
+
+    // Verificar si tiene insumos asociados
+    if (almacen.insumos && almacen.insumos.length > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar el almacén porque tiene ${almacen.insumos.length} insumo(s) asociado(s)`,
+      );
+    }
+
+    return this.almacenRepo.softRemove(almacen);
+  }
+
+  async removeProveedor(id: number) {
+    console.log('DEBUG: Eliminando proveedor', id);
+    const proveedor = await this.findOneProveedor(id);
+
+    // Verificar si tiene insumos asociados
+    if (proveedor.insumos && proveedor.insumos.length > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar el proveedor porque tiene ${proveedor.insumos.length} insumo(s) asociado(s)`,
+      );
+    }
+
+    return this.proveedorRepo.softRemove(proveedor);
+  }
+  // ==================== RESERVA DE STOCK ====================
+
+  // Reservar stock para una actividad futura
+  async reservarStock(insumoId: number, cantidad: number, actividadId: number, usuarioId: number, manager?: EntityManager) {
+    const insumo = await this.findInsumoById(insumoId, manager);
+
+    // Validar disponibilidad (Stock Disponible = StockUso - StockReservado)
+    const disponible = insumo.stockUso - (insumo.stockReservado || 0);
+    if (disponible < cantidad) {
+      throw new BadRequestException(
+        `Stock insuficiente para reservar. Disponible: ${disponible} ${insumo.unidadUso}, Solicitado: ${cantidad} ${insumo.unidadUso}`
+      );
+    }
+
+    insumo.stockReservado = (insumo.stockReservado || 0) + cantidad;
+
+    if (manager) {
+      await manager.save(insumo);
+    } else {
+      await this.insumoRepo.save(insumo);
+    }
+
+    // Visualizar movimiento en inventario
+    return this.createMovimiento({
+      insumoId,
+      tipo: 'RESERVA',
+      cantidadUso: 0, // No afecta stockUso real todavía
+      cantidadPresentacion: 0,
+      costoUnitarioUso: insumo.precioUnitarioUso,
+      descripcion: `Reserva para actividad ${actividadId}`,
+      actividadId,
+      usuarioId,
+    }, manager);
+  }
+
+  // Liberar stock reservado (cancelación o corrección)
+  // Liberar stock reservado (cancelación o corrección)
+  async liberarStock(insumoId: number, cantidad: number, actividadId: number, usuarioId: number, manager?: EntityManager) {
+    const insumo = await this.findInsumoById(insumoId, manager);
+
+    const nuevoReservado = (insumo.stockReservado || 0) - cantidad;
+    insumo.stockReservado = Math.max(0, nuevoReservado); // Evitar negativos
+
+    if (manager) {
+      await manager.save(insumo);
+    } else {
+      await this.insumoRepo.save(insumo);
+    }
+
+    // Visualizar movimiento en inventario (Inverso de reserva)
+    return this.createMovimiento({
+      insumoId,
+      tipo: 'LIBERACION_RESERVA',
+      cantidadUso: 0,
+      cantidadPresentacion: 0,
+      costoUnitarioUso: insumo.precioUnitarioUso,
+      descripcion: `Liberación de reserva actividad ${actividadId}`,
+      actividadId,
+      usuarioId,
+    }, manager);
+  }
+
+  // Confirmar consumo de una reserva (Finalización de actividad)
+  // cantidadReservada: Lo que se había planeado
+  // cantidadReal: Lo que realmente se usó
+  async confirmarConsumoReserva(
+    insumoId: number,
+    cantidadReservada: number,
+    cantidadReal: number,
+    actividadId: number,
+    usuarioId: number,
+    manager?: EntityManager,
+  ) {
+    // 1. Liberar la reserva primero
+    await this.liberarStock(insumoId, cantidadReservada, actividadId, usuarioId, manager);
+
+    // 2. Consumir el stock real
+    return this.consumirInsumo(
+      insumoId,
+      cantidadReal,
+      actividadId,
+      usuarioId,
+      undefined,
+      manager
+    );
   }
 }

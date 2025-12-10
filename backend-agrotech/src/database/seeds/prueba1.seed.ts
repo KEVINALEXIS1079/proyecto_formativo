@@ -712,17 +712,17 @@ export async function seedPrueba1(dataSource: DataSource) {
   // IoT: Lecturas de sensores
   console.log('  Creando lecturas de sensores...');
   const lecturasData = [
-    { sensorId: sensorIds[0], valor: '25.5', fecha: new Date('2024-11-20T08:00:00') },
-    { sensorId: sensorIds[0], valor: '26.0', fecha: new Date('2024-11-20T12:00:00') },
-    { sensorId: sensorIds[1], valor: '65.0', fecha: new Date('2024-11-20T08:00:00') },
-    { sensorId: sensorIds[1], valor: '70.0', fecha: new Date('2024-11-20T12:00:00') },
-    { sensorId: sensorIds[2], valor: '24.0', fecha: new Date('2024-11-20T08:00:00') },
+    { sensorId: sensorIds[0], valor: '25.5', fechaLectura: new Date('2024-11-20T08:00:00') },
+    { sensorId: sensorIds[0], valor: '26.0', fechaLectura: new Date('2024-11-20T12:00:00') },
+    { sensorId: sensorIds[1], valor: '65.0', fechaLectura: new Date('2024-11-20T08:00:00') },
+    { sensorId: sensorIds[1], valor: '70.0', fechaLectura: new Date('2024-11-20T12:00:00') },
+    { sensorId: sensorIds[2], valor: '24.0', fechaLectura: new Date('2024-11-20T08:00:00') },
   ];
 
   let lecturasCreadas = 0;
   for (const lecData of lecturasData) {
     const existing = await sensorLecturaRepo.findOne({
-      where: { sensorId: lecData.sensorId, fecha: lecData.fecha },
+      where: { sensorId: lecData.sensorId, fechaLectura: lecData.fechaLectura },
     });
     if (!existing) {
       const lectura = sensorLecturaRepo.create(lecData);

@@ -1,7 +1,6 @@
 
 import { Outlet, useNavigate } from "react-router-dom";
 import {
-  Input,
   Button,
   Badge,
   Avatar,
@@ -15,10 +14,14 @@ import {
   Chip,
   User as UserCard,
   Divider,
+  Spinner,
 } from "@heroui/react";
-import { Search, Bell, LogOut, UserRound, Mail } from "lucide-react";
+import { Bell, LogOut, UserRound, Mail } from "lucide-react";
 import { useAuth } from "../../modules/auth/hooks/useAuth";
 import { usePerfil } from "../../modules/usuarios/perfil/hooks/usePerfil";
+import { useEffect, useMemo, useState } from "react";
+import { IoTApi } from "@/modules/iot/api/iot.api";
+import { connectSocket } from "@/shared/api/client";
 
 export default function AppLayout() {
   const navigate = useNavigate();
@@ -32,12 +35,98 @@ export default function AppLayout() {
     avatarUrl: me.avatar ?? "",
   } : null;
 
-  // Mock de notificaciones; reemplázalo por tu data del backend
-  const notifs = [
-    { id: "1", title: "Nueva actividad", body: "Riego - Lote 3", unread: true, time: "hoy" },
-    { id: "2", title: "Sensor fuera de umbral", body: "Humedad < 25%", unread: true, time: "10 min" },
-  ];
-  const unreadCount = notifs.filter((n) => n.unread).length;
+  type RawAlert = {
+    id?: string | number;
+    _id?: string | number;
+    titulo?: string;
+    title?: string;
+    tipo?: string;
+    mensaje?: string;
+    descripcion?: string;
+    detalle?: string;
+    leido?: boolean;
+    read?: boolean;
+    visto?: boolean;
+    createdAt?: string;
+  };
+
+  const [iotAlerts, setIotAlerts] = useState<RawAlert[]>([]);
+  const [loadingAlerts, setLoadingAlerts] = useState(false);
+
+  const normalizeAlerts = (data: any): RawAlert[] => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.alerts)) return data.alerts;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
+  };
+
+  const fetchAlerts = async () => {
+    setLoadingAlerts(true);
+    try {
+      const data = await IoTApi.getAlerts();
+      const list = normalizeAlerts(data);
+      setIotAlerts(list.slice(0, 6));
+    } catch (error) {
+      console.error("Error cargando alertas IoT", error);
+      setIotAlerts([]);
+    } finally {
+      setLoadingAlerts(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    fetchAlerts();
+    const interval = window.setInterval(() => mounted && fetchAlerts(), 30000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const socket = connectSocket("/iot");
+    const handleAlert = (alerta: RawAlert) => {
+      setIotAlerts((prev) => {
+        const merged = [alerta, ...prev];
+        const unique = merged.filter(
+          (item, idx) =>
+            merged.findIndex(
+              (o) => String(o.id ?? (o as any)._id ?? idx) === String(item.id ?? (item as any)._id ?? idx)
+            ) === idx
+        );
+        return unique.slice(0, 6);
+      });
+    };
+    socket.on("sensorAlert", handleAlert);
+    socket.on("alertaIot", handleAlert);
+    return () => {
+      socket.off("sensorAlert", handleAlert);
+      socket.off("alertaIot", handleAlert);
+    };
+  }, []);
+
+  const notifications = useMemo(
+    () =>
+      iotAlerts.map((n, idx) => ({
+        id: String(n.id ?? (n as any)._id ?? `alert-${idx}`),
+        title: (n.titulo || n.title || n.tipo || n.nivel || n.severidad || "Alerta IoT") as string,
+        body: n.mensaje || n.descripcion || n.detalle || n.body || "",
+        unread:
+          n.leido === false ||
+          n.read === false ||
+          n.visto === false ||
+          (n.leido === undefined && n.read === undefined && n.visto === undefined),
+        time: n.createdAt
+          ? new Date(n.createdAt).toLocaleString("es-CO")
+          : (n as any).fecha
+          ? new Date((n as any).fecha).toLocaleString("es-CO")
+          : "",
+      })),
+    [iotAlerts]
+  );
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   const handleLogout = async () => {
     await logout();
@@ -68,30 +157,45 @@ export default function AppLayout() {
             </PopoverTrigger>
             <PopoverContent className="p-0 w-[300px]">
               <div className="p-3 flex items-center justify-between">
-                <h4 className="text-base font-semibold">Notificaciones</h4>
+                <h4 className="text-base font-semibold">Notificaciones IoT</h4>
                 <Chip size="sm" variant="flat" color="primary">
                   {unreadCount} sin leer
                 </Chip>
               </div>
               <Divider />
               <div className="max-h-[240px] overflow-y-auto">
-                {notifs.length === 0 ? (
+                {loadingAlerts ? (
+                  <div className="p-4 flex items-center justify-center gap-2 text-sm text-default-500">
+                    <Spinner size="sm" /> Cargando alertas...
+                  </div>
+                ) : notifications.length === 0 ? (
                   <div className="p-4 text-center text-sm text-default-500">
                     No tienes notificaciones.
                   </div>
                 ) : (
                   <ul className="divide-y">
-                    {notifs.map((n) => (
+                    {notifications.map((n) => (
                       <li key={n.id} className="p-3 hover:bg-default-50 cursor-pointer">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium">{n.title}</p>
-                          <span className="text-[11px] text-default-500">{n.time}</span>
+                        <div className="flex items-start gap-3">
+                          <span className={`h-2.5 w-2.5 rounded-full mt-1 ${n.unread ? "bg-primary" : "bg-default-300"}`} />
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm font-semibold uppercase text-foreground-900">{n.title}</p>
+                              <span className="text-[11px] text-default-500">{n.time}</span>
+                            </div>
+                            {n.body && <p className="text-xs text-default-600 leading-relaxed">{n.body}</p>}
+                          </div>
                         </div>
-                        {n.body && <p className="text-xs text-default-500">{n.body}</p>}
                       </li>
                     ))}
                   </ul>
                 )}
+              </div>
+              <Divider />
+              <div className="p-3">
+                <Button fullWidth color="success" variant="flat" onPress={() => navigate("/iot")}>
+                  Ir a IoT
+                </Button>
               </div>
             </PopoverContent>
           </Popover>

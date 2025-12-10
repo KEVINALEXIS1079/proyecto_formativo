@@ -1,8 +1,8 @@
 import type { User } from '../models/types/user.types';
 import { UserStatusBadge } from '../ui/UserStatusBadge';
 import { UserRoleBadge } from '../ui/UserRoleBadge';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Avatar } from "@heroui/react";
-import { Eye, Edit, UserX, UserCheck } from 'lucide-react';
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Avatar, Tooltip } from "@heroui/react";
+import { Edit, UserX, UserCheck } from 'lucide-react';
 import Surface from '../ui/Surface';
 
 import { useRoles } from '../hooks/usePermissions';
@@ -10,12 +10,11 @@ import { useRoles } from '../hooks/usePermissions';
 interface UserTableProps {
   users: User[];
   isLoading: boolean;
-  onView?: (user: User) => void;
-  onEdit: (user: User) => void;
+  onManage: (user: User) => void;
   onToggleStatus: (user: User) => void;
 }
 
-export const UserTable = ({ users, isLoading, onView, onEdit, onToggleStatus }: UserTableProps) => {
+export const UserTable = ({ users, isLoading, onManage, onToggleStatus }: UserTableProps) => {
   const { data: roles } = useRoles();
 
   if (isLoading) {
@@ -33,7 +32,7 @@ export const UserTable = ({ users, isLoading, onView, onEdit, onToggleStatus }: 
       if (typeof user.rol === 'string') return user.rol;
       return user.rol.nombre;
     }
-    
+
     // Priority 2: Look up by rolId in fetched roles
     if (user.rolId && roles) {
       const foundRole = roles.find(r => r.id === user.rolId);
@@ -86,37 +85,23 @@ export const UserTable = ({ users, isLoading, onView, onEdit, onToggleStatus }: 
                 {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : '-'}
               </TableCell>
               <TableCell>
-                <div className="flex justify-end gap-2">
-                  {onView && (
-                    <Button
-                      size="sm"
-                      variant="light"
-                      isIconOnly
-                      className="text-gray-600"
-                      onPress={() => onView(user)}
+                <div className="relative flex items-center gap-2">
+                  <Tooltip content="Gestionar usuario">
+                    <span className="text-lg text-[#17C964] cursor-pointer active:opacity-50 hover:text-[#12A150] transition-colors" onClick={() => onManage(user)}>
+                      <Edit size={18} />
+                    </span>
+                  </Tooltip>
+                  <Tooltip color={user.estado === 'activo' ? "warning" : "success"} content={user.estado === 'activo' ? "Desactivar usuario" : "Activar usuario"}>
+                    <span
+                      className={`text-lg cursor-pointer active:opacity-50 transition-colors ${user.estado === 'activo'
+                          ? 'text-warning hover:text-warning-400'
+                          : 'text-success hover:text-success-400'
+                        }`}
+                      onClick={() => onToggleStatus(user)}
                     >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="light"
-                    isIconOnly
-                    className="text-[#17C964]"
-                    onPress={() => onEdit(user)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="light"
-                    isIconOnly
-                    color={user.estado === 'activo' ? "warning" : "success"}
-                    onPress={() => onToggleStatus(user)}
-                    title={user.estado === 'activo' ? "Desactivar usuario" : "Activar usuario"}
-                  >
-                    {user.estado === 'activo' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                  </Button>
+                      {user.estado === 'activo' ? <UserX size={18} /> : <UserCheck size={18} />}
+                    </span>
+                  </Tooltip>
                 </div>
               </TableCell>
             </TableRow>

@@ -4,7 +4,9 @@ import { useInsumoById } from "../hooks/useInsumoById";
 import { useUpdateInsumo } from "../hooks/useUpdateInsumo";
 import { useUploadInsumoImage } from "../hooks/useUploadInsumoImage";
 import { ArrowLeft } from "lucide-react";
-import InsumoForm from "../ui/widgets/InsumoForm";
+import { toast } from "react-hot-toast";
+import { InsumoForm } from "../widgets/InsumoForm";
+import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
 import type { UpdateInsumoInput } from "../model/types";
 
 export default function EditarInsumoPage() {
@@ -18,10 +20,12 @@ export default function EditarInsumoPage() {
   const uploadMutation = useUploadInsumoImage();
 
   const handleSubmit = (data: UpdateInsumoInput) => {
+    console.log('DEBUG: Editando insumo con data:', data);
     updateMutation.mutate(
       { id: insumoId, payload: data },
       {
         onSuccess: () => {
+          toast.success("Insumo actualizado correctamente");
           if (selectedFile) {
             uploadMutation.mutate(
               { id: insumoId, file: selectedFile },
@@ -34,6 +38,10 @@ export default function EditarInsumoPage() {
           } else {
             navigate(`/inventario/${insumoId}`);
           }
+        },
+        onError: (error) => {
+          console.error('Error al actualizar insumo:', error);
+          toast.error("Error al actualizar el insumo");
         },
       }
     );
@@ -68,7 +76,7 @@ export default function EditarInsumoPage() {
     presentacionUnidad: insumo.presentacionUnidad,
     unidadBase: insumo.unidadBase,
     stockPresentaciones: insumo.stockPresentaciones,
-    precioUnitario: insumo.precioUnitario,
+    precioUnitario: insumo.precioUnitarioPresentacion,
     fechaIngreso: insumo.fechaIngreso,
     idCategoria: insumo.categoria.id,
     idProveedor: insumo.proveedor.id,
@@ -87,13 +95,22 @@ export default function EditarInsumoPage() {
         </button>
         <h1 className="text-3xl font-bold">Editar Insumo</h1>
       </div>
-      <InsumoForm
-        initialValues={initialValues}
-        onSubmit={handleSubmit}
-        onFileChange={handleFileChange}
-        isLoading={updateMutation.isPending || uploadMutation.isPending}
-        submitLabel="Actualizar"
-      />
+      <Modal isOpen={true} size="4xl" onOpenChange={() => navigate(-1)}>
+        <ModalContent>
+          <ModalHeader>Editar Insumo</ModalHeader>
+          <ModalBody>
+            <InsumoForm
+              insumo={insumo}
+              onClose={() => navigate(-1)}
+              onSuccess={async (data) => {
+                await handleSubmit(data);
+                return {};
+              }}
+              isEdit={true}
+            />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

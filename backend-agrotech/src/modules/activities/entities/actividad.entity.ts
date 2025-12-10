@@ -9,8 +9,17 @@ import { ActividadServicio } from './actividad-servicio.entity';
 import { ActividadEvidencia } from './actividad-evidencia.entity';
 import { ActividadInsumoUso } from './actividad-insumo-uso.entity';
 
+import { ActividadInsumoReserva } from './actividad-insumo-reserva.entity';
+import { UsoHerramienta } from '../../inventory/entities/uso-herramienta.entity';
+import { ActividadHerramienta } from './actividad-herramienta.entity';
+
 @Entity('actividades')
 export class Actividad extends BaseEntity {
+  // ... existing columns ...
+
+  @OneToMany(() => ActividadInsumoReserva, (reserva) => reserva.actividad)
+  insumosReserva: ActividadInsumoReserva[];
+
   @Column()
   nombre: string;
 
@@ -32,17 +41,20 @@ export class Actividad extends BaseEntity {
   @Column()
   fecha: Date;
 
-  @Column('float')
+  @Column('float', { nullable: true, default: 0 })
   horasActividad: number;
 
-  @Column('float')
+  @Column('float', { nullable: true, default: 0 })
   precioHoraActividad: number;
 
-  @Column('float')
+  @Column('float', { nullable: true, default: 0 })
   costoManoObra: number;
 
   @Column({ type: 'text', nullable: true })
   descripcion: string;
+
+  @Column({ default: 'Pendiente' })
+  estado: string; // 'Pendiente' | 'Finalizada'
 
   @Column({ name: 'creado_por_usuario_id' })
   creadoPorUsuarioId: number;
@@ -65,18 +77,38 @@ export class Actividad extends BaseEntity {
   cultivo: Cultivo;
 
   @ManyToOne(() => Usuario)
-  @JoinColumn({ name: 'creadoPorUsuarioId' })
+  @JoinColumn({ name: 'creado_por_usuario_id' })
   creadoPorUsuario: Usuario;
 
-  @OneToMany(() => ActividadResponsable, (responsable) => responsable.actividad)
+  @OneToMany(() => ActividadResponsable, (responsable) => responsable.actividad, {
+    cascade: true,
+  })
   responsables: ActividadResponsable[];
 
-  @OneToMany(() => ActividadServicio, (servicio) => servicio.actividad)
+  @OneToMany(() => ActividadServicio, (servicio) => servicio.actividad, {
+    cascade: true,
+  })
   servicios: ActividadServicio[];
 
-  @OneToMany(() => ActividadEvidencia, (evidencia) => evidencia.actividad)
+  @OneToMany(() => ActividadEvidencia, (evidencia) => evidencia.actividad, {
+    cascade: true,
+  })
   evidencias: ActividadEvidencia[];
 
   @OneToMany(() => ActividadInsumoUso, (insumoUso) => insumoUso.actividad)
   insumosUso: ActividadInsumoUso[];
+
+  @OneToMany(() => UsoHerramienta, (uso) => uso.actividad)
+  usosHerramientas: UsoHerramienta[];
+
+  @OneToMany(() => ActividadHerramienta, (h) => h.actividad, { cascade: true })
+  herramientas: ActividadHerramienta[];
+
+  // Campos específicos para Cosecha
+  @Column('int', { nullable: true })
+  cantidadPlantas: number; // "Cuantos palos se cosecharon"
+
+  @Column('float', { nullable: true })
+  kgRecolectados: number; // "Cuanto fue la cantidad que salio"
+
 }

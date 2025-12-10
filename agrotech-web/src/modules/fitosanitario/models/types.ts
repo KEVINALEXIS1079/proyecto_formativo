@@ -53,7 +53,7 @@ export type Epa = {
   fotosGenerales?: string[];
   tags?: string[];
   imagenesUrls?: string[]; // Mantener por compatibilidad o mapear a fotosGenerales
-  tipoEpa: TipoEpaLite;
+  tipoEpa: TipoEpa;
   tipoCultivoEpa: TipoCultivoEpaLite;
   estado: EstadoEpa;
 };
@@ -62,7 +62,7 @@ export type CreateEpaInput = {
   nombre: string;
   descripcion: string;
   estado: EstadoEpa;
-  tipoEpaId: number;
+  tipoEpa: string;
   tipoCultivoEpaId: number;
   cultivoId?: number;
   sintomas?: string;
@@ -71,7 +71,9 @@ export type CreateEpaInput = {
   temporadas?: string[];
   notasEstacionalidad?: string;
   tags?: string[];
-  imagenes?: File[]; // Para envío de archivos
+  fotosSintomas?: File[]; // Para envío de archivos de síntomas
+  fotosGenerales?: File[]; // Para envío de archivos generales
+  imagenes?: File[]; // Alias para fotosGenerales en formularios
 };
 
 export type UpdateEpaInput = Partial<CreateEpaInput>;

@@ -25,6 +25,10 @@ export default function ConfirmationModal({
   const [descripcion, setDescripcion] = useState("");
 
   const handleConfirm = () => {
+    if (!descripcion.trim()) {
+      alert("La descripción de la operación es obligatoria.");
+      return;
+    }
     onConfirm(descripcion);
     setDescripcion("");
   };
@@ -42,17 +46,18 @@ export default function ConfirmationModal({
           <p>{message}</p>
           <Textarea
             label="Descripción de la operación"
-            placeholder="Ingrese una descripción opcional para esta acción"
+            placeholder="Ingrese una descripción obligatoria para esta acción"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             minRows={3}
+            required
           />
         </ModalBody>
         <ModalFooter>
           <Button variant="light" onPress={handleClose} disabled={isLoading}>
             {cancelLabel}
           </Button>
-          <Button color="primary" onPress={handleConfirm} isLoading={isLoading}>
+          <Button color="primary" onPress={handleConfirm} isLoading={isLoading} disabled={!descripcion.trim()}>
             {confirmLabel}
           </Button>
         </ModalFooter>

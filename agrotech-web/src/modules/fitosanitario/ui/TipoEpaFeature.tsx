@@ -1,9 +1,28 @@
-
-import { useState, forwardRef, useImperativeHandle } from "react";
-import { Button, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Input, Textarea, Chip } from "@heroui/react";
+import { forwardRef, useImperativeHandle, useState } from "react";
+import {
+  Button,
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Input,
+  Textarea,
+} from "@heroui/react";
 import { Edit, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { useTipoEpaList, useCreateTipoEpa, useUpdateTipoEpa, useRemoveTipoEpa } from "../hooks/useFitosanitario";
+import {
+  useTipoEpaList,
+  useCreateTipoEpa,
+  useUpdateTipoEpa,
+  useRemoveTipoEpa,
+} from "../hooks/useFitosanitario";
 import type { TipoEpa, CreateTipoEpaInput } from "../models/types";
 
 export interface TipoEpaListRef {
@@ -16,7 +35,7 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
   const updateMutation = useUpdateTipoEpa();
   const removeMutation = useRemoveTipoEpa();
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTipo, setEditingTipo] = useState<TipoEpa | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<TipoEpa | null>(null);
 
@@ -33,7 +52,8 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
   useImperativeHandle(ref, () => ({
     openCreateModal: () => {
       resetForm();
-      setShowCreateModal(true);
+      setEditingTipo(null);
+      setIsFormOpen(true);
     },
   }));
 
@@ -44,10 +64,11 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
       tipoEpaEnum: tipo.tipoEpaEnum,
     });
     setEditingTipo(tipo);
+    setIsFormOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!form.nombre?.trim()) return;
+    if (!form.nombre?.trim() || !form.tipoEpaEnum) return;
 
     try {
       if (editingTipo) {
@@ -56,7 +77,7 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
           input: {
             nombre: form.nombre.trim(),
             descripcion: form.descripcion?.trim() || "",
-            tipoEpaEnum: form.tipoEpaEnum!,
+            tipoEpaEnum: form.tipoEpaEnum,
           },
         });
         toast.success("Tipo EPA actualizado");
@@ -64,11 +85,12 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
         await createMutation.mutateAsync({
           nombre: form.nombre.trim(),
           descripcion: form.descripcion?.trim() || "",
-          tipoEpaEnum: form.tipoEpaEnum!,
+          tipoEpaEnum: form.tipoEpaEnum,
         });
         toast.success("Tipo EPA creado");
       }
-      setShowCreateModal(false);
+
+      setIsFormOpen(false);
       setEditingTipo(null);
       resetForm();
     } catch (error) {
@@ -91,7 +113,6 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
   const columns = [
     { key: "id", label: "ID" },
     { key: "nombre", label: "Nombre" },
-    { key: "tipoEpaEnum", label: "Tipo" },
     { key: "descripcion", label: "Descripción" },
     { key: "acciones", label: "Acciones" },
   ];
@@ -105,23 +126,11 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
             <TableColumn key={column.key}>{column.label}</TableColumn>
           ))}
         </TableHeader>
-        <TableBody
-          isLoading={isLoading}
-          emptyContent="No hay tipos EPA registrados"
-        >
+        <TableBody isLoading={isLoading} emptyContent="No hay tipos EPA registrados">
           {tiposEpa.map((tipo) => (
             <TableRow key={tipo.id}>
               <TableCell>{tipo.id}</TableCell>
               <TableCell>{tipo.nombre}</TableCell>
-              <TableCell>
-                <Chip
-                  color={tipo.tipoEpaEnum === "enfermedad" ? "danger" : tipo.tipoEpaEnum === "plaga" ? "warning" : "success"}
-                  variant="flat"
-                  size="sm"
-                >
-                  {tipo.tipoEpaEnum}
-                </Chip>
-              </TableCell>
               <TableCell>{tipo.descripcion}</TableCell>
               <TableCell>
                 <div className="flex gap-2">
@@ -152,10 +161,10 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
 
       {/* Modal Crear/Editar */}
       <Modal
-        isOpen={showCreateModal || !!editingTipo}
+        isOpen={isFormOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setShowCreateModal(false);
+            setIsFormOpen(false);
             setEditingTipo(null);
             resetForm();
           }
@@ -164,9 +173,7 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
         backdrop="blur"
       >
         <ModalContent>
-          <ModalHeader>
-            {editingTipo ? "Editar Tipo EPA" : "Crear Tipo EPA"}
-          </ModalHeader>
+          <ModalHeader>{editingTipo ? "Editar Tipo EPA" : "Crear Tipo EPA"}</ModalHeader>
           <ModalBody className="space-y-4">
             <Input
               label="Nombre"
@@ -187,7 +194,7 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
             <Button
               variant="flat"
               onPress={() => {
-                setShowCreateModal(false);
+                setIsFormOpen(false);
                 setEditingTipo(null);
                 resetForm();
               }}
@@ -195,7 +202,8 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
               Cancelar
             </Button>
             <Button
-              color="primary"
+              color="success"
+              className="text-black font-medium"
               onPress={handleSubmit}
               isLoading={createMutation.isPending || updateMutation.isPending}
               isDisabled={!form.nombre?.trim()}
@@ -206,20 +214,13 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
         </ModalContent>
       </Modal>
 
-      {/* Modal Confirmar Eliminación */}
-      <Modal
-        isOpen={!!showDeleteConfirm}
-        onOpenChange={() => setShowDeleteConfirm(null)}
-      >
+      {/* Modal Confirmar Eliminaci\u00f3n */}
+      <Modal isOpen={!!showDeleteConfirm} onOpenChange={() => setShowDeleteConfirm(null)}>
         <ModalContent>
-          <ModalHeader>Confirmar eliminación</ModalHeader>
+          <ModalHeader>Confirmar eliminaci\u00f3n</ModalHeader>
           <ModalBody>
-            <p>
-              ¿Estás seguro de eliminar el tipo EPA <strong>"{showDeleteConfirm?.nombre}"</strong>?
-            </p>
-            <p className="text-sm text-default-500 mt-2">
-              Esta acción no se puede deshacer.
-            </p>
+            <p>\u00bfDesea eliminar este tipo de EPA?</p>
+            <p className="text-sm text-default-500 mt-2">Esta acci\u00f3n no se puede deshacer.</p>
           </ModalBody>
           <ModalFooter>
             <Button variant="flat" onPress={() => setShowDeleteConfirm(null)}>
@@ -238,5 +239,7 @@ const TipoEpaFeature = forwardRef<TipoEpaListRef>((_, ref) => {
     </div>
   );
 });
+
+TipoEpaFeature.displayName = "TipoEpaFeature";
 
 export default TipoEpaFeature;

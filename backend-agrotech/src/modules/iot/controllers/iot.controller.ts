@@ -23,6 +23,7 @@ import {
   IotFindAllLecturasDoDto,
   IotCreateLecturaDoDto,
 } from '../dtos/iot-do.dto';
+import { UpdateSensorDto } from '../dtos/update-sensor.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -30,7 +31,7 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 @Controller('iot')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class IotController {
-  constructor(private readonly iotService: IotService) {}
+  constructor(private readonly iotService: IotService) { }
 
   private extractUserId(request: Request | any): number {
     const userId = request?.user?.id ?? request?.user?.userId;
@@ -46,14 +47,29 @@ export class IotController {
 
   @Get('config')
   @RequirePermissions('iot.ver')
-  async getGlobalConfig() {
-    return this.iotService.getGlobalConfig();
+  async getGlobalConfigs() {
+    return this.iotService.getGlobalConfigs();
   }
 
   @Post('config')
   @RequirePermissions('iot.editar')
-  async saveGlobalConfig(@Body() body: any) {
-    return this.iotService.saveGlobalConfig(body);
+  async createGlobalConfig(@Body() body: any) {
+    return this.iotService.createGlobalConfig(body);
+  }
+
+  @Patch('config/:id')
+  @RequirePermissions('iot.editar')
+  async updateGlobalConfig(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+  ) {
+    return this.iotService.updateGlobalConfig(id, body);
+  }
+
+  @Delete('config/:id')
+  @RequirePermissions('iot.eliminar')
+  async deleteGlobalConfig(@Param('id', ParseIntPipe) id: number) {
+    return this.iotService.deleteGlobalConfig(id);
   }
 
   @Post('reset-seed')
@@ -64,8 +80,13 @@ export class IotController {
 
   @Get('sensors')
   @RequirePermissions('iot.ver')
-  async findAllSensorsHttp() {
-    return this.findAllSensors();
+  async findAllSensorsHttp(
+    @Query('loteId') loteId?: string,
+    @Query('subLoteId') subLoteId?: string,
+  ) {
+    const lId = loteId ? parseInt(loteId, 10) : undefined;
+    const slId = subLoteId ? parseInt(subLoteId, 10) : undefined;
+    return this.findAllSensors(lId, slId);
   }
 
   @Post('sensors')
@@ -83,7 +104,7 @@ export class IotController {
   @RequirePermissions('iot.editar')
   async updateSensorHttp(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: Partial<IotCreateSensorDoDto>,
+    @Body() dto: UpdateSensorDto,
   ) {
     return this.updateSensor(id, dto);
   }
@@ -103,8 +124,24 @@ export class IotController {
   @Get('lecturas')
   @RequirePermissions('iot.ver')
   async findAllLecturasHttp(@Query('sensorId') sensorId?: string) {
-    const sensorIdNum = sensorId ? parseInt(sensorId) : undefined;
+    const sensorIdNum = sensorId ? parseInt(sensorId, 10) : undefined;
     return this.findAllLecturas({ sensorId: sensorIdNum });
+  }
+
+  @Get('alerts')
+  @RequirePermissions('iot.ver')
+  async findAlertsHttp(
+    @Query('sensorId') sensorId?: string,
+    @Query('loteId') loteId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.iotService.findAlerts({
+      sensorId: sensorId ? parseInt(sensorId, 10) : undefined,
+      loteId: loteId ? parseInt(loteId, 10) : undefined,
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+    });
   }
 
   async createLecturaHttp(@Body() dto: IotCreateLecturaDoDto) {
@@ -124,6 +161,21 @@ export class IotController {
     @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
   ) {
     return this.iotService.getUltimasLecturas(id, limit);
+  }
+
+  @Get('general-report')
+  @RequirePermissions('iot.ver')
+  async getGeneralReportHttp(
+    @Query('loteId') loteId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('sensorId') sensorId?: string,
+  ) {
+    const lId = loteId ? parseInt(loteId, 10) : undefined;
+    const sId = sensorId ? parseInt(sensorId, 10) : undefined;
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.iotService.getGeneralReport(lId, start, end, sId);
   }
 
   // ==================== TIPO SENSOR ENDPOINTS ====================
@@ -167,8 +219,8 @@ export class IotController {
 
   // Internal method for WebSocket: handles finding all sensors by calling the service
   // Flow: Gateway calls this method -> calls iotService.findAllSensors -> returns sensors list
-  async findAllSensors() {
-    return this.iotService.findAllSensors();
+  async findAllSensors(loteId?: number, subLoteId?: number) {
+    return this.iotService.findAllSensors(loteId, subLoteId);
   }
 
   async getSensorById(id: number) {
@@ -187,8 +239,8 @@ export class IotController {
     return this.iotService.createSensor(createSensorDto, userId);
   }
 
-  async updateSensor(id: number, data: Partial<IotCreateSensorDoDto>) {
-    return this.iotService.updateSensor(id, data);
+  async updateSensor(id: number, data: Partial<IotCreateSensorDoDto> | UpdateSensorDto) {
+    return this.iotService.updateSensor(id, data as any);
   }
 
   // Internal method for WebSocket: handles removing a sensor by calling the service
@@ -208,5 +260,30 @@ export class IotController {
   @UsePipes(new ValidationPipe())
   async createLectura(createLecturaDto: IotCreateLecturaDoDto, gateway: any) {
     return this.iotService.createLectura(createLecturaDto, gateway);
+  }
+
+  @Get('comparison')
+  @RequirePermissions('iot.ver')
+  async getLotsComparison(
+    @Query('loteIds') loteIds?: string,
+    @Query('tipoSensorId') tipoSensorId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const parsedLoteIds = loteIds
+      ? loteIds.split(',').map((id) => parseInt(id, 10))
+      : undefined;
+    const parsedTipoSensorId = tipoSensorId
+      ? parseInt(tipoSensorId, 10)
+      : undefined;
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+
+    return this.iotService.getLotsComparison(
+      parsedLoteIds,
+      parsedTipoSensorId,
+      start,
+      end,
+    );
   }
 }
