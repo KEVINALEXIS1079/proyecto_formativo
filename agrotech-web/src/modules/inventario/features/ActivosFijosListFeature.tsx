@@ -1,13 +1,16 @@
 import { useState, useImperativeHandle, forwardRef } from "react";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Progress, Tooltip, User } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Progress, Tooltip, Image, Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { getActivosFijos } from "../api/insumos.service";
-import { Eye, Trash2, Wrench } from "lucide-react";
+import { Eye, Trash2, Wrench, History } from "lucide-react";
 import CreateActivoFijoModal from "../ui/CreateActivoFijoModal";
 import { HistorialActivoFijoModal } from "../ui/HistorialActivoFijoModal";
 import { MantenimientoActivoFijoModal } from "../ui/MantenimientoActivoFijoModal";
 import { DarBajaModal } from "../ui/DarBajaModal";
+import { ViewActivoFijoModal } from "../ui/ViewActivoFijoModal";
 import { formatCurrency } from "@/shared/utils/formatters";
+
+const FILES_BASE = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace('/api/v1', '');
 
 export interface ActivosFijosListRef {
     openCreateModal: () => void;
@@ -19,6 +22,7 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
     const [isHistorialOpen, setIsHistorialOpen] = useState(false);
     const [isMantenimientoOpen, setIsMantenimientoOpen] = useState(false);
     const [isBajaOpen, setIsBajaOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
     const handleOpenHistorial = (asset: any) => {
         setSelectedAsset(asset);
@@ -34,6 +38,12 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
         setSelectedAsset(asset);
         setIsBajaOpen(true);
     };
+
+    const handleOpenView = (asset: any) => {
+        setSelectedAsset(asset);
+        setIsViewModalOpen(true);
+    };
+
     const { data: activos, isLoading } = useQuery({
         queryKey: ['activos-fijos'],
         queryFn: getActivosFijos
@@ -60,6 +70,7 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
     };
 
     const columns = [
+        { name: "IMAGEN", uid: "imagen" },
         { name: "ACTIVO", uid: "nombre" },
         { name: "ESTADO", uid: "estado" },
         { name: "VALOR LIBROS", uid: "valor" },
@@ -68,7 +79,11 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
         { name: "ACCIONES", uid: "acciones" },
     ];
 
-    if (isLoading) return <div>Cargando activos...</div>;
+    if (isLoading) return (
+        <div className="flex justify-center p-4">
+            <Spinner color="success" label="Cargando activos..." />
+        </div>
+    );
 
     return (
         <div className="space-y-4">
@@ -78,7 +93,7 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
                         <TableColumn
                             key={column.uid}
                             align={
-                                column.uid === "acciones" || column.uid === "estado" ? "center" :
+                                column.uid === "acciones" || column.uid === "estado" || column.uid === "imagen" ? "center" :
                                     column.uid === "valor" ? "end" : "start"
                             }
                         >
@@ -97,14 +112,31 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
                         return (
                             <TableRow key={activo.id}>
                                 <TableCell>
-                                    <User
-                                        name={activo.nombre}
-                                        description={activo.categoria?.nombre || "Sin categoría"}
-                                        avatarProps={{
-                                            radius: "lg",
-                                            src: activo.fotoUrl
-                                        }}
-                                    />
+                                    <div className="flex justify-center">
+                                        {activo.fotoUrl ? (
+                                            <Image
+                                                src={
+                                                    /^(data:|blob:|https?:\/\/)/i.test(activo.fotoUrl)
+                                                        ? activo.fotoUrl
+                                                        : `${FILES_BASE.replace(/\/+$/, "")}/${activo.fotoUrl.replace(/^\/+/, "")}`
+                                                }
+                                                alt={activo.nombre}
+                                                width={40}
+                                                height={40}
+                                                className="object-cover rounded"
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                                                N/A
+                                            </div>
+                                        )}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-col">
+                                        <p className="font-medium text-sm capitalize">{activo.nombre}</p>
+                                        <p className="text-tiny text-default-400 capitalize">{activo.categoria?.nombre || "Sin categoría"}</p>
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex justify-center">
@@ -141,22 +173,34 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
                                 </TableCell>
                                 <TableCell>
                                     <div className="relative flex items-center justify-center gap-2">
+                                        <Tooltip content="Ver detalles">
+                                            <span
+                                                className="text-lg text-default-400 cursor-pointer active:opacity-50 hover:text-primary"
+                                                onClick={() => handleOpenView(activo)}
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </span>
+                                        </Tooltip>
+
+                                        <Tooltip content="Historial">
+                                            <span
+                                                className="text-lg text-default-400 cursor-pointer active:opacity-50 hover:text-blue-500"
+                                                onClick={() => handleOpenHistorial(activo)}
+                                            >
+                                                <History className="w-4 h-4" />
+                                            </span>
+                                        </Tooltip>
+
                                         <Tooltip content="Mantenimiento">
                                             <span
-                                                className="text-lg text-default-400 cursor-pointer active:opacity-50"
+                                                className="text-lg text-default-400 cursor-pointer active:opacity-50 hover:text-warning"
                                                 onClick={() => handleOpenMantenimiento(activo)}
                                             >
                                                 <Wrench className="w-4 h-4" />
                                             </span>
                                         </Tooltip>
-                                        <Tooltip content="Ver historial">
-                                            <span
-                                                className="text-lg text-default-400 cursor-pointer active:opacity-50"
-                                                onClick={() => handleOpenHistorial(activo)}
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </span>
-                                        </Tooltip>
+
+                                        {/* 
                                         <Tooltip color="danger" content="Dar de baja">
                                             <span
                                                 className="text-lg text-danger cursor-pointer active:opacity-50"
@@ -164,7 +208,8 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </span>
-                                        </Tooltip>
+                                        </Tooltip> 
+                                        */}
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -176,6 +221,12 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
             <CreateActivoFijoModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
+            />
+
+            <ViewActivoFijoModal
+                isOpen={isViewModalOpen}
+                onClose={() => setIsViewModalOpen(false)}
+                activo={selectedAsset}
             />
 
             <HistorialActivoFijoModal

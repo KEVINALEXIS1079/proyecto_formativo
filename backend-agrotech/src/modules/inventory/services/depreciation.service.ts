@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Insumo } from '../entities/insumo.entity';
+import { Insumo, InsumoEstado, TipoInsumo } from '../entities/insumo.entity';
 
 @Injectable()
 export class DepreciationService {
@@ -39,7 +39,7 @@ export class DepreciationService {
             throw new BadRequestException(`Insumo ${insumoId} no encontrado`);
         }
 
-        if (insumo.tipoInsumo !== 'NO_CONSUMIBLE') {
+        if (insumo.tipoInsumo !== TipoInsumo.NO_CONSUMIBLE) {
             throw new BadRequestException('Solo aplica para activos fijos (NO_CONSUMIBLE)');
         }
 
@@ -64,12 +64,12 @@ export class DepreciationService {
         // Verificar si llegó al final de vida útil
         const vidaUtil = insumo.vidaUtilHoras || 0;
         if (vidaUtil > 0 && insumo.horasUsadas >= vidaUtil) {
-            insumo.estado = 'DADO_DE_BAJA';
+            insumo.estado = InsumoEstado.DADO_DE_BAJA;
             if (!insumo.fechaBaja) {
                 insumo.fechaBaja = new Date();
             }
-        } else if (insumo.estado === 'DISPONIBLE') {
-            insumo.estado = 'EN_USO'; // Marcar como usado al menos una vez
+        } else if (insumo.estado === InsumoEstado.DISPONIBLE) {
+            insumo.estado = InsumoEstado.EN_USO; // Marcar como usado al menos una vez
         }
 
         await this.insumoRepo.save(insumo);
@@ -86,7 +86,7 @@ export class DepreciationService {
      * Obtiene el valor actual en libros de un activo
      */
     getValorEnLibros(insumo: Insumo): number {
-        if (insumo.tipoInsumo !== 'NO_CONSUMIBLE') {
+        if (insumo.tipoInsumo !== TipoInsumo.NO_CONSUMIBLE) {
             return insumo.valorInventario;
         }
         return (insumo.costoAdquisicion || 0) - (insumo.depreciacionAcumulada || 0);
@@ -96,7 +96,7 @@ export class DepreciationService {
      * Calcula porcentaje de vida útil restante
      */
     getPorcentajeVidaUtil(insumo: Insumo): number {
-        if (insumo.tipoInsumo !== 'NO_CONSUMIBLE') {
+        if (insumo.tipoInsumo !== TipoInsumo.NO_CONSUMIBLE) {
             return 100;
         }
         const vidaUtil = insumo.vidaUtilHoras || 1;

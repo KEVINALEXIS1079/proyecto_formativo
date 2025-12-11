@@ -9,6 +9,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import type { GeoLote } from "../models/types";
 import FitBoundsHandler from "./FitBoundsHandler.tsx";
+import { GeoSearchControl } from "../components/GeoSearchControl.tsx";
 
 // Fix for default marker icons in Leaflet with React
 // @ts-ignore
@@ -58,6 +59,7 @@ export default function GeoMap({ lotes, isSubloteView = false }: Props) {
                 />
 
                 <FitBoundsHandler polygons={allPolygons} />
+                <GeoSearchControl />
 
                 {lotes.map((lote, index) => (
                     <div key={`lote-${lote.id_lote_pk || index}`}>
@@ -81,17 +83,23 @@ export default function GeoMap({ lotes, isSubloteView = false }: Props) {
                                 <Tooltip sticky>
                                     <div className="text-sm space-y-1">
                                         <p className="font-bold text-base">{lote.nombre_lote}</p>
-                                        <p className="text-xs text-gray-600">Lote Principal</p>
+                                        <p className="text-xs text-gray-600">Lote #{lote.id_lote_pk}</p>
                                         <div className="border-t border-gray-200 pt-1 mt-1">
-                                            <p><span className="font-semibold">Área:</span> {Math.round(lote.area_lote).toLocaleString('es-CO')} m² ({(lote.area_lote / 10000).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha)</p>
+                                            <p><span className="font-semibold">Área:</span> {Math.round(lote.area_lote || 0).toLocaleString('es-CO')} m² ({((lote.area_lote || 0) / 10000).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha)</p>
                                             {lote.coordenadas_lote && lote.coordenadas_lote.length > 0 && (
                                                 <>
                                                     <p><span className="font-semibold">Centroide:</span></p>
                                                     <p className="text-xs ml-2">
-                                                        Lat: {(lote.coordenadas_lote.reduce((sum, c) => sum + c.latitud_lote, 0) / lote.coordenadas_lote.length).toFixed(4)}
+                                                        Lat: {(() => {
+                                                            const val = lote.coordenadas_lote.reduce((sum, c) => sum + c.latitud_lote, 0) / lote.coordenadas_lote.length;
+                                                            return isNaN(val) ? '0.0000' : val.toFixed(4);
+                                                        })()}
                                                     </p>
                                                     <p className="text-xs ml-2">
-                                                        Lng: {(lote.coordenadas_lote.reduce((sum, c) => sum + c.longitud_lote, 0) / lote.coordenadas_lote.length).toFixed(4)}
+                                                        Lng: {(() => {
+                                                            const val = lote.coordenadas_lote.reduce((sum, c) => sum + c.longitud_lote, 0) / lote.coordenadas_lote.length;
+                                                            return isNaN(val) ? '0.0000' : val.toFixed(4);
+                                                        })()}
                                                     </p>
                                                 </>
                                             )}
@@ -108,8 +116,8 @@ export default function GeoMap({ lotes, isSubloteView = false }: Props) {
                                     key={`sublote-${sublote.id_sublote_pk}`}
                                     positions={sublote.coordenadas_sublote.map(c => [c.latitud_sublote, c.longitud_sublote])}
                                     pathOptions={{
-                                        color: hoveredId === `sublote-${sublote.id_sublote_pk}` ? "#16a34a" : "#22c55e",
-                                        fillColor: "#22c55e",
+                                        color: hoveredId === `sublote-${sublote.id_sublote_pk}` ? "#2563eb" : "#3b82f6", // Blue-600 : Blue-500
+                                        fillColor: "#3b82f6",
                                         fillOpacity: 0.4,
                                         weight: 2,
                                         dashArray: "5, 5"
@@ -122,17 +130,23 @@ export default function GeoMap({ lotes, isSubloteView = false }: Props) {
                                     <Tooltip sticky>
                                         <div className="text-sm space-y-1">
                                             <p className="font-bold text-base">{sublote.nombre_sublote}</p>
-                                            <p className="text-xs text-gray-600">Sublote de: {lote.nombre_lote}</p>
+                                            <p className="text-xs text-gray-600">Sublote #{sublote.id_sublote_pk} (Lote: {lote.nombre_lote})</p>
                                             <div className="border-t border-gray-200 pt-1 mt-1">
-                                                <p><span className="font-semibold">Área:</span> {Math.round(sublote.area_sublote).toLocaleString('es-CO')} m² ({(sublote.area_sublote / 10000).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha)</p>
+                                                <p><span className="font-semibold">Área:</span> {Math.round(sublote.area_sublote || 0).toLocaleString('es-CO')} m² ({((sublote.area_sublote || 0) / 10000).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha)</p>
                                                 {sublote.coordenadas_sublote && sublote.coordenadas_sublote.length > 0 && (
                                                     <>
                                                         <p><span className="font-semibold">Centroide:</span></p>
                                                         <p className="text-xs ml-2">
-                                                            Lat: {(sublote.coordenadas_sublote.reduce((sum, c) => sum + c.latitud_sublote, 0) / sublote.coordenadas_sublote.length).toFixed(4)}
+                                                            Lat: {(() => {
+                                                                const val = sublote.coordenadas_sublote.reduce((sum, c) => sum + c.latitud_sublote, 0) / sublote.coordenadas_sublote.length;
+                                                                return isNaN(val) ? '0.0000' : val.toFixed(4);
+                                                            })()}
                                                         </p>
                                                         <p className="text-xs ml-2">
-                                                            Lng: {(sublote.coordenadas_sublote.reduce((sum, c) => sum + c.longitud_sublote, 0) / sublote.coordenadas_sublote.length).toFixed(4)}
+                                                            Lng: {(() => {
+                                                                const val = sublote.coordenadas_sublote.reduce((sum, c) => sum + c.longitud_sublote, 0) / sublote.coordenadas_sublote.length;
+                                                                return isNaN(val) ? '0.0000' : val.toFixed(4);
+                                                            })()}
                                                         </p>
                                                     </>
                                                 )}

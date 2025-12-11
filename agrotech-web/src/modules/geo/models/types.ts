@@ -1,5 +1,4 @@
-import type { Lote } from "../../cultivo/lote/model/types";
-import type { Sublote } from "../../cultivo/sublote/model/types";
+import type { Lote, Sublote } from "../../cultivos/model/types";
 
 export type GeoLote = Lote & {
   // Add any geo-specific extra props if needed, otherwise just alias

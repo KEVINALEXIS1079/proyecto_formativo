@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { AuthState, LoginRequest } from '../model/types';
 import { login, logout } from '../api/auth.service';
 import { cleanCorruptLocalStorage, cleanCorruptSessionStorage } from '@/lib/storage';
@@ -39,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Verificar sesión obteniendo el perfil
         const { getMyProfile } = await import('@/modules/profile/api/profile.api');
         const userProfile = await getMyProfile();
-        
+
         setState({
           isAuthenticated: true,
           user: {
@@ -78,6 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const navigate = useNavigate();
+
   // --- Manejo de logout ---
   const handleLogout = async () => {
     await logout();
@@ -87,6 +90,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user: null,
       token: null,
     });
+    // Forzar navegación al login con estado limpio para que la "flechita" apunte a Inicio
+    navigate('/login', { replace: true, state: { from: '/start' } });
   };
 
   const value: AuthContextType = {

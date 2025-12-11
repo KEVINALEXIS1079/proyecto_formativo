@@ -15,6 +15,11 @@ export interface ReporteFilters {
   loteId?: number;
   fechaDesde?: string;
   fechaHasta?: string;
+  // Support snake_case for compatibility with some hooks/pages
+  id_cultivo?: number;
+  id_lote?: number;
+  fecha_desde?: string;
+  fecha_hasta?: string;
 }
 
 export interface ActividadReporte {

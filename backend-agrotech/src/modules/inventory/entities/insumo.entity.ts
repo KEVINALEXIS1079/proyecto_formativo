@@ -5,6 +5,21 @@ import { Proveedor } from './proveedor.entity';
 import { Categoria } from './categoria.entity';
 import { MovimientoInsumo } from './movimiento-insumo.entity';
 
+export enum InsumoEstado {
+  DISPONIBLE = 'DISPONIBLE',
+  AGOTADO = 'AGOTADO',
+  BAJO_STOCK = 'BAJO_STOCK',
+  EN_USO = 'EN_USO',
+  MANTENIMIENTO = 'MANTENIMIENTO',
+  DADO_DE_BAJA = 'DADO_DE_BAJA',
+  RESERVADO = 'RESERVADO',
+}
+
+export enum TipoInsumo {
+  CONSUMIBLE = 'CONSUMIBLE',
+  NO_CONSUMIBLE = 'NO_CONSUMIBLE',
+}
+
 @Entity('insumos')
 export class Insumo extends BaseEntity {
   @Column()
@@ -64,31 +79,45 @@ export class Insumo extends BaseEntity {
   @Column({ nullable: true })
   creadoPorUsuarioId: number;
 
-  // NUEVOS CAMPOS PARA ACTIVOS FIJOS Y DEPRECIACIÓN
-  @Column({ default: 'CONSUMIBLE' })
-  tipoInsumo: string; // 'CONSUMIBLE' | 'NO_CONSUMIBLE'
 
-  // Para NO CONSUMIBLES (Activos Fijos)
-  @Column('float', { nullable: true })
-  costoAdquisicion: number; // Costo inicial del activo
-
-  @Column('float', { nullable: true })
-  valorResidual: number; // Valor al final de vida útil
+  @Column({
+    type: 'enum',
+    enum: TipoInsumo,
+    default: TipoInsumo.CONSUMIBLE
+  })
+  tipoInsumo: TipoInsumo;
 
   @Column('float', { nullable: true })
-  vidaUtilHoras: number; // Vida útil estimada en horas/usos
+  costoAdquisicion: number;
+
+  @Column('float', { nullable: true })
+  valorResidual: number;
+
+  @Column('float', { nullable: true })
+  vidaUtilHoras: number;
 
   @Column('float', { default: 0 })
-  horasUsadas: number; // Horas/usos acumulados
+  horasUsadas: number;
 
   @Column('float', { default: 0 })
-  stockReservado: number; // Stock comprometido en actividades pendientes
+  stockReservado: number;
 
   @Column('float', { default: 0 })
-  depreciacionAcumulada: number; // Depreciación total acumulada
+  depreciacionAcumulada: number;
 
-  @Column({ default: 'DISPONIBLE' })
-  estado: string; // 'DISPONIBLE' | 'EN_USO' | 'MANTENIMIENTO' | 'DADO_DE_BAJA'
+  @Column({ type: 'int', default: 0 })
+  stockMinimo: number;
+
+  @Column({
+    type: 'enum',
+    enum: InsumoEstado,
+    default: InsumoEstado.DISPONIBLE,
+  })
+  estado: InsumoEstado;
+
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  costoUnitario: number;
 
   @Column({ type: 'date', nullable: true })
   fechaAdquisicion: Date;

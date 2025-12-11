@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMyProfile, updateMyProfile, uploadMyAvatar } from '../api/profile.api';
-import type { Profile, UpdateProfileInput } from '../models/types/profile.types';
+import type { UpdateProfileInput } from '../models/types/profile.types';
 
 const PROFILE_QUERY_KEY = ['profile', 'me'] as const;
 
@@ -45,7 +45,7 @@ export function useProfile() {
         lastUrl.current = null;
       }
       setPreviewUrl(null);
-      
+
       queryClient.setQueryData(PROFILE_QUERY_KEY, data);
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
     },
@@ -65,12 +65,19 @@ export function useProfile() {
   // Combined save function (profile + avatar)
   const save = async (input: UpdateProfileInput & { avatar?: File }) => {
     const { avatar, ...profileData } = input;
-    
+
+    // Clean empty strings for optional fields to avoid validation errors
+    const cleanData = Object.entries(profileData).reduce((acc, [key, value]) => {
+      // If value is empty string, treat as undefined (skip sending)
+      if (value === "") return acc;
+      return { ...acc, [key]: value };
+    }, {} as Partial<UpdateProfileInput>);
+
     // Update profile data if there are changes
-    if (Object.keys(profileData).length > 0) {
-      await updateMutation.mutateAsync(profileData);
+    if (Object.keys(cleanData).length > 0) {
+      await updateMutation.mutateAsync(cleanData);
     }
-    
+
     // Upload avatar if provided
     if (avatar) {
       await uploadAvatarMutation.mutateAsync(avatar);

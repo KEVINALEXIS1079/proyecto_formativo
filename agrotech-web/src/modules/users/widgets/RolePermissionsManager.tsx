@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Checkbox, Button, Tabs, Tab } from '@heroui/react';
+import { Checkbox, Button, Tabs, Tab, Spinner } from '@heroui/react';
 import type { Rol, Permiso } from '../models/types/permissions.types';
 import { usePermisos, usePermisosByRol, useSyncPermisosRol } from '../hooks/usePermissions';
 import { Shield } from 'lucide-react';
@@ -42,7 +42,7 @@ export const RolePermissionsManager = ({ rol, readOnly = false, onClose }: RoleP
       console.log('Syncing role permissions:', { rolId: rol.id, type: typeof rol.id, permisoIds: selectedPermisos });
       // Sync permissions
       await syncMutation.mutateAsync({ rolId: Number(rol.id), permisoIds: selectedPermisos });
-      
+
       onClose();
     } catch (error) {
       console.error('Error saving role permissions:', error);
@@ -61,14 +61,18 @@ export const RolePermissionsManager = ({ rol, readOnly = false, onClose }: RoleP
     }, {} as Record<string, Permiso[]>);
   }, [allPermisos]);
 
-  if (isLoadingRolePermisos) return <div className="p-4 text-center">Cargando permisos del rol...</div>;
+  if (isLoadingRolePermisos) return (
+    <div className="flex justify-center p-4">
+      <Spinner color="success" label="Cargando permisos del rol..." />
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-[500px]">
       <div className="flex-1 overflow-hidden flex flex-col">
-        <Tabs 
-          aria-label="Módulos de permisos" 
-          isVertical 
+        <Tabs
+          aria-label="Módulos de permisos"
+          isVertical
           className="h-full"
           color="success"
           radius="full"
@@ -126,13 +130,13 @@ export const RolePermissionsManager = ({ rol, readOnly = false, onClose }: RoleP
                       const isSelected = selectedPermisos.includes(permiso.id);
 
                       return (
-                        <div 
-                          key={permiso.id} 
+                        <div
+                          key={permiso.id}
                           className={`
                             flex items-start gap-3 p-3 rounded-lg border transition-colors
-                            ${isSelected 
-                                ? 'bg-success-50 border-success-200' 
-                                : 'bg-transparent border-default-200 hover:border-default-300'
+                            ${isSelected
+                              ? 'bg-success-50 border-success-200'
+                              : 'bg-transparent border-default-200 hover:border-default-300'
                             }
                           `}
                         >

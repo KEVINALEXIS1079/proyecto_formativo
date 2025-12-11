@@ -3,7 +3,7 @@ import { useGeoData } from "../hooks/useGeoData";
 import GeoMap from "../widgets/GeoMap";
 import GeoFilters from "../ui/GeoFilters";
 import SectionTitle from "../ui/SectionTitle";
-import { Card, CardBody, Tabs, Tab, Button, Chip, Select, SelectItem } from "@heroui/react";
+import { Card, CardBody, Tabs, Tab, Button, Chip, Select, SelectItem, Spinner } from "@heroui/react";
 import { List, Map as MapIcon, Edit, MapPin, Ruler, Layers, Trash2 } from "lucide-react";
 import SubloteModal from "../widgets/SubloteModal";
 import type { Sublote } from "../../cultivos/model/types";
@@ -22,23 +22,29 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
   const [activeTab, setActiveTab] = useState<string>("info");
 
   const filteredSublotes = useMemo(() => {
-    let allSublotes = lotes.flatMap(l => l.sublotes);
+    // Ensure nested array exists and filter out nulls immediately
+    let allSublotes = lotes.flatMap(l => l.sublotes ?? []);
 
     // Filter by selected Lote
     if (selectedLoteId !== "all") {
       allSublotes = allSublotes.filter(s => {
-        // Find the lote for this sublote to check ID
-        const parentLote = lotes.find(l => l.nombre_lote === s.loteNombre);
+        if (!s) return false;
+        // extended property check
+        const sWithLote = s as any;
+        const parentLote = lotes.find(l => l.nombre_lote === sWithLote.loteNombre);
         return parentLote?.id_lote_pk?.toString() === selectedLoteId;
       });
     }
 
-    // Sort by ID to maintain consistent order
-    const sortedSublotes = [...allSublotes].sort((a, b) => (a.id_sublote_pk || 0) - (b.id_sublote_pk || 0));
+    // Sort by ID safely
+    const sortedSublotes = [...allSublotes].sort((a, b) => {
+      if (!a || !b) return 0;
+      return (a.id_sublote_pk || 0) - (b.id_sublote_pk || 0);
+    });
 
     if (!q.trim()) return sortedSublotes;
     const lowerQ = q.toLowerCase();
-    return sortedSublotes.filter(s => s.nombre_sublote.toLowerCase().includes(lowerQ));
+    return sortedSublotes.filter(s => s && s.nombre_sublote && s.nombre_sublote.toLowerCase().includes(lowerQ));
   }, [lotes, q, selectedLoteId]);
 
   const filteredLotesForMap = useMemo(() => {
@@ -51,10 +57,11 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
 
     if (!q.trim()) return lotesToMap;
     const lowerQ = q.toLowerCase();
+    // Safe filtering
     return lotesToMap.map(l => ({
       ...l,
-      sublotes: l.sublotes.filter((s: Sublote) => (s.nombre_sublote || "").toLowerCase().includes(lowerQ))
-    })).filter(l => l.sublotes.length > 0);
+      sublotes: (l.sublotes ?? []).filter((s: Sublote) => s && s.nombre_sublote && s.nombre_sublote.toLowerCase().includes(lowerQ))
+    })).filter(l => l.sublotes && l.sublotes.length > 0);
   }, [lotes, q, selectedLoteId]);
 
   useImperativeHandle(ref, () => ({
@@ -78,7 +85,11 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
     setSelectedLoteId(value || "all");
   };
 
-  if (isLoading) return <div>Cargando sublotes...</div>;
+  if (isLoading) return (
+    <div className="flex justify-center p-4">
+      <Spinner color="success" label="Cargando sublotes..." />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -145,105 +156,110 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
                 </p>
               </div>
             ) : (
-              filteredSublotes.map((sublote, index) => (
-                <Card key={`${sublote.id_sublote_pk}-${index}`} shadow="sm" className="hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-gray-800 group">
-                  <CardBody className="p-0">
-                    <div className="p-5 pb-3">
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-sm shadow-sm">
-                            {sublote.id_sublote_pk || "#"}
+              filteredSublotes.map((sublote, index) => {
+                if (!sublote) return null;
+                return (
+                  <Card key={`${sublote.id_sublote_pk}-${index}`} shadow="sm" className="hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-gray-800 group">
+                    <CardBody className="p-0">
+                      <div className="p-5 pb-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-sm shadow-sm">
+                              {sublote.id_sublote_pk || "#"}
+                            </div>
+                            <h4 className="font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-green-600 transition-colors line-clamp-1">
+                              {sublote.nombre_sublote || "Sin Nombre"}
+                            </h4>
                           </div>
-                          <h4 className="font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-green-600 transition-colors line-clamp-1">
-                            {sublote.nombre_sublote || "Sin Nombre"}
-                          </h4>
+                          <Chip size="sm" color="success" variant="flat" className="font-medium">Sublote</Chip>
                         </div>
-                        <Chip size="sm" color="success" variant="flat" className="font-medium">Sublote</Chip>
                       </div>
-                    </div>
 
-                    <div className="px-5 py-3 bg-gray-50/50 dark:bg-zinc-900/30 border-y border-gray-100 dark:border-gray-800">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Área Total</p>
-                          <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-                            <Ruler size={16} className="text-gray-400" />
-                            <div className="flex flex-col">
-                              <span className="font-medium">{Math.round(sublote.area_sublote).toLocaleString('es-CO')} m²</span>
-                              <span className="font-medium">{(sublote.area_sublote / 10000).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha</span>
+                      <div className="px-5 py-3 bg-gray-50/50 dark:bg-zinc-900/30 border-y border-gray-100 dark:border-gray-800">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Área Total</p>
+                            <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                              <Ruler size={16} className="text-gray-400" />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{Math.round(sublote.area_sublote || 0).toLocaleString('es-CO')} m²</span>
+                                <span className="font-medium">{((sublote.area_sublote || 0) / 10000).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Centroide</p>
+                            <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                              <MapPin size={16} className="text-gray-400" />
+                              <span className="font-medium text-xs">
+                                {(() => {
+                                  if (!sublote.coordenadas_sublote || sublote.coordenadas_sublote.length === 0) return "N/A";
+                                  const lat = sublote.coordenadas_sublote.reduce((sum: number, c: any) => sum + c.latitud_sublote, 0) / sublote.coordenadas_sublote.length;
+                                  const lng = sublote.coordenadas_sublote.reduce((sum: number, c: any) => sum + c.longitud_sublote, 0) / sublote.coordenadas_sublote.length;
+                                  return (
+                                    <div className="flex flex-col">
+                                      <span>Latitud: {lat.toFixed(4)}</span>
+                                      <span>Longitud: {lng.toFixed(4)}</span>
+                                    </div>
+                                  );
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="col-span-2 space-y-1 border-t border-gray-100 dark:border-gray-800 pt-2 mt-1">
+                            <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Lote Padre</p>
+                            <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                              <MapIcon size={16} className="text-gray-400" />
+                              {/* @ts-ignore: loteNombre comes from GeoSublote extension */}
+                              <span className="font-medium truncate" title={(sublote as any).loteNombre}>{(sublote as any).loteNombre || 'N/A'}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Centroide</p>
-                          <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-                            <MapPin size={16} className="text-gray-400" />
-                            <span className="font-medium text-xs">
-                              {(() => {
-                                if (!sublote.coordenadas_sublote || sublote.coordenadas_sublote.length === 0) return "N/A";
-                                const lat = sublote.coordenadas_sublote.reduce((sum: number, c: any) => sum + c.latitud_sublote, 0) / sublote.coordenadas_sublote.length;
-                                const lng = sublote.coordenadas_sublote.reduce((sum: number, c: any) => sum + c.longitud_sublote, 0) / sublote.coordenadas_sublote.length;
-                                return (
-                                  <div className="flex flex-col">
-                                    <span>Latitud: {lat.toFixed(4)}</span>
-                                    <span>Longitud: {lng.toFixed(4)}</span>
-                                  </div>
-                                );
-                              })()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="col-span-2 space-y-1 border-t border-gray-100 dark:border-gray-800 pt-2 mt-1">
-                          <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Lote Padre</p>
-                          <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-                            <MapIcon size={16} className="text-gray-400" />
-                            {/* @ts-ignore: loteNombre comes from GeoSublote extension */}
-                            <span className="font-medium truncate" title={sublote.loteNombre}>{sublote.loteNombre || 'N/A'}</span>
-                          </div>
-                        </div>
                       </div>
-                    </div>
 
-                    <div className="p-4 flex justify-end items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="light"
-                        className="text-gray-500 hover:text-green-600"
-                        startContent={<MapIcon size={16} />}
-                        onPress={handleViewOnMap}
-                      >
-                        Ver
-                      </Button>
-                      <Button
-                        size="sm"
-                        color="success"
-                        variant="flat"
-                        isIconOnly
-                        className="text-black"
-                        onPress={() => handleEdit(sublote)}
-                        title="Gestionar"
-                      >
-                        <Edit size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        color="danger"
-                        variant="flat"
-                        isIconOnly
-                        className="text-danger"
-                        onPress={() => {
-                          if (confirm(`¿Estás seguro de inhabilitar el sublote ${sublote.nombre_sublote}?`)) {
-                            console.log("Inhabilitar sublote", sublote.id_sublote_pk);
-                          }
-                        }}
-                        title="Inhabilitar"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </CardBody>
-                </Card>
-              )))
+                      <div className="p-4 flex justify-end items-center gap-2">
+                        <div className="flex-1">
+                          <Button
+                            size="sm"
+                            variant="light"
+                            className="text-gray-500 hover:text-green-600"
+                            startContent={<MapIcon size={16} />}
+                            onPress={handleViewOnMap}
+                          >
+                            Ver
+                          </Button>
+                        </div>
+                        <Button
+                          size="sm"
+                          color="success"
+                          variant="flat"
+                          isIconOnly
+                          className="text-black"
+                          onPress={() => handleEdit(sublote)}
+                          title="Gestionar"
+                        >
+                          <Edit size={16} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          color="danger"
+                          variant="flat"
+                          isIconOnly
+                          className="text-danger"
+                          onPress={() => {
+                            if (confirm(`¿Estás seguro de inhabilitar el sublote ${sublote.nombre_sublote}?`)) {
+                              console.log("Inhabilitar sublote", sublote.id_sublote_pk);
+                            }
+                          }}
+                          title="Inhabilitar"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </CardBody>
+                  </Card>
+                )
+              }))
             }
           </div>
         </Tab>

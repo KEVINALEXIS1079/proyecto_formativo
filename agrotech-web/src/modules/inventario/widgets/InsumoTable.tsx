@@ -9,6 +9,7 @@ import {
   TableCell,
   Button,
   Image,
+  Spinner,
 } from "@heroui/react";
 import { Eye, Edit, History, Trash2 } from "lucide-react";
 import Surface from "../../users/ui/Surface";
@@ -37,7 +38,11 @@ export const InsumoTable = ({
   hasMovimientosMap,
 }: InsumoTableProps) => {
   if (isLoading) {
-    return <div className="p-4 text-center">Cargando insumos...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <Spinner color="success" label="Cargando insumos..." />
+      </div>
+    );
   }
 
   if (!insumos.length) {

@@ -1,5 +1,5 @@
 import type { ProductoAgro } from '../models/types/production.types';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
 import { Eye } from 'lucide-react';
 
 import Surface from '../ui/Surface';
@@ -12,7 +12,11 @@ interface ProductTableProps {
 
 export const ProductTable = ({ products, isLoading, onEdit }: ProductTableProps) => {
     if (isLoading) {
-        return <div className="p-4 text-center">Cargando productos...</div>;
+        return (
+            <div className="flex justify-center p-4">
+                <Spinner color="success" label="Cargando productos..." />
+            </div>
+        );
     }
 
     if (!products.length) {

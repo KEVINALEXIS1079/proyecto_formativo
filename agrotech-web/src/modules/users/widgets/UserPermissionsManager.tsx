@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'r
 import type { User } from '../models/types/user.types';
 import type { Permiso } from '../models/types/permissions.types';
 import { usePermisos, useUserPermissions, useSyncUserPermissions, usePermisosByRol } from '../hooks/usePermissions';
-import { Checkbox, CheckboxGroup, Chip, Accordion, AccordionItem, ScrollShadow } from "@heroui/react";
+import { Checkbox, CheckboxGroup, Chip, Accordion, AccordionItem, ScrollShadow, Spinner } from "@heroui/react";
 import { Info } from 'lucide-react';
 import { formatModuleName } from '../constants/module-labels';
 
@@ -97,7 +97,11 @@ export const UserPermissionsManager = forwardRef<UserPermissionsManagerRef, User
     return selectedCount > 0 && selectedCount < idsInModule.length;
   };
 
-  if (isLoadingUserPermisos) return <div className="p-4 text-center">Cargando permisos...</div>;
+  if (isLoadingUserPermisos) return (
+    <div className="flex justify-center p-4">
+      <Spinner color="success" label="Cargando permisos..." />
+    </div>
+  );
 
   return (
     <div className="space-y-4">

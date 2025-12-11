@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { Sensor } from '../model/iot.types';
-import { Select, SelectItem, Button, Input } from "@heroui/react";
+import { Select, SelectItem, Button, Input, Spinner } from "@heroui/react";
 import { FileText, FileSpreadsheet } from "lucide-react";
 import { useIoTLotCharts } from '../hooks/useIoTLotCharts';
 import { buildLotReportCsv, downloadCsv } from '../utils/iot.utils';
@@ -9,7 +9,7 @@ import { useIoTReportGenerator } from '../hooks/useIoTReportGenerator';
 
 export const IoTReportsPage: React.FC = () => {
   const { sensors } = useOutletContext<{ sensors: Sensor[] }>();
-  
+
   const lots = useMemo(() => {
     const uniqueLots = new Set<number>();
     sensors.forEach(s => { if (s.loteId) uniqueLots.add(s.loteId); });
@@ -29,7 +29,7 @@ export const IoTReportsPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  
+
   const { generatePdf, generatingPdf } = useIoTReportGenerator();
 
   // Reuse the chart hook to get data for the report
@@ -43,7 +43,7 @@ export const IoTReportsPage: React.FC = () => {
 
   const handleExportCsv = () => {
     if (!metrics || !readings) return;
-    
+
     // Flatten readings for export
     const allReadings = Object.values(readings).flat();
     const csvContent = buildLotReportCsv([metrics], allReadings);
@@ -63,10 +63,10 @@ export const IoTReportsPage: React.FC = () => {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Generar Reportes</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Select 
-            label="Seleccionar Lote" 
+          <Select
+            label="Seleccionar Lote"
             selectedKeys={selectedLoteId ? [selectedLoteId.toString()] : ['all']}
             onChange={(e) => {
               const val = e.target.value;
@@ -98,19 +98,19 @@ export const IoTReportsPage: React.FC = () => {
               ]}
             </Select>
           )}
-          
+
           <div className="flex gap-2">
-            <Input 
-              type="date" 
-              label="Fecha Inicio" 
-              value={startDate} 
-              onChange={(e) => setStartDate(e.target.value)} 
+            <Input
+              type="date"
+              label="Fecha Inicio"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
             />
-            <Input 
-              type="date" 
-              label="Fecha Fin" 
-              value={endDate} 
-              onChange={(e) => setEndDate(e.target.value)} 
+            <Input
+              type="date"
+              label="Fecha Fin"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
         </div>
@@ -119,7 +119,9 @@ export const IoTReportsPage: React.FC = () => {
           <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
             <h4 className="font-bold text-blue-900 mb-2">Vista Previa</h4>
             {loading ? (
-              <p className="text-blue-700">Cargando datos...</p>
+              <div className="flex justify-center py-2">
+                <Spinner color="success" label="Cargando datos..." />
+              </div>
             ) : metrics ? (
               <div className="text-sm text-blue-800 space-y-1">
                 <p><strong>Lote:</strong> {metrics.loteNombre}</p>
@@ -133,9 +135,9 @@ export const IoTReportsPage: React.FC = () => {
           </div>
 
           <div className="flex gap-4 mt-4">
-            <Button 
-              color="success" 
-              variant="flat" 
+            <Button
+              color="success"
+              variant="flat"
               startContent={<FileSpreadsheet size={20} />}
               onPress={handleExportCsv}
               isDisabled={loading || !metrics}
@@ -143,9 +145,9 @@ export const IoTReportsPage: React.FC = () => {
               Exportar CSV
             </Button>
 
-            <Button 
-              color="danger" 
-              variant="flat" 
+            <Button
+              color="danger"
+              variant="flat"
               startContent={<FileText size={20} />}
               onPress={handleGeneratePdf}
               isLoading={generatingPdf}

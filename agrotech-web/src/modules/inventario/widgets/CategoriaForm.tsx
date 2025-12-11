@@ -1,6 +1,7 @@
-import { useState } from "react";
+
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
 import { Form } from "@heroui/form";
 import type { CreateCategoriaInsumoInput, UpdateCategoriaInsumoInput } from "../model/types";
 
@@ -26,6 +27,7 @@ export default function CategoriaForm({
     const data = {
       nombre: formData.get("nombre") as string,
       descripcion: (formData.get("descripcion") as string) || undefined,
+      tipoInsumo: (formData.get("tipoInsumo") as any) || 'CONSUMIBLE',
     };
 
     onSubmit(data);
@@ -42,6 +44,21 @@ export default function CategoriaForm({
           required
           className="rounded-lg"
         />
+        <Select
+          name="tipoInsumo"
+          label="Tipo de Categoría"
+          placeholder="Seleccione el tipo"
+          defaultSelectedKeys={initialValues?.tipoInsumo ? [initialValues.tipoInsumo] : ['CONSUMIBLE']}
+          required
+          className="rounded-lg"
+        >
+          <SelectItem key="CONSUMIBLE" textValue="Consumible (Semillas, Fertilizantes)">
+            Consumible (Semillas, Fertilizantes)
+          </SelectItem>
+          <SelectItem key="NO_CONSUMIBLE" textValue="No Consumible (Herramientas, Maquinaria)">
+            No Consumible (Herramientas, Maquinaria)
+          </SelectItem>
+        </Select>
         <Input
           name="descripcion"
           label="Descripción"

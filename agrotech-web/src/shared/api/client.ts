@@ -109,7 +109,11 @@ export function connectSocket(namespace = "/"): Socket {
     console.warn("⚠️ WS desconectado:", namespace, r);
     clearInactivityTimer(s);
   });
-  s.on("connect_error", (e) => console.error("❌ WS error:", namespace, e.message));
+  s.on("connect_error", (e) => {
+    // Manejamos el error silenciosamente o con warning para no ensuciar la consola con errores rojos
+    // El navegador ya muestra un error de conexión por defecto si falla.
+    console.warn(`⚠️ WS conexión fallida (${namespace}):`, e.message);
+  });
   s.onAny(() => startInactivityTimer(s));
 
   socketsByNs.set(url, s);

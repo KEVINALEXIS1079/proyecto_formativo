@@ -7,6 +7,7 @@ import {
   TableCell,
   Chip,
   Button,
+  Spinner
 } from "@heroui/react";
 import { Eye } from "lucide-react";
 import Surface from "../../users/ui/Surface";
@@ -32,7 +33,11 @@ export const MovimientoTable = ({
   onManage,
 }: MovimientoTableProps) => {
   if (isLoading) {
-    return <div className="p-4 text-center">Cargando movimientos...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <Spinner color="success" label="Cargando movimientos..." />
+      </div>
+    );
   }
 
   if (!movimientos.length) {

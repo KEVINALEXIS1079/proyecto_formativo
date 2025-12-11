@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, CardBody, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@heroui/react";
+import { Button, Card, CardBody, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner } from "@heroui/react";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import EpaDetail from "../widgets/EpaDetail";
@@ -67,7 +67,9 @@ export default function EpaDetailFeature() {
         </div>
         <Card>
           <CardBody className="py-12 text-center">
-            <p>Cargando EPA...</p>
+            <div className="flex justify-center">
+              <Spinner color="success" label="Cargando EPA..." />
+            </div>
           </CardBody>
         </Card>
       </div>

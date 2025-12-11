@@ -1,13 +1,18 @@
 // src/modules/auth/hooks/useRegister.ts
 import { useMutation } from "@tanstack/react-query";
 import { register } from "../api/auth.service";
-import type { RegisterRequest, RegisterResponse } from "../model/types";
-
-type RegisterErr = Error;
+// type RegisterErr = Error;
 
 export function useRegister() {
-  return useMutation<RegisterResponse, RegisterErr, RegisterRequest>({
-    mutationKey: ["auth", "register"],
-    mutationFn: (request) => register(request),
+  return useMutation({
+    mutationFn: register,
+    mutationKey: ["auth", "register"]
+  });
+}
+
+export function useCompleteRegister() {
+  return useMutation({
+    mutationFn: ({ correo, code }: { correo: string; code: string }) =>
+      import("../api/auth.service").then(m => m.completeRegistration({ correo, code })),
   });
 }

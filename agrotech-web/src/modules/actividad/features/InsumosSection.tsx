@@ -138,8 +138,18 @@ export default function InsumosSection({
       {/* Add Insumo Form */}
       <div className="p-4 rounded-lg border border-green-50 space-y-4">
         <h3 className="text-sm font-semibold text-green-800 flex items-center gap-2">
-          <Plus className="w-4 h-4" /> {isReservationMode ? "Planificar/Reservar Insumo" : "Agregar Insumo"}
+          <Plus className="w-4 h-4" /> {isReservationMode ? "Planificar / Reservar Insumo" : "Registrar Consumo Real"}
         </h3>
+
+        {isReservationMode ? (
+          <div className="mb-2 p-2 bg-yellow-50 text-yellow-800 text-xs rounded border border-yellow-200">
+            Estos insumos quedarán <strong>RESERVADOS</strong> (comprometidos) en inventario hasta que finalices la actividad.
+          </div>
+        ) : (
+          <div className="mb-2 p-2 bg-orange-50 text-orange-800 text-xs rounded border border-orange-200">
+            Estos insumos se <strong>DESCONTARÁN</strong> inmediatamente del inventario como usados.
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Select
@@ -237,105 +247,111 @@ export default function InsumosSection({
       </div>
 
       {/* Pending Insumos List */}
-      {pendingInsumos.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-orange-600">
-              Insumos pendientes de confirmar ({pendingInsumos.length})
-            </h3>
-          </div>
+      {
+        pendingInsumos.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-orange-600">
+                Insumos pendientes de confirmar ({pendingInsumos.length})
+              </h3>
+            </div>
 
-          <div className="grid gap-3">
-            {pendingInsumos.map((pending) => (
-              <Card
-                key={pending.id}
-                shadow="sm"
-                className="border border-orange-200 bg-orange-50/30"
-              >
-                <CardBody className="flex flex-row justify-between items-center p-3">
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      {pending.insumoData?.nombre || "Insumo desconocido"}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Cantidad: {pending.cantidadUso}{" "}
-                      {pending.insumoData?.unidadUso} | Costo: $
-                      {pending.costoUnitarioUso}
-                    </p>
-                  </div>
-                  <Button
-                    isIconOnly
-                    color="danger"
-                    variant="light"
-                    size="sm"
-                    onPress={() => handleRemovePending(pending.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              color="success"
-              className="text-white"
-              startContent={<CheckCircle className="w-4 h-4" />}
-              onPress={handleConfirm}
-            >
-              Confirmar Insumos ({pendingInsumos.length})
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmed Insumos List */}
-      {fields.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-green-600">
-            Insumos confirmados ({fields.length})
-          </h3>
-          <div className="grid gap-3">
-            {fields.map((field, index) => {
-              const insumo = insumos.find((i) => i.id === field.insumoId);
-              return (
+            <div className="grid gap-3">
+              {pendingInsumos.map((pending) => (
                 <Card
-                  key={field.id}
+                  key={pending.id}
                   shadow="sm"
-                  className="border border-green-100"
+                  className="border border-orange-200 bg-orange-50/30"
                 >
                   <CardBody className="flex flex-row justify-between items-center p-3">
                     <div>
                       <p className="font-medium text-gray-800">
-                        {insumo?.nombre || "Insumo desconocido"}
+                        {pending.insumoData?.nombre || "Insumo desconocido"}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Cantidad: {field.cantidadUso} {insumo?.unidadUso} |
-                        Costo: ${field.costoUnitarioUso}
+                        Cantidad: {pending.cantidadUso}{" "}
+                        {pending.insumoData?.unidadUso} | Costo: $
+                        {pending.costoUnitarioUso}
                       </p>
                     </div>
                     <Button
                       isIconOnly
                       color="danger"
                       variant="light"
-                      onPress={() => remove(index)}
+                      size="sm"
+                      onPress={() => handleRemovePending(pending.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </CardBody>
                 </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              ))}
+            </div>
 
-      {fields.length === 0 && pendingInsumos.length === 0 && (
-        <div className="text-center py-4 text-gray-400 italic">
-          No se han agregado insumos a esta actividad.
-        </div>
-      )}
+            <div className="flex justify-end">
+              <Button
+                color="success"
+                className="text-white"
+                startContent={<CheckCircle className="w-4 h-4" />}
+                onPress={handleConfirm}
+              >
+                Confirmar Insumos ({pendingInsumos.length})
+              </Button>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Confirmed Insumos List */}
+      {
+        fields.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-green-600">
+              Insumos confirmados ({fields.length})
+            </h3>
+            <div className="grid gap-3">
+              {fields.map((field, index) => {
+                const insumo = insumos.find((i) => i.id === field.insumoId);
+                return (
+                  <Card
+                    key={field.id}
+                    shadow="sm"
+                    className="border border-green-100"
+                  >
+                    <CardBody className="flex flex-row justify-between items-center p-3">
+                      <div>
+                        <p className="font-medium text-gray-800">
+                          {insumo?.nombre || "Insumo desconocido"}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Cantidad: {field.cantidadUso} {insumo?.unidadUso} |
+                          Costo: ${field.costoUnitarioUso}
+                        </p>
+                      </div>
+                      <Button
+                        isIconOnly
+                        color="danger"
+                        variant="light"
+                        onPress={() => remove(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </CardBody>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )
+      }
+
+      {
+        fields.length === 0 && pendingInsumos.length === 0 && (
+          <div className="text-center py-4 text-gray-400 italic">
+            No se han agregado insumos a esta actividad.
+          </div>
+        )
+      }
 
       {/* Confirmation Modal */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
@@ -407,6 +423,6 @@ export default function InsumosSection({
           )}
         </ModalContent>
       </Modal>
-    </div>
+    </div >
   );
 }

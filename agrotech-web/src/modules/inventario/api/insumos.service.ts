@@ -167,7 +167,16 @@ export const finalizarMantenimiento = (id: number) => {
   return api.patch(`/insumos/activos-fijos/${id}/finalizar-mantenimiento`);
 };
 
+export const darBajaActivoFijo = (id: number, motivo: string) => {
+  return api.post(`/insumos/activos-fijos/${id}/dar-baja`, { motivo });
+};
+
 export const getMovimientosByInsumo = async (insumoId: number) => {
   const { data } = await api.get('/insumos/movimientos', { params: { insumoId } });
+  return data;
+};
+
+export const getStockAlerts = async () => {
+  const { data } = await api.get('/insumos/alerts');
   return data;
 };

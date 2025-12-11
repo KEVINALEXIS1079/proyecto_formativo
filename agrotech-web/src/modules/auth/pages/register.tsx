@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthLayout from "../widgets/AuthLayout";
 import ToastDialog from "../widgets/ToastDialog";
 import AuthBackButton from "../ui/AuthBackButton";
@@ -7,14 +7,19 @@ import AuthLogo from "../ui/AuthLogo";
 import AuthRegisterForm, { type AuthRegisterValues } from "../ui/AuthRegisterForm";
 import { useRegister } from "../hooks/useRegister";
 import { motion, AnimatePresence } from "framer-motion";
-import { fadeInUp, stagger } from "@/lib/motion"; // si no tienes alias "@", usa la ruta relativa a src/lib/motion
+import { fadeInUp, stagger } from "@/lib/motion";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Solo volver a Login si venimos explícitamente de allí. Si no, a Start.
+  const from = location.state?.from;
+  const backPath = from === "/login" ? "/login" : "/start";
+
   const [msg, setMsg] = useState("");
   const [open, setOpen] = useState(false);
-  const [goLogin, setGoLogin] = useState(false); // ← marcar si debemos ir a /code al cerrar
-  const [registeredEmail, setRegisteredEmail] = useState(""); // ← email del registro
+  const [goLogin, setGoLogin] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const { mutateAsync, isPending } = useRegister();
 
   async function handleSubmit(v: AuthRegisterValues) {
@@ -51,16 +56,15 @@ export default function RegisterPage() {
       await mutateAsync(request);
       setRegisteredEmail(request.correo);
       setMsg("Registro iniciado. Hemos enviado un código a tu correo para verificar tu cuenta.");
-      setGoLogin(true);   // ← éxito: al cerrar modal, navegamos a /code
+      setGoLogin(true);
       setOpen(true);
     } catch (e: any) {
       setMsg(e?.message || "No se pudo registrar");
-      setGoLogin(false);  // ← error: no navegamos
+      setGoLogin(false);
       setOpen(true);
     }
   }
 
-  // Auto-cierre (mantengo tu animación/comportamiento)
   useEffect(() => {
     if (open) {
       const t = setTimeout(() => setOpen(false), 3500);
@@ -68,10 +72,9 @@ export default function RegisterPage() {
     }
   }, [open]);
 
-  // >>> Navegar cuando el modal se cierre y goLogin sea true (sirve para cierre manual o auto)
   useEffect(() => {
     if (!open && goLogin) {
-      navigate("/code", { state: { email: registeredEmail, type: "verify" } });
+      navigate("/code", { state: { email: registeredEmail, type: "registration" } });
     }
   }, [open, goLogin, navigate, registeredEmail]);
 
@@ -105,7 +108,7 @@ export default function RegisterPage() {
           }
           backSlot={
             <motion.div variants={fadeInUp} initial="initial" animate="animate">
-              <AuthBackButton />
+              <AuthBackButton fallback={backPath} />
             </motion.div>
           }
           formTitle={
@@ -125,7 +128,7 @@ export default function RegisterPage() {
               transition={{ delay: 0.05 }}
             >
               ¿Ya tienes cuenta?{" "}
-              <Link to="/login" className="text-primary">
+              <Link to="/login" replace state={{ from: "/register" }} className="text-green-600 font-medium hover:underline">
                 Inicia sesión
               </Link>
             </motion.p>
@@ -133,7 +136,6 @@ export default function RegisterPage() {
         </AuthLayout>
       </motion.div>
 
-      {/* Toast animado */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -148,7 +150,7 @@ export default function RegisterPage() {
                 open
                 title="Registro"
                 message={msg}
-                onClose={() => setOpen(false)} // ← cerramos; el effect hará navigate si goLogin
+                onClose={() => setOpen(false)}
                 variant="primary"
               />
             </div>

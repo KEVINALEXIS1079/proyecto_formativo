@@ -7,11 +7,14 @@ export const actividadSchema = z.object({
   subtipo: z.string().nonempty("El subtipo es requerido"),
   fecha: z.date(),
   descripcion: z.string().optional(),
-  
+
   // Locations (Lote ID is mandatory, others optional but dependent)
   loteId: z.coerce.number().min(1, "Debe seleccionar un lote"),
   subLoteId: z.coerce.number().optional(), // Removed nullable
   cultivoId: z.coerce.number().min(1, "El cultivo es requerido"),
+
+  // Status to explicit toggle
+  estado: z.enum(["PENDIENTE", "FINALIZADA"]).optional().default("PENDIENTE"),
 
   // Details
   horasActividad: z.coerce.number().min(0, "Las horas no pueden ser negativas"),
@@ -27,7 +30,7 @@ export const actividadSchema = z.object({
     horas: z.number().min(0),
     precioHora: z.number().min(0),
     // Frontend helper for UI
-    tempId: z.string().optional(), 
+    tempId: z.string().optional(),
   })).optional(),
 
   insumos: z.array(z.object({
@@ -35,14 +38,14 @@ export const actividadSchema = z.object({
     cantidadUso: z.number().min(0.01, "La cantidad debe ser mayor a 0"),
     costoUnitarioUso: z.number().min(0).default(0),
     descripcion: z.string().optional(),
-    tempId: z.string().optional(), 
+    tempId: z.string().optional(),
   })).optional(),
 
   servicios: z.array(z.object({
     nombreServicio: z.string().nonempty(),
     horas: z.number().min(0),
     precioHora: z.number().min(0),
-    tempId: z.string().optional(), 
+    tempId: z.string().optional(),
   })).optional(),
 
   evidencias: z.array(z.object({
@@ -53,14 +56,14 @@ export const actividadSchema = z.object({
   herramientas: z.array(z.object({
     activoFijoId: z.number(),
     horasUso: z.number().min(0),
-    tempId: z.string().optional(), 
+    tempId: z.string().optional(),
   })).optional(),
 });
 
 // Finalization Schema
 export const finalizarActividadSchema = z.object({
   fechaReal: z.date(),
-  
+
   // Confirmation of resources
   insumosReales: z.array(z.object({
     insumoId: z.number(),

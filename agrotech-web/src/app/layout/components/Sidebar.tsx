@@ -13,6 +13,7 @@ import {
   Leaf,
   Map,
 } from "lucide-react";
+import { useAuth } from "@/modules/auth/hooks/useAuth";
 
 /** Props opcionales */
 export type SidebarProps = {
@@ -24,6 +25,7 @@ export type SidebarProps = {
 export default function Sidebar({
   className = "",
 }: SidebarProps) {
+  const { } = useAuth();
   return (
     <aside
       className={`peer group/sidebar fixed top-0 left-0 bottom-0 z-40
@@ -33,11 +35,11 @@ export default function Sidebar({
       <nav className="pt-[74px] px-2 py-2 flex flex-col gap-1 flex-1 overflow-y-auto scroll-smooth">
         <HoverItem to="/home" icon={<HomeIcon className="h-5 w-5" />} label="Inicio" />
 
-        {/* ACTIVIDADES */}
+        {/* USUARIOS */}
         <HoverItem
-          to="/actividades"
-          icon={<ListChecks className="h-5 w-5" />}
-          label="Gestión de Actividades"
+          to="/usuarios"
+          icon={<Users className="h-5 w-5" />}
+          label="Gestión Usuarios"
         />
 
         {/* GEO */}
@@ -45,6 +47,20 @@ export default function Sidebar({
           to="/geo"
           icon={<Map className="h-5 w-5" />}
           label="Georreferenciación"
+        />
+
+        {/* INVENTARIO */}
+        <HoverItem
+          to="/inventario"
+          icon={<Boxes className="h-5 w-5" />}
+          label="Gestión de Inventario"
+        />
+
+        {/* ACTIVIDADES */}
+        <HoverItem
+          to="/actividades"
+          icon={<ListChecks className="h-5 w-5" />}
+          label="Gestión de Actividades"
         />
 
         {/* CULTIVOS */}
@@ -61,25 +77,18 @@ export default function Sidebar({
           label="Fitosanitario"
         />
 
-        {/* IOT */}
+        {/* IOT (Monitoreo) - Debajo de Cultivos */}
         <HoverItem
           to="/iot"
           icon={<Cpu className="h-5 w-5" />}
           label="Monitoreo de cultivos"
         />
 
-        {/* FINANZAS */}
+        {/* PRODUCCIÓN Y VENTAS (POS) */}
         <HoverItem
-          to="/finanzas"
+          to="/production"
           icon={<Wallet className="h-5 w-5" />}
-          label="Producción y ventas"
-        />
-
-        {/* INVENTARIO */}
-        <HoverItem
-          to="/inventario"
-          icon={<Boxes className="h-5 w-5" />}
-          label="Gestión de Inventario"
+          label="Producción y Ventas"
         />
 
         {/* REPORTES */}
@@ -89,12 +98,7 @@ export default function Sidebar({
           label="Analítica y Reportes"
         />
 
-        {/* USUARIOS */}
-        <HoverItem
-          to="/usuarios"
-          icon={<Users className="h-5 w-5" />}
-          label="Gestión Usuarios"
-        />
+
       </nav>
     </aside>
   );

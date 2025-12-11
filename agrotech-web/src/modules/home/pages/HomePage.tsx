@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Card, CardBody } from "@heroui/react";
+import { Button, Card, CardBody, Spinner } from "@heroui/react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import type { LayoutContext } from "@/app/layout/ProtectedLayout";
 import { motion, AnimatePresence } from "framer-motion";
@@ -160,7 +160,9 @@ export default function Home() {
               </div>
 
               {loadingSensors ? (
-                <p className="text-sm text-foreground-500">Cargando sensores...</p>
+                <div className="flex justify-center py-4">
+                  <Spinner color="success" label="Cargando sensores..." />
+                </div>
               ) : lotSlides.length === 0 ? (
                 <p className="text-sm text-foreground-500">No hay sensores activos por lote.</p>
               ) : (
@@ -226,7 +228,9 @@ export default function Home() {
               </div>
 
               {actividadesLoading ? (
-                <p className="text-sm text-foreground-500">Cargando actividades...</p>
+                <div className="flex justify-center py-4">
+                  <Spinner color="success" label="Cargando actividades..." />
+                </div>
               ) : actividadesRecientes.length === 0 ? (
                 <p className="text-sm text-foreground-500">No hay actividades registradas.</p>
               ) : (
@@ -274,7 +278,11 @@ export default function Home() {
                     </div>
                   );
                 })}
-                {cultivosLoading && <p className="text-sm text-foreground-500">Cargando cultivos...</p>}
+                {cultivosLoading && (
+                  <div className="col-span-1 sm:col-span-2 flex justify-center py-4">
+                    <Spinner color="success" label="Cargando cultivos..." />
+                  </div>
+                )}
                 {!cultivosLoading && cultivos.length === 0 && <p className="text-sm text-foreground-500">No hay cultivos registrados.</p>}
               </div>
             </CardBody>

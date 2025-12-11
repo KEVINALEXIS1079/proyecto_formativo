@@ -5,7 +5,7 @@ import { AddSensorModal } from '../widgets/AddSensorModal';
 import { IoTApi } from '../api/iot.api';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { Button } from "@heroui/react";
+import { Button, Spinner } from "@heroui/react";
 import { Settings, Plus } from "lucide-react";
 import PillToggle from '../ui/PillToggle';
 import Surface from '../ui/Surface';
@@ -49,7 +49,11 @@ const IoTPage: React.FC = () => {
   const activeTab = lastSegment === 'analytics' ? 'analytics' : 'dashboard';
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Cargando módulo IoT...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Spinner color="success" label="Cargando módulo IoT..." />
+      </div>
+    );
   }
 
   const handleDeleteSensor = async (id: number) => {

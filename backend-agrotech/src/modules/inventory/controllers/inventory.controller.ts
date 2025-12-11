@@ -15,6 +15,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
@@ -22,6 +23,7 @@ import * as fs from 'fs';
 import { InventoryService } from '../services/inventory.service';
 import { MovimientoInsumoService } from '../services/movimiento-insumo.service';
 import { DepreciationService } from '../services/depreciation.service';
+import { InsumoEstado, TipoInsumo } from '../entities/insumo.entity';
 import { CreateInsumoDto } from '../dtos/create-insumo.dto';
 import { UpdateInsumoDto } from '../dtos/update-insumo.dto';
 import { CreateActivoFijoDto } from '../dtos/create-activo-fijo.dto';
@@ -54,7 +56,7 @@ export class InventoryController {
   @RequirePermissions('inventario.ver')
   async findAllActivosFijos() {
     // Filtramos insumos que sean NO_CONSUMIBLE
-    return this.inventoryService.findAllInsumos({ tipoInsumo: 'NO_CONSUMIBLE' });
+    return this.inventoryService.findAllInsumos({ tipoInsumo: TipoInsumo.NO_CONSUMIBLE });
   }
 
   @Post('activos-fijos')
@@ -68,54 +70,72 @@ export class InventoryController {
   ) {
     try {
       const userId = this.extractUserId(req);
+      const cantidad = dto.cantidad && dto.cantidad > 0 ? dto.cantidad : 1;
+      const createdAssets = [];
 
-      // Convertir DTO a lo que espera createInsumo, marcando como NO_CONSUMIBLE
-      const insumoData: any = {
-        ...dto,
-        tipoInsumo: 'NO_CONSUMIBLE',
-        presentacionTipo: 'UNIDAD', // Valores por defecto para campos obligatorios de Insumo
-        presentacionCantidad: 1,
-        presentacionUnidad: 'UND',
-        unidadUso: 'HORA',
-        tipoMateria: 'solido', // Debe ser 'solido' o 'liquido' según el enum
-        factorConversionUso: 1,
-        stockPresentacion: 1,
-        stockUso: 1,
-        precioUnitarioPresentacion: dto.costoAdquisicion,
-        precioUnitarioUso: 0, // Se calcula con depreciación
-        valorInventario: dto.costoAdquisicion,
-        estado: 'DISPONIBLE'
-      };
+      for (let i = 0; i < cantidad; i++) {
+        // Generar nombre con índice si es múltiple
+        const nombre = cantidad > 1 ? `${dto.nombre} (${i + 1})` : dto.nombre;
 
-      // Crear el insumo primero
-      const createdInsumo = await this.inventoryService.createInsumo(insumoData, userId);
+        // Convertir DTO a lo que espera createInsumo, marcando como NO_CONSUMIBLE
+        const insumoData: any = {
+          ...dto,
+          nombre,
+          tipoInsumo: TipoInsumo.NO_CONSUMIBLE,
+          presentacionTipo: 'UNIDAD', // Valores por defecto para campos obligatorios de Insumo
+          presentacionCantidad: 1,
+          presentacionUnidad: 'UND',
+          unidadUso: 'HORA',
+          tipoMateria: 'solido', // Debe ser 'solido' o 'liquido' según el enum
+          factorConversionUso: 1,
+          stockPresentacion: 1,
+          stockUso: 1,
+          precioUnitarioPresentacion: dto.costoAdquisicion,
+          precioUnitarioUso: 0, // Se calcula con depreciación
+          valorInventario: dto.costoAdquisicion,
+          estado: InsumoEstado.DISPONIBLE
+        };
 
-      // Si hay archivo, subirlo
-      if (file) {
-        const fs = require('fs').promises;
-        const path = require('path');
+        // Crear el insumo
+        const createdInsumo = await this.inventoryService.createInsumo(insumoData, userId);
 
-        // Crear directorio si no existe
-        const uploadDir = 'uploads/insumos';
-        await fs.mkdir(uploadDir, { recursive: true });
+        // Si hay archivo, guardar una copia para este insumo
+        if (file) {
+          const fs = require('fs').promises;
+          const path = require('path');
 
-        // Generar nombre único para el archivo
-        const filename = `${Date.now()}-${file.originalname}`;
-        const filePath = path.join(uploadDir, filename);
+          // Crear directorio si no existe
+          const uploadDir = 'uploads/insumos';
+          await fs.mkdir(uploadDir, { recursive: true });
 
-        // Guardar el archivo
-        await fs.writeFile(filePath, file.buffer);
+          // Generar nombre único para el archivo para cada activo
+          // Usamos random o index para evitar colisiones si va muy rápido
+          const uniqueSuffix = `${Date.now()}-${i}-${Math.round(Math.random() * 1E9)}`;
+          const filename = `${uniqueSuffix}-${file.originalname}`;
+          const filePath = path.join(uploadDir, filename);
 
-        // Actualizar el insumo con la ruta de la imagen
-        await this.inventoryService.updateInsumo(createdInsumo.id, {
-          fotoUrl: filePath.replace(/\\/g, '/')
-        });
+          // Guardar el archivo
+          await fs.writeFile(filePath, file.buffer);
 
-        // Asignar url al objeto retornado
-        createdInsumo.fotoUrl = filePath.replace(/\\/g, '/');
+          // Actualizar el insumo con la ruta de la imagen
+          await this.inventoryService.updateInsumo(createdInsumo.id, {
+            fotoUrl: filePath.replace(/\\/g, '/')
+          });
+
+          // Asignar url al objeto retornado
+          createdInsumo.fotoUrl = filePath.replace(/\\/g, '/');
+        }
+
+        createdAssets.push(createdInsumo);
       }
 
-      return createdInsumo;
+      // Devolver el primero o la lista (el frontend espera uno normalmente, pero si es bulk podría esperar info)
+      // Para mantener compatibilidad con useMutation que espera un objeto single success en general o array.
+      // Retornaremos el último creado o un wrapper. Como el frontend hace invalidateQueries, no es crítico el retorno exacto
+      // excepto para mensajes. Retornemos el último para compatibilidad simple o el array si el frontend lo soporta.
+      // Dado que el frontend actual CreateActivoFijoModal usa mutation result pero principalmente confía en onSuccess:
+      return cantidad === 1 ? createdAssets[0] : { message: `${cantidad} activos creados`, assets: createdAssets };
+
     } catch (error) {
       console.error('Error creating activo fijo:', error);
       throw error;
@@ -137,6 +157,18 @@ export class InventoryController {
     @Param('id', ParseIntPipe) id: number
   ) {
     return this.inventoryService.finalizarMantenimiento(id);
+  }
+
+  @Post('activos-fijos/:id/dar-baja')
+  @RequirePermissions('inventario.eliminar')
+  async darDeBajaActivoFijo(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: { motivo: string },
+    @Req() req: Request
+  ) {
+    const userId = this.extractUserId(req);
+    if (!data.motivo) throw new BadRequestException('El motivo es requerido');
+    return this.inventoryService.darDeBajaActiveFijo(id, data.motivo, userId);
   }
 
   // ==================== HTTP ENDPOINTS ====================
@@ -164,7 +196,15 @@ export class InventoryController {
     if (page) filters.page = parseInt(page);
     if (limit) filters.limit = parseInt(limit);
     if (q) filters.q = q;
-    if (tipoInsumo) filters.tipoInsumo = tipoInsumo;
+    // Default to CONSUMIBLE if type filter is not explicitly provided
+    if (tipoInsumo) {
+      filters.tipoInsumo = tipoInsumo;
+    } else {
+      // If we are filtering by specific ID (e.g. searching for a specific item even if it's not consumable), we might not want this default?
+      // But user request is "la pala no la coloques en insumo". Usually Insumo list is general.
+      // Let's safe default to CONSUMIBLE.
+      filters.tipoInsumo = TipoInsumo.CONSUMIBLE;
+    }
     if (categoriaId) filters.categoriaId = parseInt(categoriaId);
     if (proveedorId) filters.proveedorId = parseInt(proveedorId);
     if (almacenId) filters.almacenId = parseInt(almacenId);
@@ -179,6 +219,12 @@ export class InventoryController {
   @UsePipes(new ValidationPipe())
   async createMovimiento(@Body() data: any) {
     return this.inventoryService.createMovimiento(data);
+  }
+
+  @Get('alerts')
+  @RequirePermissions('inventario.ver')
+  async getStockAlerts() {
+    return this.inventoryService.getStockAlerts();
   }
 
   @Get('movimientos')
@@ -222,10 +268,12 @@ export class InventoryController {
     return this.inventoryService.hasMovimientosByInsumo(id);
   }
 
+  /*
   @Delete('movimientos/:id')
   @RequirePermissions('inventario.eliminar')
   async deleteMovimiento(@Param('id', ParseIntPipe) id: number) {
-    return this.inventoryService.deleteMovimiento(id);
+    throw new BadRequestException('Los movimientos de inventario son inmutables por seguridad.');
+    // return this.inventoryService.deleteMovimiento(id);
   }
 
   @Patch('movimientos/:id')
@@ -235,8 +283,10 @@ export class InventoryController {
     @Param('id', ParseIntPipe) id: number,
     @Body() data: any,
   ) {
-    return this.inventoryService.updateMovimiento(id, data);
+    throw new BadRequestException('Los movimientos de inventario son inmutables por seguridad.');
+    // return this.inventoryService.updateMovimiento(id, data);
   }
+  */
 
   // ==================== CATÁLOGOS ====================
 
@@ -324,8 +374,8 @@ export class InventoryController {
 
   @Get('categorias')
   @RequirePermissions('inventario.ver')
-  async findAllCategorias() {
-    return this.inventoryService.findAllCategorias();
+  async findAllCategorias(@Query('tipoInsumo') tipoInsumo?: string) {
+    return this.inventoryService.findAllCategorias(tipoInsumo as TipoInsumo);
   }
 
   @Post('categorias')

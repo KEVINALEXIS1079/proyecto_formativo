@@ -13,8 +13,8 @@ import { Cultivo } from '../../modules/cultivos/entities/cultivo.entity';
 import { Categoria } from '../../modules/inventory/entities/categoria.entity';
 import { Proveedor } from '../../modules/inventory/entities/proveedor.entity';
 import { Almacen } from '../../modules/inventory/entities/almacen.entity';
-import { Insumo } from '../../modules/inventory/entities/insumo.entity';
-import { MovimientoInsumo } from '../../modules/inventory/entities/movimiento-insumo.entity';
+import { Insumo, TipoInsumo, InsumoEstado } from '../../modules/inventory/entities/insumo.entity';
+import { MovimientoInsumo, TipoMovimiento } from '../../modules/inventory/entities/movimiento-insumo.entity';
 
 // Activities
 import { Actividad } from '../../modules/activities/entities/actividad.entity';
@@ -200,6 +200,16 @@ export async function seedModules(dataSource: DataSource) {
       descripcion:
         'Lote principal dedicado a hortalizas y cultivos de ciclo corto',
       estado: 'activo',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.091, 1.892],
+          [-76.087, 1.892],
+          [-76.087, 1.894],
+          [-76.091, 1.894],
+          [-76.091, 1.892]
+        ]]
+      } as any
     },
     {
       nombre: 'Lote El Progreso',
@@ -208,6 +218,16 @@ export async function seedModules(dataSource: DataSource) {
       descripcion:
         'Lote para cultivos de ciclo medio y largo, con sistema de riego tecnificado',
       estado: 'activo',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.087, 1.892],
+          [-76.085, 1.892],
+          [-76.085, 1.895],
+          [-76.087, 1.895],
+          [-76.087, 1.892]
+        ]]
+      } as any
     },
     {
       nombre: 'Lote San Isidro',
@@ -215,6 +235,16 @@ export async function seedModules(dataSource: DataSource) {
       areaHa: 0.6,
       descripcion: 'Lote experimental para prácticas de aprendices',
       estado: 'activo',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.089, 1.890],
+          [-76.087, 1.890],
+          [-76.087, 1.892],
+          [-76.089, 1.892],
+          [-76.089, 1.890]
+        ]]
+      } as any
     },
   ];
 
@@ -230,6 +260,11 @@ export async function seedModules(dataSource: DataSource) {
       loteIds.push(saved.id);
       lotesCreados++;
     } else {
+      // Update geometry if it exists in seed data (to fix missing maps)
+      if (loteData.geom) {
+        existing.geom = loteData.geom;
+        await loteRepo.save(existing);
+      }
       loteIds.push(existing.id);
     }
   }
@@ -246,6 +281,16 @@ export async function seedModules(dataSource: DataSource) {
       areaM2: 3000,
       areaHa: 0.3,
       descripcion: 'Sector dedicado a producción de tomate cherry y chonto',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.091, 1.892],
+          [-76.089, 1.892],
+          [-76.089, 1.894],
+          [-76.091, 1.894],
+          [-76.091, 1.892]
+        ]]
+      } as any
     },
     {
       nombre: 'Esperanza Sector B - Lechugas',
@@ -253,6 +298,16 @@ export async function seedModules(dataSource: DataSource) {
       areaM2: 2500,
       areaHa: 0.25,
       descripcion: 'Sector para cultivo de lechugas y hortalizas de hoja',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.091, 1.893],
+          [-76.089, 1.893],
+          [-76.089, 1.894],
+          [-76.091, 1.894],
+          [-76.091, 1.893]
+        ]]
+      } as any
     },
     {
       nombre: 'Esperanza Sector C - Aromáticas',
@@ -260,6 +315,16 @@ export async function seedModules(dataSource: DataSource) {
       areaM2: 2500,
       areaHa: 0.25,
       descripcion: 'Sector para hierbas aromáticas y medicinales',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.089, 1.892],
+          [-76.088, 1.892],
+          [-76.088, 1.893],
+          [-76.089, 1.893],
+          [-76.089, 1.892]
+        ]]
+      } as any
     },
     {
       nombre: 'Progreso Sector Norte - Maíz',
@@ -267,6 +332,16 @@ export async function seedModules(dataSource: DataSource) {
       areaM2: 5000,
       areaHa: 0.5,
       descripcion: 'Sector norte para cultivo de maíz dulce',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.087, 1.894],
+          [-76.085, 1.894],
+          [-76.085, 1.895],
+          [-76.087, 1.895],
+          [-76.087, 1.894]
+        ]]
+      } as any
     },
     {
       nombre: 'Progreso Sector Sur - Tubérculos',
@@ -274,6 +349,16 @@ export async function seedModules(dataSource: DataSource) {
       areaM2: 4000,
       areaHa: 0.4,
       descripcion: 'Sector sur para papa y yuca',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.087, 1.892],
+          [-76.085, 1.892],
+          [-76.085, 1.893],
+          [-76.087, 1.893],
+          [-76.087, 1.892]
+        ]]
+      } as any
     },
     {
       nombre: 'Progreso Sector Centro - Frutales',
@@ -281,6 +366,16 @@ export async function seedModules(dataSource: DataSource) {
       areaM2: 3000,
       areaHa: 0.3,
       descripcion: 'Sector central con frutales de ciclo corto',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.087, 1.893],
+          [-76.085, 1.893],
+          [-76.085, 1.894],
+          [-76.087, 1.894],
+          [-76.087, 1.893]
+        ]]
+      } as any
     },
     {
       nombre: 'San Isidro Experimental',
@@ -288,6 +383,16 @@ export async function seedModules(dataSource: DataSource) {
       areaM2: 6000,
       areaHa: 0.6,
       descripcion: 'Área completa para prácticas y experimentos',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.089, 1.890],
+          [-76.087, 1.890],
+          [-76.087, 1.892],
+          [-76.089, 1.892],
+          [-76.089, 1.890]
+        ]]
+      } as any
     },
   ];
 
@@ -303,6 +408,11 @@ export async function seedModules(dataSource: DataSource) {
       subloteIds.push(saved.id);
       sublotesCreados++;
     } else {
+      // Update geometry if it exists in seed data
+      if (subloteData.geom) {
+        existing.geom = subloteData.geom;
+        await subLoteRepo.save(existing);
+      }
       subloteIds.push(existing.id);
     }
   }
@@ -435,9 +545,9 @@ export async function seedModules(dataSource: DataSource) {
   // Inventory: Categorías
   console.log('  Creando categorías de inventario...');
   const categoriasData = [
-    { nombre: 'Fertilizantes', descripcion: 'Productos para fertilización' },
-    { nombre: 'Pesticidas', descripcion: 'Productos para control de plagas' },
-    { nombre: 'Herramientas', descripcion: 'Herramientas agrícolas' },
+    { nombre: 'Fertilizantes', descripcion: 'Productos para fertilización', tipoInsumo: TipoInsumo.CONSUMIBLE },
+    { nombre: 'Pesticidas', descripcion: 'Productos para control de plagas', tipoInsumo: TipoInsumo.CONSUMIBLE },
+    { nombre: 'Herramientas', descripcion: 'Herramientas agrícolas', tipoInsumo: TipoInsumo.NO_CONSUMIBLE },
   ];
 
   let categoriasCreadas = 0;
@@ -568,6 +678,33 @@ export async function seedModules(dataSource: DataSource) {
       valorInventario: 500000,
       fechaRegistro: new Date('2024-02-01'),
     },
+    {
+      nombre: 'Pala',
+      descripcion: 'Pala para trabajo de campo',
+      categoriaId: categoriaIds[2], // Herramientas
+      proveedorId: proveedorIds[0],
+      unidadMedida: 'unidad',
+      precioUnitario: 10000,
+      stockMinimo: 1,
+      stockActual: 1,
+      almacenId: almacenIds[0],
+      presentacionTipo: 'Unidad',
+      presentacionCantidad: 1,
+      presentacionUnidad: 'unidad',
+      unidadUso: 'unidad',
+      tipoMateria: 'Solido',
+      factorConversionUso: 1,
+      stockPresentacion: 1,
+      stockUso: 1,
+      precioUnitarioPresentacion: 10000,
+      precioUnitarioUso: 10000,
+      valorInventario: 10000,
+      fechaRegistro: new Date('2024-02-01'),
+      tipoInsumo: TipoInsumo.NO_CONSUMIBLE,
+      costoAdquisicion: 10000,
+      vidaUtilHoras: 1000,
+      estado: InsumoEstado.DISPONIBLE
+    },
   ];
 
   let insumosCreados = 0;
@@ -594,7 +731,7 @@ export async function seedModules(dataSource: DataSource) {
   const movimientosData = [
     {
       insumoId: insumoIds[0],
-      tipo: 'entrada',
+      tipo: TipoMovimiento.REGISTRO,
       cantidad: 50,
       precioUnitario: 15000,
       almacenId: almacenIds[0],
@@ -610,7 +747,7 @@ export async function seedModules(dataSource: DataSource) {
     },
     {
       insumoId: insumoIds[1],
-      tipo: 'entrada',
+      tipo: TipoMovimiento.REGISTRO,
       cantidad: 20,
       precioUnitario: 25000,
       almacenId: almacenIds[0],
@@ -622,6 +759,22 @@ export async function seedModules(dataSource: DataSource) {
       costoUnitarioUso: 25,
       costoTotal: 500000,
       valorInventarioResultante: 500000,
+      usuarioId: adminId,
+    },
+    {
+      insumoId: insumoIds[2], // Pala
+      tipo: TipoMovimiento.ENTRADA, // Changed from REGISTRO as requested ("entrada en vez de inicial")
+      cantidad: 1,
+      precioUnitario: 10000,
+      almacenId: almacenIds[0],
+      fecha: new Date('2024-02-01'),
+      descripcion: 'Compra inicial de Pala',
+      cantidadPresentacion: 1,
+      cantidadUso: 1,
+      costoUnitarioPresentacion: 10000,
+      costoUnitarioUso: 10000,
+      costoTotal: 10000,
+      valorInventarioResultante: 10000,
       usuarioId: adminId,
     },
   ];
@@ -925,7 +1078,7 @@ export async function seedModules(dataSource: DataSource) {
   console.log('Sección activities completada.');
 
   // IoT: Tipos de sensores
- 
+
 
   // Production: Productos agro
   console.log('  Creando productos agro...');

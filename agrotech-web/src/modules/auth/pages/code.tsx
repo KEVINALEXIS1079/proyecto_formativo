@@ -6,6 +6,7 @@ import AuthBackButton from "../ui/AuthBackButton";
 import AuthLogo from "../ui/AuthLogo";
 import AuthCodeForm, { type AuthCodeValues } from "../ui/AuthCodeForm";
 import { useVerifyEmail, useResendVerificationCode } from "../hooks/useVerifyEmail";
+import { useCompleteRegister } from "../hooks/useRegister";
 // Keep existing imports for Recover flow if needed, but we focus on verify here or mixed?
 // The file handles both "verify" and "recover". existing code imported useVerifyEmail from useRecover which handles "verify".
 // But now useVerifyEmail is in new file. For "recover", we might still need useRecoverChange?
@@ -27,11 +28,12 @@ export default function CodePage() {
   const [msgVariant, setMsgVariant] = useState<"success" | "warning" | "danger">("warning");
   const [verified, setVerified] = useState(false);
   const [open, setOpen] = useState(false);
-  
+
   // Hooks
   const { mutateAsync: verifyEmail, isPending: isVerifying } = useVerifyEmail();
+  const { mutateAsync: completeRegistration, isPending: isCompleting } = useCompleteRegister();
   const { mutateAsync: resendCode, isPending: isResending } = useResendVerificationCode();
-  
+
   const navigate = useNavigate();
 
   async function handleSubmit(v: AuthCodeValues) {
@@ -43,10 +45,21 @@ export default function CodePage() {
     }
     try {
       if (type === "verify") {
-        await verifyEmail({ correo: email, code: v.codigo });
+        const res: any = await verifyEmail({ correo: email, code: v.codigo });
+        if (res.success === false) throw new Error(res.message);
+
         setMsg("Tu cuenta ha sido verificada. Debes esperar a que un administrador active tu cuenta para poder iniciar sesión.");
         setMsgVariant("success");
-        setVerified(true); // Mark as verified to prevent auto-close
+        setVerified(true);
+        setOpen(true);
+      } else if (type === "registration") {
+        // Complete registration flow
+        const res: any = await completeRegistration({ correo: email, code: v.codigo });
+        if (res.success === false) throw new Error(res.message);
+
+        setMsg("Tu cuenta ha sido creada exitosamente. Espera la activación de un administrador.");
+        setMsgVariant("success");
+        setVerified(true); // Treat as verified for flow
         setOpen(true);
       } else {
         navigate("/change-password", { state: { email, codigo: v.codigo } });
@@ -60,18 +73,18 @@ export default function CodePage() {
   }
 
   async function handleResend() {
-     if (!email) return;
-     try {
-         await resendCode(email);
-         setMsg("Código reenviado con éxito");
-         setMsgVariant("success");
-         setVerified(false);
-         setOpen(true);
-     } catch (e: any) {
-         setMsg(e?.response?.data?.message || "Error al reenviar código");
-         setMsgVariant("danger");
-         setOpen(true);
-     }
+    if (!email) return;
+    try {
+      await resendCode(email);
+      setMsg("Código reenviado con éxito");
+      setMsgVariant("success");
+      setVerified(false);
+      setOpen(true);
+    } catch (e: any) {
+      setMsg(e?.response?.data?.message || "Error al reenviar código");
+      setMsgVariant("danger");
+      setOpen(true);
+    }
   }
 
   // Navigate back if no email
@@ -88,10 +101,10 @@ export default function CodePage() {
   }, [open, verified]);
 
   const handleClose = () => {
-      setOpen(false);
-      if (verified) {
-          navigate("/login");
-      }
+    setOpen(false);
+    if (verified) {
+      navigate("/login");
+    }
   };
 
   return (
@@ -105,26 +118,29 @@ export default function CodePage() {
               <AuthLogo />
             </motion.div>
           }
-          backSlot={<motion.div variants={fadeInUp} initial="initial" animate="animate"><AuthBackButton /></motion.div>}
+          backSlot={
+            <motion.div variants={fadeInUp} initial="initial" animate="animate">
+              <AuthBackButton fallback={type === "registration" ? "/register" : "/recover"} />
+            </motion.div>
+          }
           formTitle={<motion.span variants={fadeInUp} initial="initial" animate="animate">Código de verificación</motion.span>}
         >
           <motion.div variants={stagger} initial="initial" animate="animate">
             <motion.div variants={fadeInUp}>
-              <AuthCodeForm onSubmit={handleSubmit} loading={isVerifying} />
+              <AuthCodeForm onSubmit={handleSubmit} loading={isVerifying || isCompleting} />
             </motion.div>
-            
+
             {type === "verify" && (
-                <motion.div variants={fadeInUp} className="mt-4 text-center">
-                    <Button 
-                        variant="light" 
-                        color="success" 
-                        onPress={handleResend}
-                        isLoading={isResending}
-                        className="text-sm font-medium"
-                    >
-                        ¿No recibiste el código? Reenviar
-                    </Button>
-                </motion.div>
+              <motion.div variants={fadeInUp} className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={isResending}
+                  className="text-sm font-medium text-green-600 hover:text-green-700 hover:underline disabled:opacity-50 transition-colors"
+                >
+                  {isResending ? "Enviando..." : "¿No recibiste el código? Reenviar"}
+                </button>
+              </motion.div>
             )}
 
           </motion.div>
@@ -141,12 +157,12 @@ export default function CodePage() {
             className="fixed inset-0 pointer-events-none"
           >
             <div className="pointer-events-auto">
-              <ToastDialog 
-                open 
-                title={verified ? "Verificación Exitosa" : (type === "verify" ? "Verificación" : "Recuperación")} 
-                message={msg} 
-                onClose={handleClose} 
-                variant={msgVariant} 
+              <ToastDialog
+                open
+                title={verified ? "Verificación Exitosa" : (type === "verify" ? "Verificación" : "Recuperación")}
+                message={msg}
+                onClose={handleClose}
+                variant={msgVariant}
               />
             </div>
           </motion.div>

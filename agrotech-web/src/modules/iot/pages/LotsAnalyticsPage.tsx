@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Select, SelectItem, Card, CardBody, Button, Input, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Badge } from '@heroui/react';
+import { Select, SelectItem, Card, CardBody, Button, Input, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Badge, Spinner } from '@heroui/react';
 import { BarChart3, LineChart, FileSpreadsheet, FileText, Download, Activity, Filter, Search, Power, Edit3, Trash2, Bell, AlertTriangle } from 'lucide-react';
 import { api, connectSocket } from '../../../shared/api/client';
 import { useIoTLotCharts } from '../hooks/useIoTLotCharts';
@@ -21,7 +21,7 @@ export const LotsAnalyticsPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [liveAlert, setLiveAlert] = useState<any | null>(null);
-  
+
   // Alert Pagination & Filter State
   const [alertFilterSensorId, setAlertFilterSensorId] = useState<string>('all');
   const [alertPage, setAlertPage] = useState<number>(1);
@@ -29,26 +29,26 @@ export const LotsAnalyticsPage: React.FC = () => {
   const filteredAlerts = useMemo(() => {
     if (alertFilterSensorId === 'all') return alerts;
     return alerts.filter(a => {
-        // Normalize IDs to string for comparison
-        const id1 = a.sensorId?.toString();
-        // Check nesting - sometimes backend sends sensor: { id: ... }
-        const id2 = a.sensor?.id?.toString();
-        const match = id1 === alertFilterSensorId || id2 === alertFilterSensorId;
-        return match;
+      // Normalize IDs to string for comparison
+      const id1 = a.sensorId?.toString();
+      // Check nesting - sometimes backend sends sensor: { id: ... }
+      const id2 = a.sensor?.id?.toString();
+      const match = id1 === alertFilterSensorId || id2 === alertFilterSensorId;
+      return match;
     });
   }, [alerts, alertFilterSensorId]);
 
   // Derive filter options from actual alerts to ensure all displayed alerts can be filtered
   const alertSensorOptions = useMemo(() => {
-      const unique = new Map();
-      alerts.forEach(a => {
-          const sId = a.sensorId?.toString() || a.sensor?.id?.toString();
-          const sName = a.sensor?.nombre || `Sensor ${sId}`;
-          if (sId && !unique.has(sId)) {
-              unique.set(sId, sName);
-          }
-      });
-      return Array.from(unique.entries()).map(([id, name]) => ({ id, name }));
+    const unique = new Map();
+    alerts.forEach(a => {
+      const sId = a.sensorId?.toString() || a.sensor?.id?.toString();
+      const sName = a.sensor?.nombre || `Sensor ${sId}`;
+      if (sId && !unique.has(sId)) {
+        unique.set(sId, sName);
+      }
+    });
+    return Array.from(unique.entries()).map(([id, name]) => ({ id, name }));
   }, [alerts]);
 
   const paginatedAlerts = useMemo(() => {
@@ -73,28 +73,28 @@ export const LotsAnalyticsPage: React.FC = () => {
       try {
         setLoadingLotes(true);
         const response = await api.get('/geo/lotes/summary');
-        
+
         if (mounted) {
-           if (response.data && response.data.length > 0) {
-              setLotes(response.data);
-              if (!selectedLoteId) {
-                setSelectedLoteId(response.data[0].id);
-              }
-              setLoadingLotes(false);
-           } else if (retryCount < 2) {
-              // Retry if empty (maybe auth race condition)
-              setTimeout(() => fetchLotes(retryCount + 1), 500);
-           } else {
-              setLotes([]);
-              setLoadingLotes(false);
-           }
+          if (response.data && response.data.length > 0) {
+            setLotes(response.data);
+            if (!selectedLoteId) {
+              setSelectedLoteId(response.data[0].id);
+            }
+            setLoadingLotes(false);
+          } else if (retryCount < 2) {
+            // Retry if empty (maybe auth race condition)
+            setTimeout(() => fetchLotes(retryCount + 1), 500);
+          } else {
+            setLotes([]);
+            setLoadingLotes(false);
+          }
         }
       } catch (err) {
         console.error('Error fetching lotes:', err);
         if (mounted && retryCount < 2) {
-             setTimeout(() => fetchLotes(retryCount + 1), 1000);
+          setTimeout(() => fetchLotes(retryCount + 1), 1000);
         } else if (mounted) {
-           setLoadingLotes(false);
+          setLoadingLotes(false);
         }
       }
     };
@@ -159,7 +159,7 @@ export const LotsAnalyticsPage: React.FC = () => {
 
   const displayedSummary = useMemo(() => {
     if (selectedSensorId === 'all') return sensorSummaryData;
-    return sensorSummaryData.filter((d) => d.sensorId === parseInt(selectedSensorId));
+    return sensorSummaryData.filter((d) => d?.sensorId === parseInt(selectedSensorId));
   }, [sensorSummaryData, selectedSensorId]);
 
   // handleQuickDate removed
@@ -184,34 +184,34 @@ export const LotsAnalyticsPage: React.FC = () => {
         // 1. Recover from LocalStorage first to show something immediately
         const cached = localStorage.getItem(`alerts_${selectedLoteId}`);
         if (cached) {
-            setAlerts(JSON.parse(cached));
+          setAlerts(JSON.parse(cached));
         }
 
         // 2. Fetch from API (Historical/Recent)
         const data = await IoTApi.getAlerts({
           loteId: selectedLoteId || undefined,
         });
-        
+
         // 3. Merge: deduplicate by ID if possible, or just replace if API is the source of truth
         // For now, we trust the API. If the API returns empty, we might keep cached if it was live data.
         if (data && data.length > 0) {
-            setAlerts(data);
-            localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(data));
+          setAlerts(data);
+          localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(data));
         }
       } catch (e) {
         console.error('Error fetching alerts', e);
       }
     };
     if (selectedLoteId) {
-        loadAlerts();
+      loadAlerts();
     }
   }, [selectedLoteId]);
 
   // Save live alerts to LocalStorage
   useEffect(() => {
-      if (alerts.length > 0 && selectedLoteId) {
-          localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(alerts.slice(0, 50)));
-      }
+    if (alerts.length > 0 && selectedLoteId) {
+      localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(alerts.slice(0, 50)));
+    }
   }, [alerts, selectedLoteId]);
 
   // Escuchar alertas en vivo por websocket
@@ -281,7 +281,7 @@ export const LotsAnalyticsPage: React.FC = () => {
     }
   };
 
- // Removed unused aggregateFromSummary
+  // Removed unused aggregateFromSummary
 
 
   return (
@@ -311,7 +311,7 @@ export const LotsAnalyticsPage: React.FC = () => {
               Reporte
             </Button>
             <Button size="sm" variant="ghost" color="primary" onPress={() => window.location.reload()}>
-               Recargar Datos
+              Recargar Datos
             </Button>
             <Badge content={alerts.length} color="danger" isInvisible={alerts.length === 0} shape="circle">
               <Button isIconOnly variant="flat" onPress={() => setAlertsModalOpen(true)}>
@@ -320,7 +320,7 @@ export const LotsAnalyticsPage: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-gray-500">
-             Vista en Tiempo Real
+            Vista en Tiempo Real
           </p>
           {liveAlert && (
             <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-red-700">
@@ -349,7 +349,7 @@ export const LotsAnalyticsPage: React.FC = () => {
             >
               {lotes.map((l: any) => (
                 <SelectItem key={l.id}>{l.nombre}</SelectItem>
-              ))}
+              )) as any}
             </Select>
 
             <Select
@@ -363,7 +363,7 @@ export const LotsAnalyticsPage: React.FC = () => {
             >
               {subLotes.map((sl: any) => (
                 <SelectItem key={sl.id}>{sl.nombre}</SelectItem>
-              ))}
+              )) as any}
             </Select>
 
             <Select
@@ -375,7 +375,7 @@ export const LotsAnalyticsPage: React.FC = () => {
               <SelectItem key="all">Todos los sensores</SelectItem>
               {availableSensors.map((s) => (
                 <SelectItem key={s.id.toString()}>{s.nombre}</SelectItem>
-              ))}
+              )) as any}
             </Select>
           </div>
 
@@ -489,7 +489,7 @@ export const LotsAnalyticsPage: React.FC = () => {
               )}
             </h3>
             <Chip size="sm" variant="flat" color="success">
-              {loading ? 'Cargando...' : `${displayedTimeSeries.length} series`}
+              {loading ? <Spinner size="sm" color="current" /> : `${displayedTimeSeries.length} series`}
             </Chip>
           </div>
           <div className="min-h-[360px] md:min-h-[400px]">
@@ -572,11 +572,11 @@ export const LotsAnalyticsPage: React.FC = () => {
                 </div>
               </ModalHeader>
               <ModalBody>
-                 <div className="flex justify-between items-center mb-2">
-                   <div className="w-1/2">
-                    <Select 
-                      label="Filtrar por Sensor" 
-                      size="sm" 
+                <div className="flex justify-between items-center mb-2">
+                  <div className="w-1/2">
+                    <Select
+                      label="Filtrar por Sensor"
+                      size="sm"
                       placeholder="Todos"
                       selectedKeys={[alertFilterSensorId]}
                       onChange={(e) => {
@@ -585,50 +585,50 @@ export const LotsAnalyticsPage: React.FC = () => {
                       }}
                     >
                       <SelectItem key="all">Todos</SelectItem>
-                      {alertSensorOptions.map(s => <SelectItem key={s.id}>{s.name}</SelectItem>)}
+                      {alertSensorOptions.map(s => <SelectItem key={s.id}>{s.name}</SelectItem>) as any}
                     </Select>
-                   </div>
-                   <Chip size="sm" variant="flat">{filteredAlerts.length} alertas</Chip>
-                 </div>
-                 {paginatedAlerts.length === 0 ? (
-                   <div className="text-center py-8 text-gray-400">
-                     <Bell className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                     <p>No hay alertas recientes</p>
-                   </div>
-                 ) : (
-                   <div className="space-y-2">
-                     {paginatedAlerts.map((a: any) => (
-                       <div key={a.id} className="flex items-center justify-between px-3 py-3 bg-red-50/50 border border-red-100 rounded-lg hover:bg-red-50 transition-colors">
-                         <div>
-                           <div className="flex items-center gap-2">
-                              <p className="text-sm font-semibold text-gray-800">{a.sensor?.nombre || `Sensor ${a.sensorId}`}</p>
-                              <Chip size="sm" color="danger" variant="flat" className="h-5 text-[10px] px-1">
-                                {a.tipo === 'LOW' ? 'Bajo' : 'Alto'}
-                              </Chip>
-                           </div>
-                           <p className="text-xs text-gray-600 mt-1">
-                             Valor registrado: <span className="font-bold">{a.valor}</span> (Umbral: {a.umbral ?? '-'})
-                           </p>
-                         </div>
-                         <div className="text-right">
-                            <p className="text-[11px] text-gray-400">
-                              {new Date(a.fechaAlerta).toLocaleDateString('es-ES')}
-                            </p>
-                            <p className="text-[11px] text-gray-400">
-                              {new Date(a.fechaAlerta).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
+                  </div>
+                  <Chip size="sm" variant="flat">{filteredAlerts.length} alertas</Chip>
+                </div>
+                {paginatedAlerts.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <Bell className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                    <p>No hay alertas recientes</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {paginatedAlerts.map((a: any) => (
+                      <div key={a.id} className="flex items-center justify-between px-3 py-3 bg-red-50/50 border border-red-100 rounded-lg hover:bg-red-50 transition-colors">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-gray-800">{a.sensor?.nombre || `Sensor ${a.sensorId}`}</p>
+                            <Chip size="sm" color="danger" variant="flat" className="h-5 text-[10px] px-1">
+                              {a.tipo === 'LOW' ? 'Bajo' : 'Alto'}
+                            </Chip>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1">
+                            Valor registrado: <span className="font-bold">{a.valor}</span> (Umbral: {a.umbral ?? '-'})
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[11px] text-gray-400">
+                            {new Date(a.fechaAlerta).toLocaleDateString('es-ES')}
+                          </p>
+                          <p className="text-[11px] text-gray-400">
+                            {new Date(a.fechaAlerta).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </ModalBody>
               <ModalFooter className="flex justify-between items-center">
                 <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="flat" 
-                    disabled={alertPage === 1} 
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    disabled={alertPage === 1}
                     onPress={() => setAlertPage(p => Math.max(1, p - 1))}
                   >
                     Anterior
@@ -636,10 +636,10 @@ export const LotsAnalyticsPage: React.FC = () => {
                   <span className="text-sm flex items-center">
                     Pág {alertPage} de {Math.max(1, Math.ceil(filteredAlerts.length / 5))}
                   </span>
-                  <Button 
-                    size="sm" 
-                    variant="flat" 
-                    disabled={alertPage * 5 >= filteredAlerts.length} 
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    disabled={alertPage * 5 >= filteredAlerts.length}
                     onPress={() => setAlertPage(p => p + 1)}
                   >
                     Siguiente

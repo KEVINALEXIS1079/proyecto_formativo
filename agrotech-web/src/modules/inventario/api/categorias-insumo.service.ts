@@ -6,6 +6,7 @@ function mapCreateDtoToApi(dto: CreateCategoriaInsumoInput) {
   return {
     nombre_categoria_insumo: dto.nombre,
     descripcion: dto.descripcion,
+    tipoInsumo: dto.tipoInsumo || 'CONSUMIBLE', // Default to CONSUMIBLE
   };
 }
 
@@ -31,11 +32,13 @@ class CategoriasInsumoService {
     page?: number;
     limit?: number;
     q?: string;
+    tipoInsumo?: string;
   }): Promise<CategoriaInsumo[]> {
     const query: Record<string, any> = {};
     if (params?.page) query.page = params.page;
     if (params?.limit) query.limit = params.limit;
     if (params?.q) query.q = params.q;
+    if (params?.tipoInsumo) query.tipoInsumo = params.tipoInsumo;
 
     const { data } = await api.get("/insumos/categorias", { params: query });
     return normalizeListResp(data);
@@ -67,7 +70,7 @@ class CategoriasInsumoService {
 
 export const categoriasInsumoService = new CategoriasInsumoService();
 
-export const listCategoriasInsumo = (params?: { page?: number; limit?: number; q?: string }) =>
+export const listCategoriasInsumo = (params?: { page?: number; limit?: number; q?: string; tipoInsumo?: string }) =>
   categoriasInsumoService.list(params);
 export const getCategoriaInsumo = (id: number) => categoriasInsumoService.get(id);
 export const createCategoriaInsumo = (payload: CreateCategoriaInsumoInput) => categoriasInsumoService.create(payload);

@@ -1,7 +1,7 @@
 import type { User } from '../models/types/user.types';
 import { UserStatusBadge } from '../ui/UserStatusBadge';
 import { UserRoleBadge } from '../ui/UserRoleBadge';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Avatar, Tooltip } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Avatar, Tooltip, Spinner } from "@heroui/react";
 import { Edit, UserX, UserCheck } from 'lucide-react';
 import Surface from '../ui/Surface';
 
@@ -18,7 +18,11 @@ export const UserTable = ({ users, isLoading, onManage, onToggleStatus }: UserTa
   const { data: roles } = useRoles();
 
   if (isLoading) {
-    return <div className="p-4 text-center">Cargando usuarios...</div>;
+    return (
+      <div className="flex justify-center p-8">
+        <Spinner color="success" label="Cargando usuarios..." />
+      </div>
+    );
   }
 
   if (!users.length) {
@@ -94,8 +98,8 @@ export const UserTable = ({ users, isLoading, onManage, onToggleStatus }: UserTa
                   <Tooltip color={user.estado === 'activo' ? "warning" : "success"} content={user.estado === 'activo' ? "Desactivar usuario" : "Activar usuario"}>
                     <span
                       className={`text-lg cursor-pointer active:opacity-50 transition-colors ${user.estado === 'activo'
-                          ? 'text-warning hover:text-warning-400'
-                          : 'text-success hover:text-success-400'
+                        ? 'text-warning hover:text-warning-400'
+                        : 'text-success hover:text-success-400'
                         }`}
                       onClick={() => onToggleStatus(user)}
                     >

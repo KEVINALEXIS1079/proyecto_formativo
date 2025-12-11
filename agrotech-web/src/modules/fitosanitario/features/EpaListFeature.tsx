@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from "react";
-import { Button, Card, CardBody, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Pagination } from "@heroui/react";
+import { Button, Card, CardBody, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Pagination, Spinner } from "@heroui/react";
 import { Plus, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "use-debounce";
@@ -265,24 +265,24 @@ export default function EpaListFeature() {
                   {/* Grid de EPAs */}
                   <motion.div initial="hidden" animate="show" variants={listStagger}>
                     {isLoading ? (
-                      <div className="py-12 text-center text-default-500">
-                        Cargando EPAs...
+                      <div className="py-12 flex justify-center text-default-500">
+                        <Spinner color="success" label="Cargando EPAs..." />
                       </div>
                     ) : items.length === 0 ? (
                       <Card className="border border-transparent shadow-none bg-transparent">
                         <CardBody className="py-12 text-center">
                           <div className="flex flex-col items-center justify-center">
-                              <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mb-4 text-default-500">
-                                  <Search size={32} />
-                              </div>
-                              <p className="text-default-500 text-lg font-medium">
+                            <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mb-4 text-default-500">
+                              <Search size={32} />
+                            </div>
+                            <p className="text-default-500 text-lg font-medium">
                               {debouncedQ || tipoId || tipoCultivoEpaId
-                                  ? "No se encontraron EPAs con los filtros aplicados."
-                                  : "No hay EPAs registrados aún."}
-                              </p>
-                              <p className="text-default-400 text-sm mt-1">
-                                  Intenta ajustar los filtros o crea un nuevo registro.
-                              </p>
+                                ? "No se encontraron EPAs con los filtros aplicados."
+                                : "No hay EPAs registrados aún."}
+                            </p>
+                            <p className="text-default-400 text-sm mt-1">
+                              Intenta ajustar los filtros o crea un nuevo registro.
+                            </p>
                           </div>
                         </CardBody>
                       </Card>

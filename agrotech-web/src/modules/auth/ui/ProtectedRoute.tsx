@@ -1,4 +1,5 @@
 import React from "react";
+import { Spinner } from "@heroui/react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from '../context/AuthContext';
 
@@ -11,7 +12,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
 
   // Esperar a que AuthProvider cargue la cookie
-  if (loading) return <div>Cargando...</div>;
+  if (loading) return (
+    <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+      <Spinner size="lg" color="success" label="Iniciando sesión..." />
+    </div>
+  );
 
   // Si no está autenticado, enviarlo a login
   if (!isAuthenticated) {

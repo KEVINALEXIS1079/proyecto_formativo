@@ -1,5 +1,5 @@
 import type { Cliente } from '../models/types/sales.types';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
 import Surface from '../ui/Surface';
 
 interface ClientTableProps {
@@ -10,7 +10,11 @@ interface ClientTableProps {
 
 export const ClientTable = ({ clientes, isLoading, onEdit }: ClientTableProps) => {
     if (isLoading) {
-        return <div className="p-4 text-center">Cargando clientes...</div>;
+        return (
+            <div className="flex justify-center p-4">
+                <Spinner color="success" label="Cargando clientes..." />
+            </div>
+        );
     }
 
     if (!clientes.length) {

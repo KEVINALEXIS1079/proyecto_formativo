@@ -3,7 +3,7 @@ import { forwardRef, useImperativeHandle, useState, useMemo } from "react";
 import { useGeoData } from "../hooks/useGeoData";
 import GeoMap from "../widgets/GeoMap";
 import GeoFilters from "../ui/GeoFilters";
-import { Card, CardBody, Tabs, Tab, Button, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
+import { Card, CardBody, Tabs, Tab, Button, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Spinner } from "@heroui/react";
 import { List, Map as MapIcon, Edit, MapPin, Ruler, Ban } from "lucide-react";
 import LoteModal from "../widgets/LoteModal";
 import type { Lote } from "../../cultivos/model/types";
@@ -29,7 +29,7 @@ export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
     const sortedLotes = [...lotes].sort((a, b) => (a.id_lote_pk || 0) - (b.id_lote_pk || 0));
     if (!q.trim()) return sortedLotes;
     const lowerQ = q.toLowerCase();
-    return sortedLotes.filter(l => l.nombre_lote.toLowerCase().includes(lowerQ));
+    return sortedLotes.filter(l => (l.nombre_lote || "").toLowerCase().includes(lowerQ));
   }, [lotes, q]);
 
   useImperativeHandle(ref, () => ({
@@ -53,7 +53,11 @@ export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
     setErrorModalOpen(true);
   };
 
-  if (isLoading) return <div>Cargando lotes...</div>;
+  if (isLoading) return (
+    <div className="flex justify-center p-8">
+      <Spinner color="success" label="Cargando lotes..." />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -119,8 +123,8 @@ export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
                           <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
                             <Ruler size={16} className="text-gray-400" />
                             <div className="flex flex-col">
-                              <span className="font-medium">{Math.round(lote.area_lote).toLocaleString('es-CO')} m²</span>
-                              <span className="font-medium">{(lote.area_lote / 10000).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha</span>
+                              <span className="font-medium">{Math.round(lote.area_lote || 0).toLocaleString('es-CO')} m²</span>
+                              <span className="font-medium">{((lote.area_lote || 0) / 10000).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha</span>
                             </div>
                           </div>
                         </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Card, CardBody, CardHeader, Input, Select, SelectItem } from "@heroui/react";
+import { Button, Card, CardBody, CardHeader, Input, Select, SelectItem, Spinner } from "@heroui/react";
 import { Calendar, Download, FileSpreadsheet } from "lucide-react";
 import { useCultivosList } from "../../cultivos/hooks/useCultivos";
 import { useReporteCostosRentabilidad } from "../hooks/useReportes";
@@ -116,7 +116,9 @@ export default function ReporteCultivoPage() {
       {isLoading ? (
         <Card>
           <CardBody>
-            <p>Cargando reporte...</p>
+            <div className="flex justify-center py-4">
+              <Spinner color="success" label="Cargando reporte..." />
+            </div>
           </CardBody>
         </Card>
       ) : error ? (

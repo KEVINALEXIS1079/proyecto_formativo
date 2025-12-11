@@ -1,6 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateInsumoDto } from './create-insumo.dto';
-import { IsOptional, IsNumber, Min, IsString } from 'class-validator';
+import { IsOptional, IsNumber, Min, IsString, IsEnum } from 'class-validator';
+import { InsumoEstado } from '../entities/insumo.entity';
 
 export class UpdateInsumoDto extends PartialType(CreateInsumoDto) {
   @IsOptional()
@@ -32,8 +33,8 @@ export class UpdateInsumoDto extends PartialType(CreateInsumoDto) {
   descripcionOperacion?: string;
 
   @IsOptional()
-  @IsString()
-  estado?: string;
+  @IsEnum(InsumoEstado, { message: 'El estado debe ser válido' })
+  estado?: InsumoEstado;
 
   @IsOptional()
   fechaBaja?: Date;

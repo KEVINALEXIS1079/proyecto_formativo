@@ -12,12 +12,18 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
-  // RF01: Registro
+  // RF01: Registro - Paso 1 (Iniciar)
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+    return this.authService.startRegistration(registerDto);
+  }
+
+  // RF01: Registro - Paso 2 (Completar con código)
+  @Post('complete-register')
+  async completeRegister(@Body() body: { correo: string; code: string }) {
+    return this.authService.completeRegistration(body.correo, body.code);
   }
 
   // RF02: Verificar email
@@ -33,12 +39,21 @@ export class AuthController {
   }
 
   // RF03: Login
-  @UseGuards(LocalAuthGuard)
+  // @UseGuards(LocalAuthGuard) <-- Removed to handle error manually
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Req() req: any, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.login(req.user);
-    
+  async login(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+    const user = await this.authService.validateUser(body.correo, body.password);
+
+    if (!user) {
+      // Return 200 with error flag to avoid browser console red error
+      // return res.status(200).json({ success: false, message: 'Correo o contraseña incorrectos' });
+      // NestJS way: just return the object, @HttpCode(200) handles status
+      return { success: false, message: 'Correo o contraseña incorrectos' };
+    }
+
+    const result = await this.authService.login(user);
+
     // Set HTTP-only cookie
     res.cookie('auth_token', result.access_token, {
       httpOnly: true,
@@ -47,7 +62,7 @@ export class AuthController {
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
-    return { user: result.user };
+    return { success: true, user: result.user };
   }
 
   // RF04: Logout
@@ -82,5 +97,11 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() resetDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetDto);
+  }
+
+  // RF05: Verificar código de recuperación
+  @Post('verify-reset-code')
+  async verifyResetCode(@Body() body: { correo: string; code: string }) {
+    return this.authService.verifyResetCode(body.correo, body.code);
   }
 }

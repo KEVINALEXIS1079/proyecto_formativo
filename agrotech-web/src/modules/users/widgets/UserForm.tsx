@@ -3,7 +3,7 @@ import { UserStatus } from '../models/types/user.types';
 import type { User, CreateUserDto } from '../models/types/user.types';
 import { useCreateUser, useUpdateUser, useChangeUserRole, useUploadAvatar } from '../hooks/useUsers';
 import { useRoles } from '../hooks/usePermissions';
-import { Input, Select, SelectItem, Button, Avatar } from "@heroui/react";
+import { Input, Select, SelectItem, Avatar } from "@heroui/react";
 import { Camera } from 'lucide-react';
 
 export interface UserFormRef {
@@ -15,11 +15,10 @@ interface UserFormProps {
   readOnly?: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  onToggleEdit?: () => void;
-  onCancelEdit?: () => void;
+
 }
 
-export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly = false, onClose, onSuccess, onToggleEdit, onCancelEdit }, ref) => {
+export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly = false, onClose, onSuccess }, ref) => {
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const changeRoleMutation = useChangeUserRole();
@@ -129,7 +128,7 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
     }
   };
 
-  const isLoading = createUserMutation.isPending || updateUserMutation.isPending || changeRoleMutation.isPending || uploadAvatarMutation.isPending;
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -272,44 +271,7 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 mt-6">
-        {readOnly ? (
-          <>
-            <Button
-              variant="flat"
-              onPress={onClose}
-            >
-              Cerrar
-            </Button>
-            {onToggleEdit && (
-              <Button
-                color="success"
-                className="text-black font-semibold"
-                onPress={onToggleEdit}
-              >
-                Editar
-              </Button>
-            )}
-          </>
-        ) : (
-          <>
-            <Button
-              variant="light"
-              onPress={user && onCancelEdit ? onCancelEdit : onClose}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              color="success"
-              className="text-black font-semibold"
-              isLoading={isLoading}
-            >
-              {isLoading ? 'Guardando...' : 'Guardar Cambios'}
-            </Button>
-          </>
-        )}
-      </div>
+
     </form>
   );
 });

@@ -53,6 +53,7 @@ import InsumosEliminadosPage from "@/modules/inventario/pages/InsumosEliminadosP
 import HistorialMovimientosPage from "@/modules/inventario/pages/HistorialMovimientosPage";
 
 import GeoPage from "@/modules/geo/pages/GeoPage";
+import ProductionPage from "@/modules/production/pages/ProductionPage";
 
 // Guards
 import { ProtectedRoute } from "@/modules/auth/ui/ProtectedRoute";
@@ -206,6 +207,9 @@ export default function AppRoutes() {
           <Route index element={<IoTDashboard />} />
           <Route path="analytics" element={<LotsAnalyticsPage />} />
         </Route>
+
+        {/* Producción */}
+        <Route path="/production" element={<ProductionPage />} />
 
         {/* Geo */}
         <Route path="/geo" element={<GeoPage />} />

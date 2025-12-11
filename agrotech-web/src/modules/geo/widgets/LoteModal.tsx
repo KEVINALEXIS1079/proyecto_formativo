@@ -4,7 +4,7 @@ import { LoteMap } from "../../cultivos/widgets";
 import { useCreateLote, useUpdateLote } from "../../cultivos/hooks/useLotes";
 import type { CreateLoteDTO, Lote } from "../../cultivos/model/types";
 import { useGeoData } from "../hooks/useGeoData";
-import { Trash2 } from "lucide-react";
+import { Trash2, Info } from "lucide-react";
 
 interface Props {
   isOpen: boolean;
@@ -12,26 +12,29 @@ interface Props {
   loteToEdit?: Lote;
 }
 
-export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
-  // Renamed to avoid confusion with existing hook usage convention
-  const { data: lotes = [], refetch } = useGeoData();
+// Imports update
+import { validateLote } from "../utils/spatial-validation";
+import MapValidationAlert from "../components/MapValidationAlert";
 
-  /* Hook usage explanation: 
-     Hooks return { mutate, loading, error }, but we aliased them to createLote/updateLote in previous steps.
-     We must ensure we are using the MUTATE function from the hook, not the service directly, to get proper loading state.
-  */
+export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
+  // ... existing hooks
+  const { data: lotes = [], refetch } = useGeoData();
   const { createLote, loading: creating } = useCreateLote();
   const { updateLote, loading: updating } = useUpdateLote();
 
-  // Fix state initialization types
+  // ... existing state
   const [nombre, setNombre] = useState<string>("");
   const [coordenadas, setCoordenadas] = useState<{ latitud_lote: number; longitud_lote: number }[]>([]);
   const [area, setArea] = useState<number>(0);
   const [errorNombre, setErrorNombre] = useState<string>("");
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
+  // NEW: Validation Alert State
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
+      // ... existing reset logic
+      setValidationError(null); // Reset error
       if (loteToEdit) {
         setNombre(loteToEdit.nombre_lote || "");
         setArea(loteToEdit.area_lote || 0);
@@ -52,24 +55,27 @@ export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
       setErrorNombre("El nombre es requerido");
       return;
     }
-    if (coordenadas.length < 3) {
-      alert("Debes dibujar un polígono válido (mínimo 3 puntos)");
+
+    // SPATIAL VALIDATION
+    const validation = validateLote(coordenadas, lotes, loteToEdit?.id_lote_pk);
+    if (!validation.isValid) {
+      setValidationError(validation.message || "Error de validación espacial");
       return;
     }
-    // No "area" check needed for payload, backend likely calculates it or we trust coords
 
+    if (coordenadas.length < 3) {
+      setValidationError("Debes dibujar un polígono válido (mínimo 3 puntos)");
+      return;
+    }
+    // ... try catch block
     try {
-      // Create GeoJSON Polygon
-      // coordinates array of array of numbers [[lng, lat], [lng, lat], ...]
       const polygonCoords = coordinatesToGeoJSON(coordenadas);
-
       const payload: CreateLoteDTO = {
         nombre: nombre.trim(),
         geom: {
           type: "Polygon",
           coordinates: [polygonCoords]
         },
-        // descripcion: "" // Add if field exists in UI
       };
 
       if (loteToEdit) {
@@ -80,6 +86,7 @@ export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
       refetch();
       onClose();
     } catch (error: any) {
+      // ... error handling
       console.error("Error saving lote:", error);
       if (error.response?.data) {
         const errorMsg = error.response.data.message || "Error al guardar";
@@ -90,10 +97,9 @@ export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
     }
   };
 
+  // ... helper functions
   const coordinatesToGeoJSON = (coords: { latitud_lote: number; longitud_lote: number }[]) => {
-    // Map to [lng, lat]
     const points = coords.map(c => [Number(c.longitud_lote), Number(c.latitud_lote)]);
-    // Close the loop if not closed
     const first = points[0];
     const last = points[points.length - 1];
     if (first[0] !== last[0] || first[1] !== last[1]) {
@@ -107,12 +113,22 @@ export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
   return (
     <Modal size="3xl" isOpen={isOpen} onClose={onClose} scrollBehavior="inside" classNames={{ base: "max-w-[60vw]" }}>
       <ModalContent>
+        {/* ... Header and Instructions ... */}
         <ModalHeader className="flex flex-col gap-1">
           {loteToEdit ? (isReadOnly ? "Detalles del Lote" : "Editar Lote") : "Nuevo Lote"}
         </ModalHeader>
         <ModalBody>
+          <div className="bg-success-50 dark:bg-success-900/20 p-4 rounded-lg flex gap-3 items-start mb-4 border border-success-100 dark:border-success-900/50">
+            <Info className="w-5 h-5 text-success-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-success-800 dark:text-success-200">
+              <p className="font-semibold mb-1">Instrucciones</p>
+              <p>
+                Haz clic en el mapa para marcar los puntos del perímetro del lote. Marca al menos <strong>3 puntos</strong> y haz clic en el primer punto (o cierra el ciclo) para completar el polígono. Usa el botón "Limpiar" si necesitas reiniciar.
+              </p>
+            </div>
+          </div>
           <div className="grid grid-cols-12 gap-6 h-full">
-            {/* Left Column: Form & Coordinates */}
+            {/* Left Column ... */}
             <div className="col-span-4 flex flex-col gap-4 h-full overflow-y-auto pr-2">
               <Input
                 label="Nombre del Lote"
@@ -205,12 +221,19 @@ export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
 
             {/* Right Column: Map */}
             <div className="col-span-8 h-full min-h-[400px] bg-gray-100 dark:bg-zinc-900 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 relative">
+              {/* VALIDATION ALERT OVERLAY */}
+              <MapValidationAlert
+                message={validationError}
+                onClose={() => setValidationError(null)}
+              />
               <LoteMap
                 coordenadas={coordenadas}
                 setCoordenadas={setCoordenadas}
                 setArea={setArea}
                 isEditing={!isReadOnly}
                 lotesExistentes={lotes}
+                onError={(msg) => setValidationError(msg)}
+                editingId={loteToEdit?.id_lote_pk}
               />
             </div>
           </div>
@@ -230,7 +253,6 @@ export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
               <Button variant="flat" onPress={() => {
                 if (loteToEdit) {
                   setIsReadOnly(true);
-                  // Optionally reset form values here if needed
                 } else {
                   onClose();
                 }

@@ -1,6 +1,6 @@
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
 import { Button } from "@heroui/button";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/react";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Spinner } from "@heroui/react";
 import { useState } from "react";
 import { useAlmacenList } from "../hooks/useAlmacenList";
 import { useAlmacenById } from "../hooks/useAlmacenById";
@@ -167,7 +167,9 @@ export default function AlmacenesPage() {
           <ModalBody>
             {isEditMode ? (
               !almacen ? (
-                <div>Cargando información del almacén...</div>
+                <div className="flex justify-center p-4">
+                  <Spinner color="success" label="Cargando información del almacén..." />
+                </div>
               ) : (
                 <AlmacenForm
                   initialValues={{ nombre: (almacen as any)?.nombre, descripcion: (almacen as any)?.descripcion }}

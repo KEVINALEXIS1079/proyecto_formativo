@@ -39,7 +39,7 @@ export default function RecoverPage() {
         }
         backSlot={
           <motion.div variants={fadeInUp} initial="initial" animate="animate">
-            <AuthBackButton />
+            <AuthBackButton fallback="/login" />
           </motion.div>
         }
         formTitle={

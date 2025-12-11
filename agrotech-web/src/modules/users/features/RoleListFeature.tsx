@@ -13,7 +13,8 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Button
+  Button,
+  Spinner
 } from "@heroui/react";
 import { Edit, Trash2 } from "lucide-react";
 import { useRoles, useDeleteRol } from "../hooks/usePermissions";
@@ -70,7 +71,11 @@ export const RoleListFeature = forwardRef<RoleListRef, {}>((_, ref) => {
     }
   };
 
-  if (isLoading) return <div>Cargando roles...</div>;
+  if (isLoading) return (
+    <div className="flex justify-center p-8">
+      <Spinner color="success" label="Cargando roles..." />
+    </div>
+  );
 
   return (
     <div className="flex flex-col">
@@ -95,7 +100,7 @@ export const RoleListFeature = forwardRef<RoleListRef, {}>((_, ref) => {
             <TableRow key={rol.id}>
               <TableCell>
                 <div className="flex flex-col">
-                  <p className="font-bold text-medium capitalize">{rol.nombre}</p>
+                  <p className="text-medium capitalize">{rol.nombre}</p>
                 </div>
               </TableCell>
               <TableCell>

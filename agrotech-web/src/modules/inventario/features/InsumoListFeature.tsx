@@ -11,13 +11,12 @@ import { hasMovimientos } from '../api/insumos.service';
 import { InsumoTable } from '../widgets/InsumoTable';
 import { InsumoForm } from '../widgets/InsumoForm';
 import { InsumoFilters } from '../widgets/InsumoFilters';
+import { ViewInsumoModal } from '../ui/ViewInsumoModal';
 import { Modal, ModalContent, ModalHeader, ModalBody } from '@heroui/modal';
 import { Button } from '@heroui/button';
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
-import { Image } from "@heroui/image";
+import { Spinner } from "@heroui/react";
 import type { Insumo, InsumoFilters as InsumoFiltersType } from '../model/types';
-
-const FILES_BASE = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace('/api/v1', '');
 
 export interface InsumoListRef {
   openCreateModal: () => void;
@@ -74,16 +73,12 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
     },
   }));
 
-  // Edit disabled
-  // const handleEdit = (insumo: Insumo) => {
-  //   setSelectedInsumo(insumo);
-  //   setIsModalOpen(true);
-  // };
-
+  /*
   const handleDelete = (insumo: Insumo) => {
     setInsumoToDelete(insumo);
     setIsDeleteModalOpen(true);
   };
+  */
 
   const handleViewMovimientos = (insumo: Insumo) => {
     setSelectedInsumoForMovimientos(insumo.id);
@@ -111,11 +106,9 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
     }
   };
 
-
   const handleFormSubmit = async (data: any): Promise<{ id?: number }> => {
     try {
       if (selectedInsumo) {
-        // Update
         await updateInsumoMutation.mutateAsync({
           id: selectedInsumo.id,
           payload: data
@@ -123,7 +116,6 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
         refetch();
         return {};
       } else {
-        // Create
         const result = await createInsumoMutation.mutateAsync(data);
         refetch();
         return { id: result.id };
@@ -143,7 +135,7 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
         insumos={insumos}
         isLoading={isLoading}
         onView={handleView}
-        onDelete={handleDelete}
+        onDelete={undefined} // Disabled: Insumos should not be deleted
         onViewMovimientos={handleViewMovimientos}
         hasMovimientosMap={hasMovimientosMap}
       />
@@ -157,14 +149,29 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
             setSelectedInsumo(undefined);
           }
         }}
-        size="2xl"
+        size="3xl"
         scrollBehavior="inside"
+        classNames={{
+          wrapper: "items-center justify-center overflow-hidden",
+          base: "max-h-[90vh] w-full max-w-4xl mx-4 my-auto",
+          body: "overflow-y-auto overflow-x-hidden max-h-[70vh] py-4",
+          backdrop: "bg-black/50",
+          header: "flex-shrink-0 border-b border-gray-200",
+          footer: "flex-shrink-0"
+        }}
       >
         <ModalContent>
-          <ModalHeader>
-            {selectedInsumo ? `Editar Insumo: ${selectedInsumo.nombre}` : 'Nuevo Insumo'}
+          <ModalHeader className="px-6 py-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {selectedInsumo ? `Editar Insumo: ${selectedInsumo.nombre}` : 'Nuevo Insumo'}
+              </h2>
+              <p className="text-sm text-gray-500 font-normal mt-1">
+                {selectedInsumo ? 'Modifica los datos del insumo' : 'Registra materiales y suministros consumibles'}
+              </p>
+            </div>
           </ModalHeader>
-          <ModalBody>
+          <ModalBody className="px-6">
             <InsumoForm
               insumo={selectedInsumo}
               onClose={() => {
@@ -220,8 +227,7 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
           <ModalBody>
             {isLoadingMovimientos ? (
               <div className="flex justify-center p-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-2">Cargando movimientos...</span>
+                <Spinner color="success" label="Cargando movimientos..." />
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -250,117 +256,21 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
               </div>
             )}
           </ModalBody>
+          <div className="flex justify-end p-4 border-t border-gray-200">
+            <Button color="danger" variant="light" onPress={() => setIsMovimientosModalOpen(false)}>
+              Cerrar
+            </Button>
+          </div>
         </ModalContent>
       </Modal>
 
-      {/* View Modal */}
-      <Modal
+      {/* View Modal - New Redesigned Component */}
+      <ViewInsumoModal
         isOpen={isViewModalOpen}
-        onOpenChange={setIsViewModalOpen}
-        size="2xl"
-        scrollBehavior="inside"
-      >
-        <ModalContent>
-          <ModalHeader>Detalles del Insumo</ModalHeader>
-          <ModalBody>
-            {insumoView && (
-              <div className="space-y-6">
-                {/* Imagen */}
-                <div className="flex justify-center">
-                  {insumoView.imagenUrl ? (
-                    <Image
-                      src={
-                        /^(data:|blob:|https?:\/\/)/i.test(insumoView.imagenUrl)
-                          ? insumoView.imagenUrl
-                          : `${FILES_BASE.replace(/\/+$/, "")}/${insumoView.imagenUrl.replace(/^\/+/, "")}`
-                      }
-                      alt={insumoView.nombre}
-                      width={200}
-                      height={200}
-                      className="object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500">
-                      Sin imagen
-                    </div>
-                  )}
-                </div>
-
-                {/* Información básica */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Información General</h3>
-                    <div className="space-y-2">
-                      <p><strong>ID:</strong> {insumoView.id}</p>
-                      <p><strong>Nombre:</strong> {insumoView.nombre}</p>
-                      <p><strong>Descripción:</strong> {insumoView.descripcion || 'N/A'}</p>
-                      <p><strong>Tipo de Materia:</strong> {insumoView.tipoMateria}</p>
-                      <p><strong>Fecha de Ingreso:</strong> {new Date(insumoView.fechaIngreso).toLocaleDateString('es-CO')}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Presentación</h3>
-                    <div className="space-y-2">
-                      <p><strong>Tipo:</strong> {insumoView.presentacionTipo}</p>
-                      <p><strong>Cantidad:</strong> {insumoView.presentacionCantidad} {insumoView.presentacionUnidad}</p>
-                      <p><strong>Unidad Base:</strong> {insumoView.unidadBase}</p>
-                      <p><strong>Factor de Conversión:</strong> {insumoView.factorConversion}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stock y precios */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Stock</h3>
-                    <div className="space-y-2">
-                      <p><strong>Stock Presentaciones:</strong> {insumoView.stockPresentaciones}</p>
-                      <p><strong>Stock Total Base:</strong> {insumoView.stockTotalBase} {insumoView.unidadBase}</p>
-                      <p><strong>Stock Total Presentación:</strong> {insumoView.stockTotalPresentacion}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Precios</h3>
-                    <div className="space-y-2">
-                      <p><strong>Precio Unitario:</strong> ${insumoView.precioUnitarioUso?.toLocaleString()}</p>
-                      <p><strong>Precio Total:</strong> ${insumoView.precioTotal?.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Relaciones */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Categoría</h3>
-                    <div className="space-y-2">
-                      <p><strong>Nombre:</strong> {insumoView.categoria?.nombre || 'N/A'}</p>
-                      <p><strong>Descripción:</strong> {insumoView.categoria?.descripcion || 'N/A'}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Proveedor</h3>
-                    <div className="space-y-2">
-                      <p><strong>Nombre:</strong> {insumoView.proveedor?.nombre || 'N/A'}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Almacén</h3>
-                    <div className="space-y-2">
-                      <p><strong>Nombre:</strong> {insumoView.almacen?.nombre || 'N/A'}</p>
-                      <p><strong>Descripción:</strong> {insumoView.almacen?.descripcion || 'N/A'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-    </div>
+        onClose={() => setIsViewModalOpen(false)}
+        insumo={insumoView}
+      />
+    </div >
   );
 });
 

@@ -30,8 +30,10 @@ function parseGeoJSONCoords(geojson: any, isSublote = false): any[] {
 }
 
 export function adaptLote(raw: any): Lote {
+  const idValue = raw?.id ?? raw?.id_lote_pk ?? raw?.idLote;
   return {
-    id: raw?.id ?? raw?.id_lote_pk ?? raw?.idLote,
+    id: idValue,
+    id_lote_pk: idValue, // Ensure this is mapped
     nombre: raw?.nombre ?? raw?.nombre_lote ?? "",
     nombre_lote: raw?.nombre_lote ?? raw?.nombre ?? "",
     descripcion: raw?.descripcion ?? "",
@@ -43,14 +45,23 @@ export function adaptLote(raw: any): Lote {
 }
 
 export function adaptSublote(raw: any): Sublote {
+  // Debug log for visibility investigation
+  // if (raw) console.log("Adapting Sublote:", raw.nombre || "unnamed", "Geom type:", typeof raw.geom, "Coords type:", typeof raw.coordenadas);
+
+  const idValue = raw?.id ?? raw?.id_sublote_pk ?? raw?.idSublote;
+  const coords = parseGeoJSONCoords(raw?.geom ?? raw?.coordenadas, true);
+
+  // if (coords.length === 0 && raw) console.warn("Sublote has NO coords:", raw.nombre);
+
   return {
-    id: raw?.id ?? raw?.id_sublote_pk ?? raw?.idSublote,
+    id: idValue,
+    id_sublote_pk: idValue, // Ensure this is mapped
     nombre: raw?.nombre ?? raw?.nombre_sublote ?? "",
     nombre_sublote: raw?.nombre_sublote ?? raw?.nombre ?? "",
     idLote: raw?.loteId ?? raw?.id_lote_fk ?? raw?.idLote ?? raw?.lote_id,
     descripcion: raw?.descripcion ?? "",
     area_sublote: Number(raw?.areaM2 ?? raw?.area_sublote ?? 0),
-    coordenadas_sublote: parseGeoJSONCoords(raw?.geom ?? raw?.coordenadas, true),
+    coordenadas_sublote: coords,
   };
 }
 

@@ -1,4 +1,4 @@
-import { Card, CardBody, CardHeader, Button } from "@heroui/react";
+import { Card, CardBody, CardHeader, Button, Spinner } from "@heroui/react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useVentaById } from "../hooks";
@@ -10,7 +10,11 @@ interface VentaDetailFeatureProps {
 export default function VentaDetailFeature({ id }: VentaDetailFeatureProps) {
   const { venta, loading, error } = useVentaById(id);
 
-  if (loading) return <p>Cargando venta...</p>;
+  if (loading) return (
+    <div className="flex justify-center p-4">
+      <Spinner color="success" label="Cargando venta..." />
+    </div>
+  );
   if (error) return <p className="text-red-500">{error}</p>;
   if (!venta) return <p>Venta no encontrada</p>;
 
@@ -54,7 +58,7 @@ export default function VentaDetailFeature({ id }: VentaDetailFeatureProps) {
         </CardHeader>
         <CardBody>
           <div className="space-y-4">
-            {venta.detalles.map((detalle) => (
+            {venta.detalles.map((detalle: any) => (
               <div key={detalle.id_venta_detalle_pk} className="border rounded p-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>

@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, CardBody } from "@heroui/react";
+import { Button, Card, CardBody, Spinner } from "@heroui/react";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import EpaForm from "../widgets/EpaForm";
@@ -71,7 +71,9 @@ export default function EpaEditFeature() {
         </div>
         <Card>
           <CardBody className="py-12 text-center">
-            <p>Cargando EPA...</p>
+            <div className="flex justify-center">
+              <Spinner color="success" label="Cargando EPA..." />
+            </div>
           </CardBody>
         </Card>
       </div>

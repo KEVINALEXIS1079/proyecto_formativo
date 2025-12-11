@@ -1,5 +1,5 @@
 import type { Rol } from '../models/types/permissions.types';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
 import { Trash2 } from 'lucide-react';
 import Surface from '../ui/Surface';
 
@@ -12,7 +12,11 @@ interface RolesTableProps {
 
 export const RolesTable = ({ roles, isLoading, onManage, onDelete }: RolesTableProps) => {
   if (isLoading) {
-    return <div className="p-4 text-center">Cargando roles...</div>;
+    return (
+      <div className="flex justify-center p-8">
+        <Spinner color="success" label="Cargando roles..." />
+      </div>
+    );
   }
 
   if (!roles.length) {
@@ -30,7 +34,7 @@ export const RolesTable = ({ roles, isLoading, onManage, onDelete }: RolesTableP
         <TableBody items={roles}>
           {(rol) => (
             <TableRow key={rol.id} className="hover:bg-gray-50/50 transition-colors">
-              <TableCell className="font-medium text-gray-900">{rol.nombre}</TableCell>
+              <TableCell className="text-gray-900">{rol.nombre}</TableCell>
               <TableCell className="text-gray-500">{rol.descripcion || '-'}</TableCell>
               <TableCell>
                 <div className="flex justify-end gap-2">

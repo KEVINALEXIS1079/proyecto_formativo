@@ -10,6 +10,9 @@ export class Categoria extends BaseEntity {
   @Column({ nullable: true })
   descripcion?: string;
 
+  @Column({ default: 'CONSUMIBLE', nullable: true })
+  tipoInsumo?: string; // CONSUMIBLE | NO_CONSUMIBLE
+
   @OneToMany(() => Insumo, (insumo) => insumo.categoria)
   insumos: Insumo[];
 }

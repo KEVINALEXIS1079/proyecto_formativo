@@ -10,7 +10,7 @@ import {
 } from "@heroui/react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateInsumo } from "../api/insumos.service";
+import { darBajaActivoFijo } from "../api/insumos.service";
 import { toast } from "react-hot-toast";
 import { AlertTriangle } from "lucide-react";
 
@@ -37,15 +37,8 @@ export const DarBajaModal: React.FC<DarBajaModalProps> = ({
     const { mutate, isPending } = useMutation({
         mutationFn: (data: DarBajaForm) => {
             if (!activoFijoId) throw new Error("No activo ID");
-            return updateInsumo(activoFijoId, {
-                estado: "DADO_DE_BAJA",
-                fechaBaja: new Date(), // This might need ISO string handling depending on backend, passing Date usually works with axios/JSON.
-                descripcionOperacion: data.razon,
-                // We technically send CreateInsumoInput-like partial. 
-                // Need to ensure updateInsumo handles these fields. 
-                // Our service mapUpdateDtoToApi handles payload mapping.
-                // We need to check execution.
-            } as any);
+            if (!activoFijoId) throw new Error("No activo ID");
+            return darBajaActivoFijo(activoFijoId, data.razon);
         },
         onSuccess: () => {
             toast.success("Activo dado de baja correctamente");

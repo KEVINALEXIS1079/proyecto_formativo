@@ -14,7 +14,8 @@ import { Categoria } from '../../modules/inventory/entities/categoria.entity';
 import { Proveedor } from '../../modules/inventory/entities/proveedor.entity';
 import { Almacen } from '../../modules/inventory/entities/almacen.entity';
 import { Insumo } from '../../modules/inventory/entities/insumo.entity';
-import { MovimientoInsumo } from '../../modules/inventory/entities/movimiento-insumo.entity';
+import { MovimientoInsumo, TipoMovimiento } from '../../modules/inventory/entities/movimiento-insumo.entity';
+import { TipoInsumo, InsumoEstado } from '../../modules/inventory/entities/insumo.entity';
 
 // Activities
 import { Actividad } from '../../modules/activities/entities/actividad.entity';
@@ -126,7 +127,7 @@ export async function seedPrueba1(dataSource: DataSource) {
     console.log(`    ${usuariosCreados} usuarios creados`);
   }
   console.log('Sección usuarios completada.');
-  
+
   // Geo: Lotes
   console.log('  Creando lotes...');
   const lotesData = [
@@ -136,6 +137,16 @@ export async function seedPrueba1(dataSource: DataSource) {
       areaHa: 0.5,
       descripcion: 'Lote principal en la zona norte',
       estado: 'activo',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.091, 1.892],
+          [-76.087, 1.892],
+          [-76.087, 1.894],
+          [-76.091, 1.894],
+          [-76.091, 1.892]
+        ]]
+      } as any
     },
     {
       nombre: 'Finca Sur',
@@ -143,6 +154,16 @@ export async function seedPrueba1(dataSource: DataSource) {
       areaHa: 0.3,
       descripcion: 'Lote secundario en la zona sur',
       estado: 'activo',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.087, 1.890],
+          [-76.085, 1.890],
+          [-76.085, 1.892],
+          [-76.087, 1.892],
+          [-76.087, 1.890]
+        ]]
+      } as any
     },
   ];
 
@@ -156,6 +177,11 @@ export async function seedPrueba1(dataSource: DataSource) {
       loteIds.push(saved.id);
       lotesCreados++;
     } else {
+      // Update geometry if it exists in seed data (to fix missing maps)
+      if (loteData.geom) {
+        existing.geom = loteData.geom as any;
+        await loteRepo.save(existing);
+      }
       loteIds.push(existing.id);
     }
   }
@@ -172,6 +198,16 @@ export async function seedPrueba1(dataSource: DataSource) {
       areaM2: 2500,
       areaHa: 0.25,
       descripcion: 'Sublote A del lote Norte',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.091, 1.892],
+          [-76.089, 1.892],
+          [-76.089, 1.893],
+          [-76.091, 1.893],
+          [-76.091, 1.892]
+        ]]
+      } as any
     },
     {
       nombre: 'Norte B',
@@ -179,6 +215,16 @@ export async function seedPrueba1(dataSource: DataSource) {
       areaM2: 2500,
       areaHa: 0.25,
       descripcion: 'Sublote B del lote Norte',
+      geom: {
+        type: 'Polygon',
+        coordinates: [[
+          [-76.089, 1.893],
+          [-76.087, 1.893],
+          [-76.087, 1.894],
+          [-76.089, 1.894],
+          [-76.089, 1.893]
+        ]]
+      } as any
     },
   ];
 
@@ -192,6 +238,11 @@ export async function seedPrueba1(dataSource: DataSource) {
       subloteIds.push(saved.id);
       sublotesCreados++;
     } else {
+      // Update geometry if it exists in seed data
+      if (subloteData.geom) {
+        existing.geom = subloteData.geom as any;
+        await subLoteRepo.save(existing);
+      }
       subloteIds.push(existing.id);
     }
   }
@@ -245,13 +296,13 @@ export async function seedPrueba1(dataSource: DataSource) {
     console.log(`    ${cultivosCreados} cultivos creados`);
   }
   console.log('Sección geo completada.');
-  
+
   // Inventory: Categorías
   console.log('  Creando categorías de inventario...');
   const categoriasData = [
-    { nombre: 'Fertilizantes', descripcion: 'Productos para fertilización' },
-    { nombre: 'Pesticidas', descripcion: 'Productos para control de plagas' },
-    { nombre: 'Herramientas', descripcion: 'Herramientas agrícolas' },
+    { nombre: 'Fertilizantes', descripcion: 'Productos para fertilización', tipoInsumo: TipoInsumo.CONSUMIBLE },
+    { nombre: 'Pesticidas', descripcion: 'Productos para control de plagas', tipoInsumo: TipoInsumo.CONSUMIBLE },
+    { nombre: 'Herramientas', descripcion: 'Herramientas agrícolas', tipoInsumo: TipoInsumo.NO_CONSUMIBLE },
   ];
 
   let categoriasCreadas = 0;
@@ -368,6 +419,33 @@ export async function seedPrueba1(dataSource: DataSource) {
       valorInventario: 500000,
       fechaRegistro: new Date('2024-02-01'),
     },
+    {
+      nombre: 'Pala',
+      descripcion: 'Pala para trabajo de campo',
+      categoriaId: categoriaIds[2], // Herramientas
+      proveedorId: proveedorIds[0],
+      unidadMedida: 'unidad',
+      precioUnitario: 10000,
+      stockMinimo: 1,
+      stockActual: 1,
+      almacenId: almacenIds[0],
+      presentacionTipo: 'Unidad', // Changed from 'Saco' to match real type
+      presentacionCantidad: 1,
+      presentacionUnidad: 'unidad',
+      unidadUso: 'unidad',
+      tipoMateria: 'Solido',
+      factorConversionUso: 1,
+      stockPresentacion: 1,
+      stockUso: 1,
+      precioUnitarioPresentacion: 10000,
+      precioUnitarioUso: 10000,
+      valorInventario: 10000,
+      fechaRegistro: new Date('2024-02-01'),
+      tipoInsumo: TipoInsumo.NO_CONSUMIBLE, // Explicitly mark as Fixed Asset
+      costoAdquisicion: 10000,
+      vidaUtilHoras: 1000, // Example
+      estado: InsumoEstado.DISPONIBLE
+    },
   ];
 
   let insumosCreados = 0;
@@ -392,7 +470,7 @@ export async function seedPrueba1(dataSource: DataSource) {
   const movimientosData = [
     {
       insumoId: insumoIds[0],
-      tipo: 'entrada',
+      tipo: TipoMovimiento.REGISTRO,
       cantidad: 50,
       precioUnitario: 15000,
       almacenId: almacenIds[0],
@@ -408,7 +486,7 @@ export async function seedPrueba1(dataSource: DataSource) {
     },
     {
       insumoId: insumoIds[1],
-      tipo: 'entrada',
+      tipo: TipoMovimiento.REGISTRO,
       cantidad: 20,
       precioUnitario: 25000,
       almacenId: almacenIds[0],
@@ -420,6 +498,22 @@ export async function seedPrueba1(dataSource: DataSource) {
       costoUnitarioUso: 25000,
       costoTotal: 500000,
       valorInventarioResultante: 500000,
+      usuarioId: 1,
+    },
+    {
+      insumoId: insumoIds[2], // Pala
+      tipo: TipoMovimiento.ENTRADA, // Cambiado de REGISTRO a ENTRADA
+      cantidad: 1,
+      precioUnitario: 10000,
+      almacenId: almacenIds[0],
+      fecha: new Date('2024-02-01'),
+      descripcion: 'Compra inicial de Pala',
+      cantidadPresentacion: 1,
+      cantidadUso: 1,
+      costoUnitarioPresentacion: 10000,
+      costoUnitarioUso: 10000,
+      costoTotal: 10000,
+      valorInventarioResultante: 10000,
       usuarioId: 1,
     },
   ];
@@ -443,7 +537,7 @@ export async function seedPrueba1(dataSource: DataSource) {
     console.log(`    ${movimientosCreados} movimientos de insumos creados`);
   }
   console.log('Sección inventory completada.');
-  
+
   // Activities: Actividades
   console.log('  Creando actividades...');
   const actividadesData = [
@@ -658,7 +752,7 @@ export async function seedPrueba1(dataSource: DataSource) {
     console.log(`    ${evidenciasCreadas} evidencias creadas`);
   }
   console.log('Sección activities completada.');
-  
+
   // IoT: Tipos de sensores
   console.log('  Creando tipos de sensores...');
   const tiposSensorData = [
@@ -734,7 +828,7 @@ export async function seedPrueba1(dataSource: DataSource) {
     console.log(`    ${lecturasCreadas} lecturas de sensores creadas`);
   }
   console.log('Sección IoT completada.');
-  
+
   // Production: Productos agro
   console.log('  Creando productos agro...');
   const productosData = [
@@ -995,7 +1089,7 @@ export async function seedPrueba1(dataSource: DataSource) {
     console.log(`    ${facturasCreadas} facturas creadas`);
   }
   console.log('Sección production completada.');
-  
+
   // Wiki: Tipos de cultivo wiki
   console.log('  Creando tipos de cultivo wiki...');
   const tiposCultivoWikiData = [
@@ -1072,6 +1166,6 @@ export async function seedPrueba1(dataSource: DataSource) {
     console.log(`    ${relacionesCreadas} relaciones EPA - Tipo Cultivo creadas`);
   }
   console.log('Sección wiki completada.');
-  
+
   console.log('Seed de datos de prueba comprehensivos completado\n');
 }

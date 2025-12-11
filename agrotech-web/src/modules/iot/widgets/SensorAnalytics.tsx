@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardBody, ButtonGroup, Button } from "@heroui/react";
+import { Card, CardBody, ButtonGroup, Button, Spinner } from "@heroui/react";
 import { LineChart, BarChart3, AreaChart as AreaChartIcon } from 'lucide-react';
 import {
   LineChart as RechartsLineChart, Line, AreaChart, Area, BarChart, Bar,
@@ -132,10 +132,7 @@ export const SensorAnalytics: React.FC<SensorAnalyticsProps> = ({ sensor }) => {
   if (loading) {
     return (
       <div className="h-[400px] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="text-gray-500">Cargando analítica...</p>
-        </div>
+        <Spinner color="success" label="Cargando analítica..." />
       </div>
     );
   }
@@ -234,7 +231,7 @@ export const SensorAnalytics: React.FC<SensorAnalyticsProps> = ({ sensor }) => {
             strokeWidth={3}
             dot={chartType !== 'bar' ? { r: 3, fill: '#3b82f6' } : undefined}
             activeDot={chartType !== 'bar' ? { r: 5 } : undefined}
-            radius={chartType === 'bar' ? ([8, 8, 0, 0] as [number, number, number, number]) : undefined}
+            radius={chartType === 'bar' ? ([8, 8, 0, 0] as any) : undefined}
             animationDuration={800}
             connectNulls
           />
@@ -286,8 +283,8 @@ export const SensorAnalytics: React.FC<SensorAnalyticsProps> = ({ sensor }) => {
               <Button
                 onClick={() => setChartType('line')}
                 className={`transition-all duration-200 ${chartType === 'line'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 <LineChart className="w-4 h-4 mr-1" />
@@ -296,8 +293,8 @@ export const SensorAnalytics: React.FC<SensorAnalyticsProps> = ({ sensor }) => {
               <Button
                 onClick={() => setChartType('area')}
                 className={`transition-all duration-200 ${chartType === 'area'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 <AreaChartIcon className="w-4 h-4 mr-1" />
@@ -306,8 +303,8 @@ export const SensorAnalytics: React.FC<SensorAnalyticsProps> = ({ sensor }) => {
               <Button
                 onClick={() => setChartType('bar')}
                 className={`transition-all duration-200 ${chartType === 'bar'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 <BarChart3 className="w-4 h-4 mr-1" />

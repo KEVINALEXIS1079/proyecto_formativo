@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input, Button, Checkbox } from "@heroui/react";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -9,22 +9,40 @@ export default function AuthLoginForm({
 }: { onSubmit: (v: AuthLoginValues) => void; loading?: boolean; footerSlot?: React.ReactNode }) {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("remember_email");
+    if (savedEmail) {
+      setCorreo(savedEmail);
+      setRemember(true);
+    }
+  }, []);
 
   const toggleVisibility = () => setIsVisible(!isVisible);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (remember) {
+      localStorage.setItem("remember_email", correo);
+    } else {
+      localStorage.removeItem("remember_email");
+    }
+    onSubmit({ correo, password, remember });
+  };
+
   return (
-    <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); onSubmit({ correo, password, remember }); }}>
-      <Input 
-        label="Correo electrónico" 
-        type="email" 
-        value={correo} 
-        onValueChange={(v) => setCorreo(v.toLowerCase())} 
-        radius="lg" 
+    <form className="grid gap-3" onSubmit={handleSubmit}>
+      <Input
+        label="Correo electrónico"
+        type="email"
+        value={correo}
+        onValueChange={(v) => setCorreo(v.toLowerCase())}
+        radius="lg"
         placeholder="usuario@gmail.com"
-        isClearable 
-        required 
+        isClearable
+        required
       />
       <Input
         label="Contraseña"
@@ -44,7 +62,13 @@ export default function AuthLoginForm({
         }
       />
       <div className="flex items-center justify-between">
-        <Checkbox isSelected={remember} onValueChange={setRemember}>Recordarme</Checkbox>
+        <Checkbox
+          isSelected={remember}
+          onValueChange={setRemember}
+          color="success"
+        >
+          Recordarme
+        </Checkbox>
         {footerSlot}
       </div>
       <Button type="submit" color="success" className="w-full rounded-full" isLoading={loading}>Entrar</Button>

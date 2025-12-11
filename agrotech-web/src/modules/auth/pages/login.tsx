@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import AuthLayout from "../widgets/AuthLayout";
 import ToastDialog from "../widgets/ToastDialog";
@@ -13,6 +13,11 @@ const BYPASS = import.meta.env.VITE_BYPASS_AUTH === "true";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Solo volver a Registro si venimos explícitamente de allí. Si no, a Start.
+  const from = location.state?.from;
+  const backPath = from === "/register" ? "/register" : "/start";
+
   const [msg, setMsg] = useState("");
   const [open, setOpen] = useState(false);
   const { login, loading } = useAuth();
@@ -57,7 +62,7 @@ export default function LoginPage() {
           }
           backSlot={
             <motion.div variants={fadeInUp} initial="initial" animate="animate">
-              <AuthBackButton fallback="/start" />
+              <AuthBackButton fallback={backPath} />
             </motion.div>
           }
           formTitle={<motion.span variants={fadeInUp} initial="initial" animate="animate">Inicia sesión</motion.span>}
@@ -67,12 +72,12 @@ export default function LoginPage() {
               <AuthLoginForm
                 onSubmit={handleSubmit}
                 loading={loading}
-                footerSlot={<Link to="/recover" className="text-primary text-sm">¿Olvidaste tu contraseña?</Link>}
+                footerSlot={<Link to="/recover" className="text-green-600 font-medium text-sm hover:underline">¿Olvidaste tu contraseña?</Link>}
               />
             </motion.div>
 
             <motion.p className="text-center text-sm mt-3" variants={fadeInUp} transition={{ delay: 0.05 }}>
-              ¿No tienes cuenta? <Link to="/register" className="text-primary">Regístrate</Link>
+              ¿No tienes cuenta? <Link to="/register" replace state={{ from: "/login" }} className="text-green-600 font-medium hover:underline">Regístrate</Link>
             </motion.p>
           </motion.div>
         </AuthLayout>

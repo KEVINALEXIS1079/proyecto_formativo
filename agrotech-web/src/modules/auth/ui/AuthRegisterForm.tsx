@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Input, Button, Checkbox } from "@heroui/react";
 import { Eye, EyeOff } from "lucide-react";
+import TermsModal from "./TermsModal";
 
 export type AuthRegisterValues = {
   cedula_usuario: string; nombre_usuario: string; apellido_usuario: string;
@@ -13,8 +14,8 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [visiblePass, setVisiblePass] = useState(false);
-  const [visibleConfirm, setVisibleConfirm] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [showTerms, setShowTerms] = useState(false);
 
   const validate = (field: string, value: any): string => {
     switch (field) {
@@ -37,7 +38,7 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
 
   const handleChange = (field: keyof AuthRegisterValues, value: any) => {
     let finalValue = value;
-    
+
     // Numeric enforcement
     if (["cedula_usuario", "telefono_usuario", "id_ficha"].includes(field)) {
       if (value && !/^\d*$/.test(value)) return; // Reject non-numeric
@@ -49,12 +50,12 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
       finalValue = value.toLowerCase();
       // Auto-complete legacy aid
       if (finalValue.includes("@g") && !finalValue.includes("@gmail.com")) {
-         // simple heuristic, user likely typing fast
+        // simple heuristic, user likely typing fast
       }
     }
 
     setForm(p => ({ ...p, [field]: finalValue }));
-    
+
     if (touched[field]) {
       setErrors(p => ({ ...p, [field]: validate(field, finalValue) }));
     }
@@ -87,95 +88,117 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
   };
 
   return (
-    <form className="grid gap-3" onSubmit={handleSubmit} noValidate>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Input 
-            label="Nombre" value={form.nombre_usuario} 
-            onValueChange={(v) => handleChange("nombre_usuario", v)} 
-            radius="lg" required 
-        />
-        <Input 
-            label="Apellido" value={form.apellido_usuario} 
-            onValueChange={(v) => handleChange("apellido_usuario", v)} 
-            radius="lg" required 
-        />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Input 
-            label="Número de documento" value={form.cedula_usuario} 
-            onValueChange={(v) => handleChange("cedula_usuario", v)} 
+    <>
+      <form className="grid gap-3" onSubmit={handleSubmit} noValidate>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Input
+            label="Nombre" value={form.nombre_usuario}
+            onValueChange={(v) => handleChange("nombre_usuario", v)}
+            radius="lg" required
+          />
+          <Input
+            label="Apellido" value={form.apellido_usuario}
+            onValueChange={(v) => handleChange("apellido_usuario", v)}
+            radius="lg" required
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Input
+            label="Número de documento" value={form.cedula_usuario}
+            onValueChange={(v) => handleChange("cedula_usuario", v)}
             onBlur={() => handleBlur("cedula_usuario")}
             isInvalid={!!errors.cedula_usuario}
             errorMessage={errors.cedula_usuario}
-            radius="lg" inputMode="numeric" maxLength={10} required 
-        />
-        <Input 
-            label="Teléfono" value={form.telefono_usuario} 
-            onValueChange={(v) => handleChange("telefono_usuario", v)} 
+            radius="lg" inputMode="numeric" maxLength={10} required
+          />
+          <Input
+            label="Teléfono" value={form.telefono_usuario}
+            onValueChange={(v) => handleChange("telefono_usuario", v)}
             onBlur={() => handleBlur("telefono_usuario")}
             isInvalid={!!errors.telefono_usuario}
             errorMessage={errors.telefono_usuario}
-            radius="lg" inputMode="numeric" maxLength={10} required 
-        />
-      </div>
-      <Input 
-          label="Correo electrónico" type="email" value={form.correo_usuario} 
-          onValueChange={(v) => handleChange("correo_usuario", v)} 
+            radius="lg" inputMode="numeric" maxLength={10} required
+          />
+        </div>
+        <Input
+          label="Correo electrónico" type="email" value={form.correo_usuario}
+          onValueChange={(v) => handleChange("correo_usuario", v)}
           onBlur={() => handleBlur("correo_usuario")}
           isInvalid={!!errors.correo_usuario}
           errorMessage={errors.correo_usuario}
           description="Solo se permiten correos @gmail.com"
           placeholder="usuario@gmail.com"
-          radius="lg" required 
-      />
-      <Input 
-          label="ID ficha" value={form.id_ficha} 
-          onValueChange={(v) => handleChange("id_ficha", v)} 
+          radius="lg" required
+        />
+        <Input
+          label="ID ficha" value={form.id_ficha}
+          onValueChange={(v) => handleChange("id_ficha", v)}
           onBlur={() => handleBlur("id_ficha")}
           isInvalid={!!errors.id_ficha}
           errorMessage={errors.id_ficha}
-          radius="lg" inputMode="numeric" maxLength={8} required 
+          radius="lg" inputMode="numeric" maxLength={8} required
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Input
+            label="Contraseña"
+            type={visiblePass ? "text" : "password"}
+            value={form.contrasena_usuario}
+            onValueChange={(v) => handleChange("contrasena_usuario", v)}
+            onBlur={() => handleBlur("contrasena_usuario")}
+            isInvalid={!!errors.contrasena_usuario}
+            errorMessage={errors.contrasena_usuario}
+            radius="lg"
+            required
+            endContent={
+              <button className="focus:outline-none" type="button" onClick={() => setVisiblePass(!visiblePass)}>
+                {visiblePass ? <EyeOff className="text-2xl text-default-400 pointer-events-none" /> : <Eye className="text-2xl text-default-400 pointer-events-none" />}
+              </button>
+            }
+          />
+          <Input
+            label="Confirmar contraseña"
+            type={visiblePass ? "text" : "password"}
+            value={form.confirmar}
+            onValueChange={(v) => handleChange("confirmar", v)}
+            onBlur={() => handleBlur("confirmar")}
+            isInvalid={!!errors.confirmar}
+            errorMessage={errors.confirmar}
+            radius="lg"
+            required
+            endContent={
+              <button className="focus:outline-none" type="button" onClick={() => setVisiblePass(!visiblePass)}>
+                {visiblePass ? <EyeOff className="text-2xl text-default-400 pointer-events-none" /> : <Eye className="text-2xl text-default-400 pointer-events-none" />}
+              </button>
+            }
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            isSelected={!!form.acepta}
+            onValueChange={(v) => setForm(p => ({ ...p, acepta: v }))}
+            color="success"
+            classNames={{ label: "text-small" }}
+          >
+            Acepto los
+          </Checkbox>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); setShowTerms(true); }}
+            className="text-sm font-medium text-success underline hover:text-success-600 focus:outline-none"
+          >
+            Términos y condiciones
+          </button>
+        </div>
+        <Button type="submit" color="success" className="w-full rounded-full" isLoading={loading}>Registrarse</Button>
+      </form>
+
+      <TermsModal
+        isOpen={showTerms}
+        onClose={() => setShowTerms(false)}
+        onAccept={() => setForm(p => ({ ...p, acepta: true }))}
       />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Input
-          label="Contraseña"
-          type={visiblePass ? "text" : "password"}
-          value={form.contrasena_usuario}
-          onValueChange={(v) => handleChange("contrasena_usuario", v)} 
-          onBlur={() => handleBlur("contrasena_usuario")}
-          isInvalid={!!errors.contrasena_usuario}
-          errorMessage={errors.contrasena_usuario}
-          radius="lg"
-          required
-          endContent={
-            <button className="focus:outline-none" type="button" onClick={() => setVisiblePass(!visiblePass)}>
-              {visiblePass ? <EyeOff className="text-2xl text-default-400 pointer-events-none" /> : <Eye className="text-2xl text-default-400 pointer-events-none" />}
-            </button>
-          }
-        />
-        <Input
-          label="Confirmar contraseña"
-          type={visibleConfirm ? "text" : "password"}
-          value={form.confirmar}
-          onValueChange={(v) => handleChange("confirmar", v)}
-          onBlur={() => handleBlur("confirmar")}
-          isInvalid={!!errors.confirmar}
-          errorMessage={errors.confirmar}
-          radius="lg"
-          required
-          endContent={
-            <button className="focus:outline-none" type="button" onClick={() => setVisibleConfirm(!visibleConfirm)}>
-              {visibleConfirm ? <EyeOff className="text-2xl text-default-400 pointer-events-none" /> : <Eye className="text-2xl text-default-400 pointer-events-none" />}
-            </button>
-          }
-        />
-      </div>
-
-      <Checkbox isSelected={!!form.acepta} onValueChange={(v) => setForm(p => ({ ...p, acepta: v }))}>
-        Acepto términos y condiciones
-      </Checkbox>
-      <Button type="submit" color="success" className="w-full rounded-full" isLoading={loading}>Registrarse</Button>
-    </form>
+    </>
   );
 }

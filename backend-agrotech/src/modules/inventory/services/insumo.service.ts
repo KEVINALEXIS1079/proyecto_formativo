@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Insumo } from '../entities/insumo.entity';
-import { MovimientoInsumo } from '../entities/movimiento-insumo.entity';
+import { MovimientoInsumo, TipoMovimiento } from '../entities/movimiento-insumo.entity';
 
 @Injectable()
 export class InsumoService {
@@ -11,7 +11,7 @@ export class InsumoService {
     private insumoRepo: Repository<Insumo>,
     @InjectRepository(MovimientoInsumo)
     private movimientoRepo: Repository<MovimientoInsumo>,
-  ) {}
+  ) { }
 
   async create(data: {
     nombre: string;
@@ -95,7 +95,7 @@ export class InsumoService {
     if (stockUso > 0) {
       await this.movimientoRepo.save({
         insumoId: saved.id,
-        tipo: 'INGRESO',
+        tipo: TipoMovimiento.REGISTRO,
         cantidadUso: stockUso,
         cantidadPresentacion: stockPresentacion,
         costoUnitarioPresentacion: precioUnitarioPresentacion,

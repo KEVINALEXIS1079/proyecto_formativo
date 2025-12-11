@@ -1,16 +1,17 @@
 import { motion } from "framer-motion";
-import { Package, ArrowRightLeft, Settings, Wrench } from "lucide-react";
+import { Package, ArrowRightLeft, Settings, Wrench, Clock } from "lucide-react";
 
 export default function InventarioPillToggle({
   value,
   onChange,
 }: {
-  value: "insumos" | "movimientos" | "activos-fijos" | "catalogos";
-  onChange: (v: "insumos" | "movimientos" | "activos-fijos" | "catalogos") => void;
+  value: "insumos" | "movimientos" | "activos-fijos" | "catalogos" | "reservas";
+  onChange: (v: "insumos" | "movimientos" | "activos-fijos" | "catalogos" | "reservas") => void;
 }) {
   const options = [
     { value: "insumos" as const, icon: Package, label: "Insumos" },
     { value: "activos-fijos" as const, icon: Wrench, label: "Activos Fijos" },
+    { value: "reservas" as const, icon: Clock, label: "Reservas" },
     { value: "movimientos" as const, icon: ArrowRightLeft, label: "Movimientos" },
     { value: "catalogos" as const, icon: Settings, label: "Catálogos" },
   ];

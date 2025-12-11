@@ -1,5 +1,5 @@
 import type { Permiso } from '../models/types/permissions.types';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
 import { Trash2, Edit } from 'lucide-react';
 import Surface from '../ui/Surface';
 
@@ -12,7 +12,11 @@ interface PermissionsTableProps {
 
 export const PermissionsTable = ({ permisos, isLoading, onManage, onDelete }: PermissionsTableProps) => {
   if (isLoading) {
-    return <div className="p-4 text-center">Cargando permisos...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <Spinner color="success" label="Cargando permisos..." />
+      </div>
+    );
   }
 
   if (!permisos.length) {

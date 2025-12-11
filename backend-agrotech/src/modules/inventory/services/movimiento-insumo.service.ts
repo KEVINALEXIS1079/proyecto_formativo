@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MovimientoInsumo } from '../entities/movimiento-insumo.entity';
+import { MovimientoInsumo, TipoMovimiento } from '../entities/movimiento-insumo.entity';
 import { Insumo } from '../entities/insumo.entity';
 
 @Injectable()
@@ -11,11 +11,11 @@ export class MovimientoInsumoService {
     private movimientoRepo: Repository<MovimientoInsumo>,
     @InjectRepository(Insumo)
     private insumoRepo: Repository<Insumo>,
-  ) {}
+  ) { }
 
   async create(data: {
     insumoId: number;
-    tipo: string;
+    tipo: TipoMovimiento;
     cantidadPresentacion?: number;
     cantidadUso: number;
     costoUnitarioUso: number;
@@ -31,8 +31,8 @@ export class MovimientoInsumoService {
     }
 
     // Validar que no quede stock negativo
-    if (data.tipo === 'CONSUMO' || data.tipo === 'SALIDA' || (data.tipo === 'AJUSTE' && data.cantidadUso < 0)) {
-      const cantidadRequerida = data.tipo === 'AJUSTE' ? Math.abs(data.cantidadUso) : data.cantidadUso;
+    if (data.tipo === TipoMovimiento.CONSUMO || data.tipo === TipoMovimiento.SALIDA || (data.tipo === TipoMovimiento.AJUSTE && data.cantidadUso < 0)) {
+      const cantidadRequerida = data.tipo === TipoMovimiento.AJUSTE ? Math.abs(data.cantidadUso) : data.cantidadUso;
       // Validar stockUso
       if (insumo.stockUso < cantidadRequerida) {
         throw new BadRequestException(
@@ -42,7 +42,7 @@ export class MovimientoInsumoService {
 
       // Validar stockPresentacion si se especifica
       if (data.cantidadPresentacion) {
-        const cantidadPresentacionRequerida = data.tipo === 'AJUSTE' ? Math.abs(data.cantidadPresentacion) : data.cantidadPresentacion;
+        const cantidadPresentacionRequerida = data.tipo === TipoMovimiento.AJUSTE ? Math.abs(data.cantidadPresentacion) : data.cantidadPresentacion;
         if (insumo.stockPresentacion < cantidadPresentacionRequerida) {
           throw new BadRequestException(
             `Stock insuficiente en presentación. Disponible: ${insumo.stockPresentacion} ${insumo.presentacionUnidad}, Solicitado: ${cantidadPresentacionRequerida} ${insumo.presentacionUnidad}`,
@@ -52,7 +52,7 @@ export class MovimientoInsumoService {
     }
 
     // Validaciones específicas por tipo
-    if (data.tipo === 'TRASLADO') {
+    if (data.tipo === TipoMovimiento.TRASLADO) {
       if (!data.almacenOrigenId || !data.almacenDestinoId) {
         throw new BadRequestException('Para traslados se requieren almacenOrigenId y almacenDestinoId');
       }
@@ -64,13 +64,13 @@ export class MovimientoInsumoService {
       }
     }
 
-    if (data.tipo === 'ELIMINACION') {
+    if (data.tipo === TipoMovimiento.ELIMINACION) {
       if (insumo.deletedAt) {
         throw new BadRequestException('El insumo ya está eliminado');
       }
     }
 
-    if (data.tipo === 'RESTAURACION') {
+    if (data.tipo === TipoMovimiento.RESTAURACION) {
       if (!insumo.deletedAt) {
         throw new BadRequestException('El insumo no está eliminado');
       }
@@ -83,18 +83,18 @@ export class MovimientoInsumoService {
 
     // Calcular el stock resultante para determinar valorInventarioResultante
     let stockResultante = insumo.stockUso;
-    if (data.tipo === 'INGRESO' || data.tipo === 'INGRESO_COMPRA' || data.tipo === 'INICIAL') {
+    if (data.tipo === TipoMovimiento.ENTRADA || data.tipo === TipoMovimiento.REGISTRO) {
       stockResultante += data.cantidadUso;
-    } else if (data.tipo === 'CONSUMO' || data.tipo === 'SALIDA') {
+    } else if (data.tipo === TipoMovimiento.CONSUMO || data.tipo === TipoMovimiento.SALIDA || data.tipo === TipoMovimiento.RESERVA_USO) {
       stockResultante -= data.cantidadUso;
-    } else if (data.tipo === 'AJUSTE') {
+    } else if (data.tipo === TipoMovimiento.AJUSTE) {
       stockResultante += data.cantidadUso; // cantidadUso puede ser negativa
     }
     // Para TRASLADO, ELIMINACION, RESTAURACION: no cambia stock
 
     // Calcular el valor del inventario resultante
     let precioUnitarioResultante = insumo.precioUnitarioUso;
-    if (data.tipo === 'INGRESO' || data.tipo === 'INGRESO_COMPRA' || data.tipo === 'INICIAL') {
+    if (data.tipo === TipoMovimiento.ENTRADA || data.tipo === TipoMovimiento.REGISTRO) {
       if (data.costoUnitarioUso && data.costoUnitarioUso > 0) {
         const valorAnterior = insumo.stockUso * insumo.precioUnitarioUso;
         const valorNuevo = data.cantidadUso * data.costoUnitarioUso;
@@ -118,17 +118,17 @@ export class MovimientoInsumoService {
     await this.movimientoRepo.save(movimiento);
 
     // Actualizar stock del insumo
-    if (data.tipo === 'INGRESO' || data.tipo === 'INGRESO_COMPRA' || data.tipo === 'INICIAL') {
+    if (data.tipo === TipoMovimiento.ENTRADA || data.tipo === TipoMovimiento.REGISTRO) {
       insumo.stockUso += data.cantidadUso;
       if (data.cantidadPresentacion) {
         insumo.stockPresentacion += data.cantidadPresentacion;
       }
-    } else if (data.tipo === 'CONSUMO' || data.tipo === 'SALIDA') {
+    } else if (data.tipo === TipoMovimiento.CONSUMO || data.tipo === TipoMovimiento.SALIDA || data.tipo === TipoMovimiento.RESERVA_USO) {
       insumo.stockUso -= data.cantidadUso;
       if (data.cantidadPresentacion) {
         insumo.stockPresentacion -= data.cantidadPresentacion;
       }
-    } else if (data.tipo === 'AJUSTE') {
+    } else if (data.tipo === TipoMovimiento.AJUSTE) {
       insumo.stockUso += data.cantidadUso; // cantidadUso puede ser negativa
       if (data.cantidadPresentacion) {
         insumo.stockPresentacion += data.cantidadPresentacion; // también puede ser negativa
@@ -137,7 +137,7 @@ export class MovimientoInsumoService {
     // Para TRASLADO, ELIMINACION, RESTAURACION: no cambia stock
 
     // Recalcular precioUnitarioUso si hay ingreso con costo
-    if (data.tipo === 'INGRESO' || data.tipo === 'INGRESO_COMPRA') {
+    if (data.tipo === TipoMovimiento.ENTRADA || data.tipo === TipoMovimiento.REGISTRO) {
       if (data.costoUnitarioUso && data.costoUnitarioUso > 0) {
         const stockAnterior = insumo.stockUso - data.cantidadUso;
         const valorAnterior = stockAnterior * insumo.precioUnitarioUso;
@@ -156,14 +156,14 @@ export class MovimientoInsumoService {
     await this.insumoRepo.save(insumo);
 
     // Lógica específica por tipo después de guardar el movimiento
-    if (data.tipo === 'TRASLADO') {
+    if (data.tipo === TipoMovimiento.TRASLADO) {
       // Cambiar el almacén del insumo
       insumo.almacenId = data.almacenDestinoId!;
       await this.insumoRepo.save(insumo);
-    } else if (data.tipo === 'ELIMINACION') {
+    } else if (data.tipo === TipoMovimiento.ELIMINACION) {
       // Soft delete del insumo
       await this.insumoRepo.softRemove(insumo);
-    } else if (data.tipo === 'RESTAURACION') {
+    } else if (data.tipo === TipoMovimiento.RESTAURACION) {
       // Restaurar el insumo
       await this.insumoRepo.restore(insumo);
     }
@@ -220,7 +220,7 @@ export class MovimientoInsumoService {
 
   async findAllGeneral(filters?: {
     insumoId?: number;
-    tipo?: string;
+    tipo?: TipoMovimiento;
     fechaDesde?: Date;
     fechaHasta?: Date;
   }) {

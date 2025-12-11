@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   CardBody,
+  Spinner
 } from "@heroui/react";
 import { Plus, FileText, FileSpreadsheet } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -228,7 +229,7 @@ export default function ListaPage() {
                   {/* List */}
                   {isLoading ? (
                     <div className="flex justify-center p-8">
-                      <p>Cargando actividades...</p>
+                      <Spinner color="success" label="Cargando actividades..." />
                     </div>
                   ) : filtered.length === 0 ? (
                     <div className="text-center p-8 text-gray-500">
@@ -250,7 +251,7 @@ export default function ListaPage() {
                 /* History Table */
                 isLoading ? (
                   <div className="flex justify-center p-8">
-                    <p>Cargando historial...</p>
+                    <Spinner color="success" label="Cargando historial..." />
                   </div>
                 ) : (
                   <HistorialActividadesTable actividades={list.filter(x => x.estado === 'FINALIZADA')} />
@@ -264,6 +265,7 @@ export default function ListaPage() {
       <CreateActivityModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        initialState={activeTab === "realizadas" ? "FINALIZADA" : "PENDIENTE"}
       />
 
       <GestionarActividadModal

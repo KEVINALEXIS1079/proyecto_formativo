@@ -14,20 +14,22 @@ export enum TipoMateria {
   LIQUIDO = 'liquido',
 }
 
+import { TipoInsumo } from '../entities/insumo.entity';
+
 export class CreateInsumoDto {
-   @IsString({ message: 'El nombre debe ser un texto válido' })
-   @IsNotEmpty({ message: 'El nombre es requerido' })
-   @MaxLength(200, { message: 'El nombre no puede exceder 200 caracteres' })
-   nombre: string;
+  @IsString({ message: 'El nombre debe ser un texto válido' })
+  @IsNotEmpty({ message: 'El nombre es requerido' })
+  @MaxLength(200, { message: 'El nombre no puede exceder 200 caracteres' })
+  nombre: string;
 
-   @IsOptional()
-   @IsString({ message: 'La descripción debe ser un texto válido' })
-   @MaxLength(500, { message: 'La descripción no puede exceder 500 caracteres' })
-   descripcion?: string;
+  @IsOptional()
+  @IsString({ message: 'La descripción debe ser un texto válido' })
+  @MaxLength(500, { message: 'La descripción no puede exceder 500 caracteres' })
+  descripcion?: string;
 
-   @IsString({ message: 'El tipo de presentación debe ser un texto válido' })
-   @IsNotEmpty({ message: 'El tipo de presentación es requerido' })
-   presentacionTipo: string;
+  @IsString({ message: 'El tipo de presentación debe ser un texto válido' })
+  @IsNotEmpty({ message: 'El tipo de presentación es requerido' })
+  presentacionTipo: string;
 
   @IsEnum(TipoMateria, { message: 'El tipo de materia debe ser: solido o liquido' })
   tipoMateria: TipoMateria;
@@ -83,4 +85,8 @@ export class CreateInsumoDto {
   @IsOptional()
   @IsNumber({}, { message: 'La categoría ID debe ser un número válido' })
   categoriaId?: number;
+
+  @IsOptional()
+  @IsEnum(TipoInsumo, { message: 'El tipo de insumo debe ser válido' })
+  tipoInsumo?: TipoInsumo;
 }

@@ -15,17 +15,17 @@ export class GeoService {
   constructor(
     @InjectRepository(Lote) private loteRepo: Repository<Lote>,
     @InjectRepository(SubLote) private subLoteRepo: Repository<SubLote>,
-  ) {}
+  ) { }
 
   // ==================== LOTES ====================
-  
+
   // RF09: Registro de lotes con cálculos automáticos
   async createLote(data: CreateLoteDto) {
     // Calcular área y centroide usando PostGIS
     const areaM2 = await this.calculateArea(data.geom);
     const areaHa = areaM2 / 10000;
     const centroide = await this.calculateCentroid(data.geom);
-    
+
     const lote = this.loteRepo.create({
       ...data,
       areaM2,
@@ -33,7 +33,7 @@ export class GeoService {
       centroide,
       estado: 'activo',
     });
-    
+
     return this.loteRepo.save(lote);
   }
 
@@ -51,21 +51,21 @@ export class GeoService {
       WHERE l.estado = 'activo'
       ORDER BY l.nombre ASC
     `);
-    
+
     // Fetch sublotes separately or in a second light query if needed, 
     // or just return lots first to verify speed. 
     // For now, let's join manually to avoid N+1 if we really need sublotes.
     // Actually, distinct query for sublotes is faster than large join if many rows.
-    
+
     const sublotes = await this.subLoteRepo.query(`
       SELECT s.id, s.nombre, s.lote_id as "loteId" 
       FROM sublotes s
     `);
-    
+
     // Merge in JS (much faster for 6 lots)
     return raw.map((l: any) => ({
-        ...l,
-        sublotes: sublotes.filter((s: any) => s.loteId === l.id)
+      ...l,
+      sublotes: sublotes.filter((s: any) => s.loteId === l.id)
     }));
   }
 
@@ -77,14 +77,14 @@ export class GeoService {
 
   async updateLote(id: number, data: UpdateLoteDto) {
     const lote = await this.findLoteById(id);
-    
+
     // Si se actualiza la geometría, recalcular áreas y centroide
     if (data.geom) {
       lote.areaM2 = await this.calculateArea(data.geom);
       lote.areaHa = lote.areaM2 / 10000;
       lote.centroide = await this.calculateCentroid(data.geom);
     }
-    
+
     Object.assign(lote, data);
     return this.loteRepo.save(lote);
   }
@@ -95,42 +95,42 @@ export class GeoService {
   }
 
   // ==================== SUBLOTES ====================
-  
+
   // RF10: Registro de sublotes con validaciones espaciales
   async createSubLote(data: CreateSubLoteDto) {
-    console.log('📍 Creating sublote with data:', JSON.stringify(data, null, 2));
-    
+
+
     const lote = await this.findLoteById(data.loteId);
-    console.log('📍 Found lote:', lote.id, lote.nombre);
-    
+
+
     // RF10: Validar que el sublote esté contenido en el lote
     const isContained = await this.validateContainment(lote.geom, data.geom);
-    console.log('📍 Is contained:', isContained);
+
     if (!isContained) {
       throw new BadRequestException('El sublote debe estar completamente dentro del lote');
     }
-    
+
     // RF10: Validar que no haya solape con otros sublotes del mismo lote
     const hasOverlap = await this.checkOverlaps(data.loteId, data.geom);
-    console.log('📍 Has overlap:', hasOverlap);
+
     if (hasOverlap) {
       throw new BadRequestException('El sublote se solapa con otro sublote existente');
     }
-    
+
     // RF10: Validar nombre único por lote
     const existingSubLote = await this.subLoteRepo.findOne({
       where: { loteId: data.loteId, nombre: data.nombre },
     });
-    
+
     if (existingSubLote) {
       throw new BadRequestException(`Ya existe un sublote con nombre "${data.nombre}" en este lote`);
     }
-    
+
     // Calcular área y centroide
     const areaM2 = await this.calculateArea(data.geom);
     const areaHa = areaM2 / 10000;
     const centroide = await this.calculateCentroid(data.geom);
-    
+
     const subLote = this.subLoteRepo.create({
       ...data,
       areaM2,
@@ -138,25 +138,25 @@ export class GeoService {
       centroide,
       lote,
     });
-    
-    console.log('📍 Sublote created successfully');
+
+
     const savedSubLote = await this.subLoteRepo.save(subLote);
-    console.log('📍 Saved sublote:', JSON.stringify(savedSubLote, null, 2));
+
     return savedSubLote;
   }
 
   async findAllSubLotes(loteId?: number) {
     const where: any = {};
     if (loteId) where.loteId = loteId;
-    
-    return this.subLoteRepo.find({ 
+
+    return this.subLoteRepo.find({
       where,
       relations: ['lote'],
     });
   }
 
   async findSubLoteById(id: number) {
-    const subLote = await this.subLoteRepo.findOne({ 
+    const subLote = await this.subLoteRepo.findOne({
       where: { id },
       relations: ['lote'],
     });
@@ -166,29 +166,29 @@ export class GeoService {
 
   async updateSubLote(id: number, data: UpdateSubLoteDto) {
     const subLote = await this.findSubLoteById(id);
-    
+
     // Si se actualiza la geometría, validar contención y no-solape
     if (data.geom) {
       const lote = await this.findLoteById(subLote.loteId);
-      
+
       // Validar contención
       const isContained = await this.validateContainment(lote.geom, data.geom);
       if (!isContained) {
         throw new BadRequestException('El sublote debe estar completamente dentro del lote');
       }
-      
+
       // Validar no solapamiento (excluyendo el sublote actual)
       const hasOverlap = await this.checkOverlaps(subLote.loteId, data.geom, id);
       if (hasOverlap) {
         throw new BadRequestException('El sublote se solapa con otro sublote existente');
       }
-      
+
       // Recalcular áreas y centroide
       subLote.areaM2 = await this.calculateArea(data.geom);
       subLote.areaHa = subLote.areaM2 / 10000;
       subLote.centroide = await this.calculateCentroid(data.geom);
     }
-    
+
     Object.assign(subLote, data);
     return this.subLoteRepo.save(subLote);
   }
@@ -257,7 +257,7 @@ export class GeoService {
           WHERE lote_id = $1 
           AND ST_Overlaps(ST_GeomFromGeoJSON($2), ST_GeomFromGeoJSON(geom::json))
       `;
-      
+
       const params: any[] = [loteId, JSON.stringify(geom)];
 
       if (excludeId) {

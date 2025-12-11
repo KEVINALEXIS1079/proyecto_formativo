@@ -1,13 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { Sensor } from '../model/iot.types';
-import { Select, SelectItem, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Card, CardBody } from "@heroui/react";
+import { Select, SelectItem, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Card, CardBody, Spinner } from "@heroui/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { IoTApi } from '../api/iot.api';
 
 export const LotsComparisonPage: React.FC = () => {
   const { sensors } = useOutletContext<{ sensors: Sensor[] }>();
-  
+
   const lots = useMemo(() => {
     const uniqueLots = new Set<number>();
     sensors.forEach(s => { if (s.loteId) uniqueLots.add(s.loteId); });
@@ -64,9 +64,9 @@ export const LotsComparisonPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center gap-4 flex-wrap">
         <h2 className="text-xl font-bold">Comparación de Lotes</h2>
-        <Select 
-          className="max-w-xs" 
-          label="Seleccionar Lotes a Comparar" 
+        <Select
+          className="max-w-xs"
+          label="Seleccionar Lotes a Comparar"
           selectionMode="multiple"
           selectedKeys={selectedLotIds}
           onSelectionChange={(keys) => setSelectedLotIds(keys as Set<string>)}
@@ -93,8 +93,8 @@ export const LotsComparisonPage: React.FC = () => {
       </div>
 
       {loading && (
-        <div className="text-center py-12 text-gray-400">
-          Cargando datos de comparación...
+        <div className="flex justify-center py-12">
+          <Spinner color="success" label="Cargando datos de comparación..." />
         </div>
       )}
 
@@ -118,11 +118,11 @@ export const LotsComparisonPage: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar 
-                  dataKey="metric" 
-                  name={tipoSensorInfo ? `${tipoSensorInfo.nombre} (Promedio)` : "Métrica Promedio"} 
-                  fill="#8884d8" 
-                  radius={[4, 4, 0, 0]} 
+                <Bar
+                  dataKey="metric"
+                  name={tipoSensorInfo ? `${tipoSensorInfo.nombre} (Promedio)` : "Métrica Promedio"}
+                  fill="#8884d8"
+                  radius={[4, 4, 0, 0]}
                 />
               </BarChart>
             </ResponsiveContainer>

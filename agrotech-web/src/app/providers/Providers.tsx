@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { startUsuariosRealtime } from "@/modules/users/models/realtime";
+import { AuthProvider } from "@/modules/auth/context/AuthContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +28,9 @@ export default function Providers({ children }: PropsWithChildren) {
 
   return (
     <BrowserRouter>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

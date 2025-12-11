@@ -4,15 +4,17 @@ import { Button } from '@heroui/react';
 import { Plus } from 'lucide-react';
 import Surface from '../../users/ui/Surface';
 import InventarioPillToggle from '../ui/InventarioPillToggle';
+import { StockAlertBell } from '../ui/StockAlertBell';
 import { InsumoListFeature } from '../features/InsumoListFeature';
 import { MovimientoListFeature } from '../features/MovimientoListFeature';
-import { ActivosFijosListFeature } from '../features/ActivosFijosListFeature'; // Import
+import { ActivosFijosListFeature } from '../features/ActivosFijosListFeature';
+import { ReservaListFeature } from '../features/ReservaListFeature';
 import type { InsumoListRef } from '../features/InsumoListFeature';
 import type { MovimientoListRef } from '../features/MovimientoListFeature';
-import type { ActivosFijosListRef } from '../features/ActivosFijosListFeature'; // Import
+import type { ActivosFijosListRef } from '../features/ActivosFijosListFeature';
 import CatalogoTabs from '../ui/widgets/CatalogoTabs';
 
-type Tab = 'insumos' | 'movimientos' | 'activos-fijos' | 'catalogos';
+type Tab = 'insumos' | 'movimientos' | 'activos-fijos' | 'catalogos' | 'reservas';
 
 export default function InventarioPage() {
   const [activeTab, setActiveTab] = useState<Tab>('insumos');
@@ -48,15 +50,18 @@ export default function InventarioPage() {
       {/* PillToggle y botón de acción en la misma fila */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <InventarioPillToggle value={activeTab} onChange={setActiveTab} />
-        {(activeTab === 'insumos' || activeTab === 'movimientos' || activeTab === 'activos-fijos') && (
-          <Button
-            color="success"
-            startContent={<Plus className="h-4 w-4" />}
-            onPress={handleCreate}
-          >
-            {getButtonLabel()}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <StockAlertBell />
+          {(activeTab === 'insumos' || activeTab === 'movimientos' || activeTab === 'activos-fijos') && (
+            <Button
+              color="success"
+              startContent={<Plus className="h-4 w-4" />}
+              onPress={handleCreate}
+            >
+              {getButtonLabel()}
+            </Button>
+          )}
+        </div>
       </div>
 
       <Surface className="overflow-hidden p-0">
@@ -77,6 +82,10 @@ export default function InventarioPage() {
                 <ActivosFijosListFeature ref={activosFijosListRef} />
               )}
 
+              {activeTab === 'reservas' && (
+                <ReservaListFeature />
+              )}
+
               {activeTab === 'movimientos' && (
                 <MovimientoListFeature ref={movimientoListRef} />
               )}
@@ -88,6 +97,6 @@ export default function InventarioPage() {
           </AnimatePresence>
         </div>
       </Surface>
-    </div>
+    </div >
   );
 }

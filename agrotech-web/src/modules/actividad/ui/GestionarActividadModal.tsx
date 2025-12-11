@@ -530,7 +530,7 @@ export default function GestionarActividadModal({
                       <CardBody className="p-4">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                           <Wrench className="w-5 h-5 text-purple-600" />
-                          Herramientas y Maquinaria
+                          Herramientas
                         </h3>
 
                         {actividad.usosHerramientas &&
@@ -693,8 +693,8 @@ export default function GestionarActividadModal({
               </Tabs>
             </ModalBody>
 
-            <div className="flex w-full justify-between items-center">
-              <Button color="danger" variant="light" onPress={onClose}>
+            <div className="flex w-full justify-between items-center p-4 border-t border-gray-100 bg-white rounded-b-lg">
+              <Button color="danger" variant="light" onPress={onClose} className="text-black">
                 Cerrar
               </Button>
 
@@ -711,19 +711,26 @@ export default function GestionarActividadModal({
                   Editar
                 </Button>
 
-                {actividad.estado === "Pendiente" && onFinalize && (
-                  <Button
-                    color="success"
-                    className="text-white shadow-md shadow-green-200"
-                    startContent={<CheckCircle className="w-4 h-4" />}
-                    onPress={() => {
-                      onClose();
-                      onFinalize(actividad);
-                    }}
-                  >
-                    Confirmar y Finalizar
-                  </Button>
-                )}
+                <div className="flex flex-col items-end gap-1">
+                  {actividad.estado === "Pendiente" && onFinalize && (
+                    <span className="text-xs text-green-600 font-medium px-2">
+                      ¿Actividad completada? Confirma insumos y cierra la actividad.
+                    </span>
+                  )}
+                  {actividad.estado === "Pendiente" && onFinalize && (
+                    <Button
+                      color="success"
+                      className="text-black shadow-md shadow-green-200 font-medium"
+                      startContent={<CheckCircle className="w-4 h-4" />}
+                      onPress={() => {
+                        onClose();
+                        onFinalize(actividad);
+                      }}
+                    >
+                      Confirmar y Finalizar
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </>

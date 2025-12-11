@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Card, CardBody, Input } from "@heroui/react";
+import { Button, Card, CardBody, Input, Spinner } from "@heroui/react";
 import { Plus, Calendar, User, Leaf } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -77,7 +77,9 @@ export default function VentasListFeature() {
       {/* Lista de Ventas */}
       {loading ? (
         <Card>
-          <CardBody>Cargando ventas...</CardBody>
+          <CardBody className="flex justify-center items-center py-8">
+            <Spinner color="success" label="Cargando ventas..." />
+          </CardBody>
         </Card>
       ) : ventas.length === 0 ? (
         <Card>

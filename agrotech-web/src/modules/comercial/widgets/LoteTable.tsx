@@ -1,5 +1,5 @@
 import type { LoteProduccion } from '../models/types/production.types';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button } from "@heroui/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
 import { Eye } from 'lucide-react';
 
 import Surface from '../ui/Surface';
@@ -12,7 +12,11 @@ interface LoteTableProps {
 
 export const LoteTable = ({ lotes, isLoading, onEdit }: LoteTableProps) => {
     if (isLoading) {
-        return <div className="p-4 text-center">Cargando lotes...</div>;
+        return (
+            <div className="flex justify-center p-4">
+                <Spinner color="success" label="Cargando lotes..." />
+            </div>
+        );
     }
 
     if (!lotes.length) {

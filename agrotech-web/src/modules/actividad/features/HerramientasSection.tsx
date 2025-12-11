@@ -30,11 +30,12 @@ export default function HerramientasSection({ control }: HerramientasSectionProp
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Wrench className="w-5 h-5" />
-                    Herramientas y Maquinaria
+                    Herramientas
                 </h3>
                 <Button
                     size="sm"
-                    color="primary"
+                    color="success"
+                    className="text-black"
                     startContent={<Plus className="w-4 h-4" />}
                     onPress={() => append({ activoFijoId: 0, horasUso: 1 })}
                 >

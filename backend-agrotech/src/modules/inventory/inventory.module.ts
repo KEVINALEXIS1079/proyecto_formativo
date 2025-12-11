@@ -15,6 +15,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
 
+import { Reserva } from './entities/reserva.entity';
+import { ReservasService } from './services/reservas.service';
+import { ReservasController } from './controllers/reservas.controller';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -24,6 +28,7 @@ import { AuthModule } from '../auth/auth.module';
       Categoria,
       MovimientoInsumo,
       UsoHerramienta,
+      Reserva,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -34,8 +39,8 @@ import { AuthModule } from '../auth/auth.module';
     }),
     AuthModule,
   ],
-  controllers: [InventoryController],
-  providers: [MovimientoInsumoService, InventoryService, InventoryGateway, DepreciationService],
-  exports: [InventoryService, DepreciationService],
+  controllers: [InventoryController, ReservasController],
+  providers: [MovimientoInsumoService, InventoryService, InventoryGateway, DepreciationService, ReservasService],
+  exports: [InventoryService, DepreciationService, ReservasService],
 })
 export class InventoryModule { }

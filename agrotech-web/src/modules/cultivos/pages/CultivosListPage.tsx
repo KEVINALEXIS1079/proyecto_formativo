@@ -10,6 +10,7 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Spinner
 } from "@heroui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import Surface from "../ui/Surface";
@@ -232,7 +233,9 @@ export default function CultivosListPage() {
 
                   {isLoading ? (
                     <Card>
-                      <CardBody>Cargando...</CardBody>
+                      <CardBody className="flex justify-center items-center py-8">
+                        <Spinner color="success" label="Cargando cultivos..." />
+                      </CardBody>
                     </Card>
                   ) : cultivos.length === 0 ? (
                     <Card>
@@ -343,7 +346,9 @@ export default function CultivosListPage() {
                     />
 
                     {isLoadingHist ? (
-                      <p className="text-sm text-gray-600">Cargando historial...</p>
+                      <div className="flex justify-center p-4">
+                        <Spinner color="success" label="Cargando historial..." />
+                      </div>
                     ) : filteredHistorial.length === 0 ? (
                       <p className="text-sm text-gray-600">No hay cambios registrados.</p>
                     ) : (

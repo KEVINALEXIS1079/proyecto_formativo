@@ -16,13 +16,20 @@ export default function AuthRecoverForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!email.endsWith("@gmail.com")) {
+
+    const val = email.trim();
+
+    if (!val) {
+      setError("Por favor ingresa un correo");
+      return;
+    }
+
+    if (!val.endsWith("@gmail.com")) {
       setError("Solo se permiten correos @gmail.com");
       return;
     }
     setError("");
-    onSubmit({ email });
+    onSubmit({ email: val });
   }
 
   return (
@@ -31,7 +38,7 @@ export default function AuthRecoverForm({
         label="Correo electrónico"
         type="email"
         value={email}
-        onValueChange={(v) => { setEmail(v.toLowerCase()); setError(""); }}
+        onValueChange={(v) => { setEmail(v); setError(""); }}
         radius="lg"
         required
         placeholder="usuario@gmail.com"
@@ -44,8 +51,6 @@ export default function AuthRecoverForm({
         color="success"
         className="w-full rounded-full"
         isLoading={loading}
-        // IMPORTANTE: evita un segundo submit interno
-        onPress={() => onSubmit({ email })}
       >
         Verificar
       </Button>

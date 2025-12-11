@@ -13,21 +13,22 @@ import toast from "react-hot-toast";
 interface CreateActivityModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialState?: "PENDIENTE" | "FINALIZADA";
 }
 
 export default function CreateActivityModal({
   isOpen,
   onClose,
+  initialState = "PENDIENTE",
 }: CreateActivityModalProps) {
   const createMutation = useCreateActividad();
 
   const handleSubmit = async (data: CreateActividadPayload) => {
     try {
-      // Determine estado based on evidencias
-      const hasEvidencias = data.evidencias && data.evidencias.length > 0;
+      // Use form data (which includes explicit estado)
       const activityData = {
         ...data,
-        estado: hasEvidencias ? "Finalizada" : "Pendiente",
+        // Ensure estado is respected from form (data.estado)
       };
 
       // Create Activity (backend already processes insumos, servicios, and evidencias)
@@ -64,6 +65,7 @@ export default function CreateActivityModal({
                 isLoading={createMutation.isPending}
                 submitLabel="Registrar"
                 onCancel={onClose}
+                initialData={{ estado: initialState }}
               />
             </ModalBody>
             {/* Footer removed, handled by form */}

@@ -9,7 +9,7 @@ export class SeedService implements OnModuleInit {
   private readonly logger = new Logger(SeedService.name);
   private readonly SEED_LOG_TABLE = 'seed_execution_log';
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) { }
 
   async onModuleInit() {
     this.logger.log('Checking if seeds need to be executed...');
@@ -21,12 +21,9 @@ export class SeedService implements OnModuleInit {
     await queryRunner.connect();
 
     try {
-      // Drop log table if exists
-      await queryRunner.query(`DROP TABLE IF EXISTS ${this.SEED_LOG_TABLE}`);
-
-      // Create log table with new structure
+      // Create log table if not exists
       await queryRunner.query(`
-        CREATE TABLE ${this.SEED_LOG_TABLE} (
+        CREATE TABLE IF NOT EXISTS ${this.SEED_LOG_TABLE} (
           id SERIAL PRIMARY KEY,
           seed_name VARCHAR(255) NOT NULL UNIQUE,
           executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

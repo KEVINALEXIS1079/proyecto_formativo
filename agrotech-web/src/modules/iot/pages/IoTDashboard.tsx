@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardBody, Button, Chip, Skeleton } from '@heroui/react';
+import { Card, CardBody, Button, Chip, Skeleton, Spinner } from '@heroui/react';
 import { IoTFilters } from '../widgets/IoTFilters';
 import { Activity, FileText, Wifi, WifiOff, BarChart3, MapPin } from 'lucide-react';
 import { api } from '../../../shared/api/client';
@@ -23,7 +23,7 @@ export const IoTDashboard: React.FC = () => {
 
   const [selectedLoteId, setSelectedLoteId] = useState<number | null>(null);
   const [selectedSubLoteId, setSelectedSubLoteId] = useState<number | null>(null);
-  
+
   // Carousel State
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isAutoMode, setIsAutoMode] = useState(true);
@@ -157,7 +157,7 @@ export const IoTDashboard: React.FC = () => {
                 <p className="text-small text-gray-500">Monitoreo en tiempo real de campo</p>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-2 items-center">
               {/* Removed date filters (7D, 30D, 90D) as requested - strictly Real Time */}
               <Button
@@ -195,26 +195,26 @@ export const IoTDashboard: React.FC = () => {
         <CardBody className="p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-gray-600" /> 
+              <BarChart3 className="w-5 h-5 text-gray-600" />
               Visión general por sensores
             </h3>
-            <Chip size="sm" variant="flat" color={isLive ? "success" : "default"} startContent={isLive ? <Activity size={12}/> : null}>
-               {loading ? 'Cargando datos...' : isLive ? 'En vivo' : 'Histórico'}
+            <Chip size="sm" variant="flat" color={isLive ? "success" : "default"} startContent={isLive ? <Activity size={12} /> : null}>
+              {loading ? <Spinner size="sm" color="current" /> : isLive ? 'En vivo' : 'Histórico'}
             </Chip>
           </div>
-          
+
           <div className="min-h-[420px] relative">
-             {loading && timeSeriesData.length === 0 && (
-                 <div className="absolute inset-0 z-10 flex flex-col gap-4 p-4 bg-white/80 backdrop-blur-sm">
-                    <Skeleton className="rounded-lg h-60 w-full"/>
-                    <div className="flex gap-4">
-                        <Skeleton className="rounded-lg h-24 w-1/3"/>
-                        <Skeleton className="rounded-lg h-24 w-1/3"/>
-                        <Skeleton className="rounded-lg h-24 w-1/3"/>
-                    </div>
-                 </div>
-             )}
-            
+            {loading && timeSeriesData.length === 0 && (
+              <div className="absolute inset-0 z-10 flex flex-col gap-4 p-4 bg-white/80 backdrop-blur-sm">
+                <Skeleton className="rounded-lg h-60 w-full" />
+                <div className="flex gap-4">
+                  <Skeleton className="rounded-lg h-24 w-1/3" />
+                  <Skeleton className="rounded-lg h-24 w-1/3" />
+                  <Skeleton className="rounded-lg h-24 w-1/3" />
+                </div>
+              </div>
+            )}
+
             <SensorCharts
               timeSeriesData={labeledSeries}
               sensorSummaryData={sensorSummaryData}
@@ -228,7 +228,7 @@ export const IoTDashboard: React.FC = () => {
 
       {/* Alerts Section - Collapsible or always visible? Always visible for now */}
 
-      
+
       <PendingAlertsList loteId={effectiveLoteId} />
 
       {filteredSensors.length === 0 && (
@@ -245,33 +245,33 @@ export const IoTDashboard: React.FC = () => {
 };
 
 const SummaryCard = ({ title, value, icon, color = "default", info }: any) => {
-    const colors: any = {
-        success: "text-emerald-600 bg-emerald-50 border-emerald-100",
-        danger: "text-rose-600 bg-rose-50 border-rose-100",
-        default: "text-gray-800 bg-gray-50 border-gray-100"
-    };
+  const colors: any = {
+    success: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    danger: "text-rose-600 bg-rose-50 border-rose-100",
+    default: "text-gray-800 bg-gray-50 border-gray-100"
+  };
 
-    const icons: any = {
-        wifi: <Wifi className="w-5 h-5" />,
-        "wifi-off": <WifiOff className="w-5 h-5" />,
-        map: <MapPin className="w-5 h-5" />,
-        box: <Activity className="w-5 h-5" />
-    };
+  const icons: any = {
+    wifi: <Wifi className="w-5 h-5" />,
+    "wifi-off": <WifiOff className="w-5 h-5" />,
+    map: <MapPin className="w-5 h-5" />,
+    box: <Activity className="w-5 h-5" />
+  };
 
-    return (
-        <Card className={`border-1 shadow-sm ${colors[color].split(" ")[2]} ${colors[color].split(" ")[1]}`}>
-            <CardBody className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</p>
-                    <div className={`p-1.5 rounded-lg ${colors[color].split(" ")[1]} ${colors[color].split(" ")[0]}`}>
-                        {icons[icon]}
-                    </div>
-                </div>
-                <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
-                    {info && <span className="text-xs text-gray-400">{info}</span>}
-                </div>
-            </CardBody>
-        </Card>
-    );
+  return (
+    <Card className={`border-1 shadow-sm ${colors[color].split(" ")[2]} ${colors[color].split(" ")[1]}`}>
+      <CardBody className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</p>
+          <div className={`p-1.5 rounded-lg ${colors[color].split(" ")[1]} ${colors[color].split(" ")[0]}`}>
+            {icons[icon]}
+          </div>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
+          {info && <span className="text-xs text-gray-400">{info}</span>}
+        </div>
+      </CardBody>
+    </Card>
+  );
 };

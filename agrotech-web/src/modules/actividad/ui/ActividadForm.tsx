@@ -53,12 +53,14 @@ export default function ActividadForm({
         herramientas: [],
         horasActividad: 0,
         precioHoraActividad: 0,
+        estado: "PENDIENTE", // Default to Planned
       };
     }
 
     const fechaDate = initialData.fecha ? new Date(initialData.fecha) : new Date();
 
     return {
+      estado: (initialData.estado as "PENDIENTE" | "FINALIZADA") || "PENDIENTE",
       nombre: initialData.nombre || "",
       tipo: initialData.tipo || "",
       subtipo: initialData.subtipo || "",
@@ -104,22 +106,22 @@ export default function ActividadForm({
       defaultValues: processedDefaultValues,
     });
 
-    const onError = (errors: any) => {
-      console.log("Validation Errors:", errors);
-      toast.error("Por favor corrija los errores en el formulario");
-    }
+  const onError = (errors: any) => {
+    console.log("Validation Errors:", errors);
+    toast.error("Por favor corrija los errores en el formulario");
+  }
 
-    const handleFormSubmit: SubmitHandler<ActividadFormData> = (data) => {
-      // Transform Form Data (Date) to Payload (String)
-      const payload: CreateActividadPayload = {
-        ...data,
-        fecha: data.fecha.toISOString(),
-        subLoteId: data.subLoteId, // Direct assignment now possible
-        cantidadPlantas: data.cantidadPlantas,
-        kgRecolectados: data.kgRecolectados,
-      };
-      return onSubmit(payload);
+  const handleFormSubmit: SubmitHandler<ActividadFormData> = (data) => {
+    // Transform Form Data (Date) to Payload (String)
+    const payload: CreateActividadPayload = {
+      ...data,
+      fecha: data.fecha.toISOString(),
+      subLoteId: data.subLoteId, // Direct assignment now possible
+      cantidadPlantas: data.cantidadPlantas,
+      kgRecolectados: data.kgRecolectados,
     };
+    return onSubmit(payload);
+  };
 
   // ... inside component
   const [cultivos, setCultivos] = useState<any[]>([]);
@@ -148,12 +150,10 @@ export default function ActividadForm({
     }
   }, [cultivoId, cultivos, setValue]);
 
-  const evidencias = watch("evidencias");
-  const isFinalized =
-    initialData?.estado === "FINALIZADA" ||
-    initialData?.estado === "Finalizada";
-  const willFinalize = evidencias && evidencias.length > 0;
-  const isReservationMode = !isFinalized && !willFinalize;
+  const estado = watch("estado");
+
+  const isFinalized = estado === "FINALIZADA" || initialData?.estado === "FINALIZADA"; // Trust form state first
+  const isReservationMode = !isFinalized; // Simplified logic: If not finalized, it is planned/reserved
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit, onError)} className="space-y-6">
@@ -161,10 +161,47 @@ export default function ActividadForm({
         aria-label="Opciones de actividad"
         color="success"
         variant="underlined"
+        classNames={{
+          tabList: "gap-6",
+          cursor: "w-full bg-green-600",
+          tab: "max-w-fit px-4 h-12",
+        }}
       >
         <Tab key="general" title="General">
           <Card>
             <CardBody>
+              {/* State Toggle Section */}
+              <div className="mb-6 p-4 rounded-lg bg-gray-50 border border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-800">Estado de la Actividad</h3>
+                  <p className="text-sm text-gray-500">
+                    {isReservationMode
+                      ? "Planificando para el futuro. Los recursos se reservarán."
+                      : "Registrando actividad ya completada. Los recursos se consumirán inmediatamente."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 bg-white p-1 rounded-full border border-gray-300">
+                  <Button
+                    size="sm"
+                    color={isReservationMode ? "warning" : "default"}
+                    variant={isReservationMode ? "solid" : "light"}
+                    className={isReservationMode ? "text-white" : "text-gray-500"}
+                    onPress={() => setValue("estado", "PENDIENTE")}
+                  >
+                    Planificada (Pendiente)
+                  </Button>
+                  <Button
+                    size="sm"
+                    color={!isReservationMode ? "success" : "default"}
+                    variant={!isReservationMode ? "solid" : "light"}
+                    className={!isReservationMode ? "text-white" : "text-gray-500"}
+                    onPress={() => setValue("estado", "FINALIZADA")}
+                  >
+                    Realizada (Finalizada)
+                  </Button>
+                </div>
+              </div>
+
               <GeneralSection
                 control={control}
                 watch={watch}
@@ -221,11 +258,12 @@ export default function ActividadForm({
         </Tab>
       </Tabs>
 
-      <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+      <div className="sticky bottom-0 z-20 bg-white border-t border-gray-200 p-4 flex justify-end gap-2 -mx-6 -mb-6 rounded-b-lg mt-6">
         {onCancel && (
           <Button
             color="danger"
-            variant="flat"
+            variant="light"
+            className="text-black"
             onPress={onCancel}
           >
             Cancelar
@@ -234,7 +272,7 @@ export default function ActividadForm({
         <Button
           type="submit"
           color="success"
-          className="text-white shadow-lg shadow-green-100"
+          className="text-black font-medium"
           isLoading={isLoading}
           startContent={<Save className="w-4 h-4" />}
         >

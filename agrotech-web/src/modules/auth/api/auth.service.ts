@@ -52,9 +52,18 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
 
   const { data } = await api.post('/auth/login', body);
 
+  if (data.success === false) {
+    throw new Error(data.message);
+  }
+
   const user = mapUserFromBackend(data.user);
 
   return { user };
+}
+
+export async function completeRegistration(request: { correo: string; code: string }) {
+  const { data } = await api.post('/auth/complete-register', request);
+  return data;
 }
 
 /* ===========================
@@ -64,6 +73,7 @@ export async function logout(): Promise<LogoutResponse> {
   const { data } = await api.post('/auth/logout');
   return data;
 }
+
 
 /* ===========================
  * REQUEST PASSWORD RESET
@@ -78,5 +88,12 @@ export async function requestPasswordReset(request: RequestResetRequest): Promis
  * =========================== */
 export async function resetPassword(request: ResetPasswordRequest): Promise<ResetPasswordResponse> {
   const { data } = await api.post('/auth/reset-password', request);
+  return data;
+}
+/* ===========================
+ * VERIFY RESET CODE
+ * =========================== */
+export async function verifyResetCode(request: { correo: string; code: string }): Promise<{ valid: boolean; message: string }> {
+  const { data } = await api.post('/auth/verify-reset-code', request);
   return data;
 }

@@ -1,4 +1,5 @@
-import { IsNumber, IsString, IsOptional } from 'class-validator';
+import { IsNumber, IsString, IsOptional, IsEnum } from 'class-validator';
+import { TipoMovimiento } from '../entities/movimiento-insumo.entity';
 import { CreateInsumoDto } from './create-insumo.dto';
 import { UpdateInsumoDto } from './update-insumo.dto';
 
@@ -21,7 +22,7 @@ export class InventoryFindInsumoByIdDoDto {
   id: number;
 }
 
-export class InventoryCreateInsumoDoDto extends CreateInsumoDto {}
+export class InventoryCreateInsumoDoDto extends CreateInsumoDto { }
 
 export class InventoryUpdateInsumoDoDto {
   @IsNumber()
@@ -39,8 +40,8 @@ export class InventoryCreateMovimientoDoDto {
   @IsNumber()
   insumoId: number;
 
-  @IsString()
-  tipo: string;
+  @IsEnum(TipoMovimiento)
+  tipo: TipoMovimiento;
 
   @IsOptional()
   @IsNumber()
@@ -66,8 +67,8 @@ export class InventoryFindMovimientosByInsumoDoDto {
   insumoId: number;
 }
 
-export class InventoryFindAllAlmacenesDoDto {}
+export class InventoryFindAllAlmacenesDoDto { }
 
-export class InventoryFindAllProveedoresDoDto {}
+export class InventoryFindAllProveedoresDoDto { }
 
-export class InventoryFindAllCategoriasDoDto {}
+export class InventoryFindAllCategoriasDoDto { }

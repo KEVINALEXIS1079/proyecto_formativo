@@ -2,9 +2,9 @@ import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Button
 import { useState, useRef, useEffect } from "react";
 import { SubloteMap } from "../../cultivos/widgets";
 import { useCreateSublote, useUpdateSublote, useLotesList } from "../../cultivos/hooks/useLotes";
-import type { CreateSubloteDTO, Sublote } from "../../cultivos/model/types";
+import type { Sublote } from "../../cultivos/model/types";
 import { useGeoData } from "../hooks/useGeoData";
-import { Trash2 } from "lucide-react";
+import { Trash2, Info } from "lucide-react";
 
 interface Props {
     isOpen: boolean;
@@ -12,7 +12,12 @@ interface Props {
     subloteToEdit?: Sublote;
 }
 
+// Imports
+import { validateSublote } from "../utils/spatial-validation";
+import MapValidationAlert from "../components/MapValidationAlert";
+
 export default function SubloteModal({ isOpen, onClose, subloteToEdit }: Props) {
+    // ... hooks
     const { refetch } = useGeoData();
     const { data: lotes = [] } = useLotesList();
     const { createSublote, loading: creating } = useCreateSublote();
@@ -25,12 +30,15 @@ export default function SubloteModal({ isOpen, onClose, subloteToEdit }: Props) 
     const [coordenadas, setCoordenadas] = useState<{ latitud_sublote: number; longitud_sublote: number }[]>([]);
     const [area, setArea] = useState(0);
     const [isReadOnly, setIsReadOnly] = useState(false);
+    // NEW: Validation state
+    const [validationError, setValidationError] = useState<string | null>(null);
 
     const mapContainerRef = useRef<HTMLDivElement>(null);
 
     // Initialize form when opening for edit
     useEffect(() => {
         if (isOpen) {
+            setValidationError(null); // Reset
             if (subloteToEdit) {
                 setNombreSublote(subloteToEdit.nombre_sublote || "");
                 setLoteSeleccionado(String(subloteToEdit.id_lote_fk || subloteToEdit.idLote || ""));
@@ -61,25 +69,63 @@ export default function SubloteModal({ isOpen, onClose, subloteToEdit }: Props) 
             return;
         }
 
+        // SPATIAL VALIDATION
+        const parentLote = lotes.find(l => String(l.id_lote_pk) === loteSeleccionado);
+        // We need existing sublotes for this parent. 
+        // NOTE: The `lotes` array from `useLotesList` typically includes `sublotes` nested property.
+        // If not, we might need to fetch them. Assuming they are present as `useLotesList` implies full hierarchy primarily.
+        const existingSublotes = parentLote?.sublotes || [];
+
+        const validation = validateSublote(coordenadas, parentLote, existingSublotes, subloteToEdit?.id_sublote_pk);
+        if (!validation.isValid) {
+            setValidationError(validation.message || "Error de validación espacial");
+            return;
+        }
+
         if (coordenadas.length < 3) {
-            alert("Debes dibujar un polígono válido (mínimo 3 puntos).");
+            setValidationError("Debes dibujar un polígono válido (mínimo 3 puntos).");
             return;
         }
         if (area <= 0) {
-            alert("El área debe ser mayor a 0");
+            setValidationError("El área debe ser mayor a 0");
             return;
         }
 
         try {
-            const payload: CreateSubloteDTO = {
-                nombre_sublote: nombreSublote.trim(),
-                coordenadas_sublote: coordenadas.map((c) => ({
-                    latitud_sublote: c.latitud_sublote,
-                    longitud_sublote: c.longitud_sublote,
-                })),
-                area_sublote: area,
-                id_lote_fk: loteSeleccionado ? Number(loteSeleccionado) : 0,
+            // Prepare GeoJSON Polygon
+            const points = coordenadas.map(c => [c.longitud_sublote, c.latitud_sublote]);
+            if (points.length > 0) {
+                const first = points[0];
+                const last = points[points.length - 1];
+                if (first[0] !== last[0] || first[1] !== last[1]) {
+                    points.push(first);
+                }
+            }
+
+            const geojson = {
+                type: "Polygon",
+                coordinates: [points]
             };
+
+            // Payload MUST match CreateSubLoteDto: { loteId, nombre, geom }
+            const payload: any = {
+                nombre: nombreSublote.trim(), // Backend: 'nombre'
+                // area_sublote: area, // Backend does not listed area? It likely calculates it or stores it in geom properties?
+                // Let's keep compatible fields just in case, but prioritize DTO keys
+                loteId: loteSeleccionado ? Number(loteSeleccionado) : null, // Backend: 'loteId'
+                geom: geojson, // Backend: 'geom'
+                descripcion: "", // Optional
+
+                // Keeping these ONLY if mapper downstream needs them, but purely for DTO compliance:
+                // nombre_sublote: nombreSublote.trim(),
+                // id_lote: loteSeleccionado ? Number(loteSeleccionado) : null,
+                // geometria: geojson 
+            };
+
+            // Note: If update uses proper DTO, it probably uses UpdateSubLoteDto which usually matches Create.
+            // But verify if Update maps differently. Assuming standard CRUD.
+
+            console.log("Sending Sublote Payload (DTO compliant):", payload);
 
             if (subloteToEdit) {
                 await updateSublote(subloteToEdit.id_sublote_pk!, payload);
@@ -87,17 +133,22 @@ export default function SubloteModal({ isOpen, onClose, subloteToEdit }: Props) 
                 await createSublote(payload);
             }
 
-            refetch(); // Refresh geo data
+            refetch();
             onClose();
         } catch (error: any) {
             console.error("Error saving sublote:", error);
+
+            // Extract detailed message
+            let serverMsg = "";
             if (error.response?.data) {
-                console.error("Server response:", error.response.data);
-                const errorMsg = error.response.data.message || error.response.data.error || "Error al guardar";
-                alert(Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg);
+                const d = error.response.data;
+                serverMsg = d.message || d.error || JSON.stringify(d);
+                if (Array.isArray(serverMsg)) serverMsg = serverMsg.join("\n");
             } else {
-                alert("No se pudo guardar el sublote. Verifica que esté completamente dentro del lote y no se solape con otros sublotes.");
+                serverMsg = error.message || String(error);
             }
+
+            alert(`Error al guardar: ${serverMsg}`);
         }
     };
 
@@ -121,9 +172,20 @@ export default function SubloteModal({ isOpen, onClose, subloteToEdit }: Props) 
                             {subloteToEdit ? (isReadOnly ? "Detalles del Sublote" : "Editar Sublote") : "Registrar Nuevo Sublote"}
                         </ModalHeader>
                         <ModalBody className="p-0 overflow-hidden">
+                            {/* ... Instructions ... */}
+                            <div className="bg-success-50 dark:bg-success-900/20 p-4 border-b border-success-100 dark:border-success-900/50 flex gap-3 items-start">
+                                <Info className="w-5 h-5 text-success-600 mt-0.5 flex-shrink-0" />
+                                <div className="text-sm text-success-800 dark:text-success-200">
+                                    <p className="font-semibold mb-1">Instrucciones</p>
+                                    <p>
+                                        Primero <strong>selecciona un lote principal</strong>. Luego, dibuja el sublote haciendo clic dentro de los límites del lote seleccionado. Asegúrate de cerrar el polígono uniendo el último punto con el primero.
+                                    </p>
+                                </div>
+                            </div>
                             <div className="flex flex-col lg:flex-row h-full">
                                 {/* Left Column: Parameters */}
                                 <div className="w-full lg:w-5/12 p-6 overflow-y-auto border-r border-divider space-y-6 bg-content1/50">
+                                    {/* ... Inputs ... */}
                                     <div>
                                         <h3 className="text-lg font-semibold mb-4">Información General</h3>
                                         <div className="space-y-4">
@@ -242,6 +304,11 @@ export default function SubloteModal({ isOpen, onClose, subloteToEdit }: Props) 
 
                                 {/* Right Column: Map */}
                                 <div className="w-full lg:w-7/12 h-[400px] lg:h-auto relative bg-gray-50 dark:bg-zinc-900" ref={mapContainerRef}>
+                                    {/* VALIDATION ALERT OVERLAY */}
+                                    <MapValidationAlert
+                                        message={validationError}
+                                        onClose={() => setValidationError(null)}
+                                    />
                                     <div className="absolute inset-0 p-4">
                                         <SubloteMap
                                             coordenadas={coordenadas}
@@ -250,6 +317,8 @@ export default function SubloteModal({ isOpen, onClose, subloteToEdit }: Props) 
                                             loteSeleccionado={loteSeleccionado}
                                             lotes={lotes}
                                             isEditing={!isReadOnly}
+                                            onError={(msg) => setValidationError(msg)}
+                                            editingId={subloteToEdit?.id_sublote_pk}
                                         />
                                     </div>
                                 </div>

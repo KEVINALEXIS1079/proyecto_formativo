@@ -23,11 +23,11 @@ export class AuthService {
     private emailService: EmailService,
     private redisService: RedisService,
     private verificationService: VerificationService,
-  ) {}
+  ) { }
 
-  // RF01: Registro de usuario
-  async register(registerDto: RegisterDto) {
-    // Validar unicidad de identificacion y correo
+  // RF01: Iniciar registro (Pre-registro en Redis)
+  async startRegistration(registerDto: RegisterDto) {
+    // Validar unicidad
     const existingUser = await this.usuarioRepo.findOne({
       where: [
         { identificacion: registerDto.identificacion },
@@ -36,63 +36,74 @@ export class AuthService {
     });
 
     if (existingUser) {
-        // Si el usuario ya existe y está activo, error normal
-        if (existingUser.estado !== 'pendiente_verificacion') {
-            if (existingUser.correo === registerDto.correo) {
-                throw new BadRequestException('El correo ya está registrado');
-            }
-            throw new BadRequestException('La identificación ya está registrada');
-        }
-
-        // Si existe pero está PENDIENTE, permitimos "sobreescribir/actualizar"
-        // para recuperar el registro fallido (Healing).
-        const passwordHash = await bcrypt.hash(registerDto.password, 10);
-        
-        existingUser.nombre = registerDto.nombre;
-        existingUser.apellido = registerDto.apellido;
-        existingUser.identificacion = registerDto.identificacion;
-        existingUser.idFicha = (registerDto.idFicha ?? null) as any;
-        existingUser.telefono = (registerDto.telefono ?? null) as any;
-        existingUser.correo = registerDto.correo;
-        existingUser.passwordHash = passwordHash;
-        // Rol se mantiene o se resetea? Mejor mantener o resetear a INVITADO si se requiere
-        // FIX: Cambiar a ADMINISTRADOR temporalmente para evitar 403 Forbidden (iot.ver)
-        existingUser.rolId = ROLES.ADMINISTRADOR; 
-        
-        const savedUser = await this.usuarioRepo.save(existingUser);
-        
-        // Invalidar códigos viejos? generateCode crea uno nuevo. 
-        // verifyEmail usará el último válido o cualquiera válido.
-        await this.generateVerificationCode(savedUser.id, savedUser.correo);
-        
-        const { passwordHash: _ph, ...userWithoutPassword } = savedUser;
-        return userWithoutPassword;
+      // Recuperación si está pendiente
+      if (existingUser.estado === 'pendiente_verificacion') {
+        // Re-enviar código para el existente
+        await this.generateVerificationCode(existingUser.id, existingUser.correo);
+        return { message: 'Usuario pendiente encontrado. Código reenviado.' };
+      }
+      if (existingUser.correo === registerDto.correo) throw new BadRequestException('El correo ya está registrado');
+      throw new BadRequestException('La identificación ya está registrada');
     }
 
-    // Encriptar contraseña
-    const passwordHash = await bcrypt.hash(registerDto.password, 10);
+    // Generar código
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const usuario = this.usuarioRepo.create({
-      nombre: registerDto.nombre,
-      apellido: registerDto.apellido,
-      identificacion: registerDto.identificacion,
-      idFicha: registerDto.idFicha,
-      telefono: registerDto.telefono,
-      correo: registerDto.correo,
-      passwordHash,
-      // FIX: Default rol ADMINISTRADOR para evitar problemas de permisos
-      rolId: ROLES.ADMINISTRADOR,
-      estado: 'pendiente_verificacion',
+    // Hash password antes de guardar en Redis
+    const passwordHash = await bcrypt.hash(registerDto.password, 10);
+    const userToStore = { ...registerDto, passwordHash, password: undefined };
+
+    // Guardar en Redis (TTL 30 min)
+    await this.redisService.getClient().setex(`pre-reg:${registerDto.correo}`, 1800, JSON.stringify({ user: userToStore, code }));
+
+    // Enviar email
+    await this.emailService.sendVerificationEmail(registerDto.correo, code);
+
+    return { message: 'Código de verificación enviado. Revisa tu correo.' };
+  }
+
+  // RF01: Completar registro
+  async completeRegistration(correo: string, code: string) {
+    const data = await this.redisService.getClient().get(`pre-reg:${correo}`);
+    if (!data) {
+      // throw new BadRequestException('Sesión de registro expirada...');
+      return { success: false, message: 'Sesión de registro expirada o no encontrada. Regístrate de nuevo.' };
+    }
+
+    const { user, code: storedCode } = JSON.parse(data);
+    if (storedCode !== code) {
+      // throw new BadRequestException('Código inválido');
+      return { success: false, message: 'Código inválido' };
+    }
+
+    // Crear usuario
+    const newUser = this.usuarioRepo.create({
+      nombre: user.nombre,
+      apellido: user.apellido,
+      identificacion: user.identificacion,
+      idFicha: user.idFicha,
+      telefono: user.telefono,
+      correo: user.correo,
+      passwordHash: user.passwordHash,
+      // Rol por defecto
+      rolId: ROLES.INVITADO,
+      // Ya verificado
+      estado: 'activo',
+      emailVerifiedAt: new Date(),
     });
 
-    const savedUser = await this.usuarioRepo.save(usuario);
+    const saved = await this.usuarioRepo.save(newUser);
 
-    // Generar código de verificación
-    await this.generateVerificationCode(savedUser.id, savedUser.correo);
+    // Limpiar Redis
+    await this.redisService.getClient().del(`pre-reg:${correo}`);
 
-    // Retornar usuario sin password
-    const { passwordHash: _, ...userWithoutPassword } = savedUser;
-    return userWithoutPassword;
+    const { passwordHash: _, ...result } = saved;
+    return { success: true, user: result, message: 'Registro completado' };
+  }
+
+  // Deprecated direct register (kept for compatibility if needed, using startRegistration logic is preferred)
+  async register(registerDto: RegisterDto) {
+    return this.startRegistration(registerDto);
   }
 
   // RF02: Generar código de verificación
@@ -105,12 +116,14 @@ export class AuthService {
   async verifyEmail(verifyDto: VerifyEmailDto) {
     const usuario = await this.usuarioRepo.findOne({ where: { correo: verifyDto.correo } });
     if (!usuario) {
-      throw new NotFoundException('Usuario no encontrado');
+      // throw new NotFoundException('Usuario no encontrado');
+      return { success: false, message: 'Usuario no encontrado' };
     }
 
     const isValid = await this.verificationService.verifyCode('verify', usuario.id, verifyDto.code);
     if (!isValid) {
-      throw new BadRequestException('Código inválido, expirado o ya usado');
+      // throw new BadRequestException('Código inválido, expirado o ya usado');
+      return { success: false, message: 'Código inválido, expirado o ya usado' };
     }
 
     // Marcar email como verificado
@@ -130,7 +143,7 @@ export class AuthService {
       { usedAt: new Date() },
     );
 
-    return { message: 'Correo verificado exitosamente' };
+    return { success: true, message: 'Correo verificado exitosamente' };
   }
 
   // RF02: Reenviar código de verificación
@@ -166,11 +179,11 @@ export class AuthService {
 
     // Verificar status
     if (usuario.estado === 'pendiente_verificacion') {
-        throw new UnauthorizedException('Debes verificar tu correo electrónico antes de iniciar sesión');
+      throw new UnauthorizedException('Debes verificar tu correo electrónico antes de iniciar sesión');
     }
 
     if (usuario.estado === 'pendiente_aprobacion') {
-        throw new UnauthorizedException('Tu cuenta está pendiente de aprobación por un administrador');
+      throw new UnauthorizedException('Tu cuenta está pendiente de aprobación por un administrador');
     }
 
     // Verificar que el usuario tenga el email verificado (estado activo)
@@ -264,14 +277,15 @@ export class AuthService {
   async requestPasswordReset(requestDto: RequestResetDto) {
     const usuario = await this.usuarioRepo.findOne({ where: { correo: requestDto.correo } });
 
-    // No revelar si el correo existe o no (seguridad)
     if (!usuario) {
-      return { message: 'Si el correo existe, recibirás un código de recuperación' };
+      // throw new NotFoundException('El correo no está registrado en el sistema');
+      // Return success: false to handle it gracefully in frontend
+      return { success: false, message: 'El correo no está registrado en el sistema' };
     }
 
     await this.verificationService.generateCode(usuario.correo, 'reset', usuario.id);
 
-    return { message: 'Si el correo existe, recibirás un código de recuperación' };
+    return { success: true, message: 'Código de recuperación enviado a tu correo' };
   }
 
   // RF05: Resetear contraseña
@@ -309,6 +323,37 @@ export class AuthService {
     // TODO: Invalidar todas las sesiones activas del usuario (Redis)
 
     return { message: 'Contraseña actualizada exitosamente' };
+  }
+
+  // RF05: Verificar código de recuperación (sin resetear)
+  async verifyResetCode(correo: string, code: string) {
+    const usuario = await this.usuarioRepo.findOne({ where: { correo } });
+    if (!usuario) {
+      // Por seguridad, puedes retornar error genérico o falso.
+      // Retornamos falso para que el frontend sepa que no es válido,
+      // pero intentamos no filtrar info si es posible.
+      // En este caso, si llega aquí es porque el usuario ya ingresó el correo.
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const emailCode = await this.emailCodeRepo.findOne({
+      where: {
+        usuarioId: usuario.id,
+        tipo: 'reset',
+        code,
+        usedAt: IsNull(),
+      },
+    });
+
+    if (!emailCode) {
+      return { valid: false, message: 'Código inválido o ya usado' };
+    }
+
+    if (new Date() > emailCode.expiresAt) {
+      return { valid: false, message: 'Código expirado' };
+    }
+
+    return { valid: true, message: 'Código válido' };
   }
 
 }

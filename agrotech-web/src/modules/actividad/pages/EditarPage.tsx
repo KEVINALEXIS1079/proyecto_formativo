@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
-import { Card } from "@heroui/react";
+import { Card, Spinner } from "@heroui/react";
 import { Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -34,7 +34,9 @@ export default function EditarPage() {
 
   if (isLoadingData) {
     return (
-      <div className="p-8 text-center">Cargando datos de la actividad...</div>
+      <div className="p-8 flex justify-center">
+        <Spinner color="success" label="Cargando datos de la actividad..." />
+      </div>
     );
   }
 
@@ -53,7 +55,13 @@ export default function EditarPage() {
         <ActividadForm
           onSubmit={handleSubmit}
           isLoading={updateMutation.isPending}
-          initialData={actividad}
+          initialData={{
+            ...actividad,
+            herramientas: actividad.herramientas?.map((h: any) => ({
+              activoFijoId: h.activoFijoId,
+              horasUso: h.horasEstimadas
+            }))
+          }}
           submitLabel="Guardar Cambios"
         />
       </Card>

@@ -1,23 +1,22 @@
-import { useState } from "react";
+import { } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useInsumoById } from "../hooks/useInsumoById";
 import { useUpdateInsumo } from "../hooks/useUpdateInsumo";
-import { useUploadInsumoImage } from "../hooks/useUploadInsumoImage";
+
 import { ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { InsumoForm } from "../widgets/InsumoForm";
-import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
+import { Modal, ModalContent, ModalHeader, ModalBody, Spinner } from "@heroui/react";
 import type { UpdateInsumoInput } from "../model/types";
 
 export default function EditarInsumoPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const insumoId = parseInt(id!);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { data: insumo, isLoading: isLoadingInsumo } = useInsumoById(insumoId);
   const updateMutation = useUpdateInsumo();
-  const uploadMutation = useUploadInsumoImage();
+
 
   const handleSubmit = (data: UpdateInsumoInput) => {
     console.log('DEBUG: Editando insumo con data:', data);
@@ -26,18 +25,7 @@ export default function EditarInsumoPage() {
       {
         onSuccess: () => {
           toast.success("Insumo actualizado correctamente");
-          if (selectedFile) {
-            uploadMutation.mutate(
-              { id: insumoId, file: selectedFile },
-              {
-                onSuccess: () => {
-                  navigate(`/inventario/${insumoId}`);
-                },
-              }
-            );
-          } else {
-            navigate(`/inventario/${insumoId}`);
-          }
+          navigate(`/inventario/${insumoId}`);
         },
         onError: (error) => {
           console.error('Error al actualizar insumo:', error);
@@ -47,14 +35,14 @@ export default function EditarInsumoPage() {
     );
   };
 
-  const handleFileChange = (file: File | null) => {
-    setSelectedFile(file);
-  };
+
 
   if (isLoadingInsumo) {
     return (
       <div className="mx-auto max-w-6xl p-4 md:p-6">
-        <p>Cargando insumo...</p>
+        <div className="flex justify-center">
+          <Spinner color="success" label="Cargando insumo..." />
+        </div>
       </div>
     );
   }
@@ -67,21 +55,7 @@ export default function EditarInsumoPage() {
     );
   }
 
-  const initialValues = {
-    nombre: insumo.nombre,
-    descripcion: insumo.descripcion,
-    imagenUrl: insumo.imagenUrl,
-    presentacionTipo: insumo.presentacionTipo,
-    presentacionCantidad: insumo.presentacionCantidad,
-    presentacionUnidad: insumo.presentacionUnidad,
-    unidadBase: insumo.unidadBase,
-    stockPresentaciones: insumo.stockPresentaciones,
-    precioUnitario: insumo.precioUnitarioPresentacion,
-    fechaIngreso: insumo.fechaIngreso,
-    idCategoria: insumo.categoria.id,
-    idProveedor: insumo.proveedor.id,
-    idAlmacen: insumo.almacen.id,
-  };
+
 
   return (
     <div className="mx-auto max-w-6xl p-4 md:p-6">

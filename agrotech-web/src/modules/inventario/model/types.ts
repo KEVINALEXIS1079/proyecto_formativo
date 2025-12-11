@@ -4,7 +4,7 @@ export type UnidadPresentacion = 'kg' | 'g' | 'lb' | 'L' | 'mL' | 'galón' | 'un
 
 export type UnidadBase = 'g' | 'cm3' | 'unidad';
 
-export type TipoMovimiento = 'REGISTRO' | 'AJUSTE' | 'CONSUMO' | 'TRASLADO' | 'ELIMINACION' | 'INICIAL';
+export type TipoMovimiento = 'REGISTRO' | 'AJUSTE' | 'CONSUMO' | 'TRASLADO' | 'ELIMINACION' | 'SALIDA' | 'ENTRADA' | 'RESERVA_USO' | 'DEVOLUCION' | 'MANTENIMIENTO_SALIDA' | 'MANTENIMIENTO_ENTRADA' | 'RESERVA' | 'LIBERACION_RESERVA' | 'RESTAURACION' | 'INICIAL';
 
 export interface CategoriaInsumo {
   id: number;
@@ -46,13 +46,38 @@ export interface Insumo {
   proveedor: Proveedor;
   almacen: Almacen;
   // Campos de Activos Fijos
-  estado?: 'DISPONIBLE' | 'EN_USO' | 'MANTENIMIENTO' | 'DADO_DE_BAJA';
+  estado?: 'DISPONIBLE' | 'EN_USO' | 'MANTENIMIENTO' | 'DADO_DE_BAJA' | 'AGOTADO' | 'BAJO_STOCK' | 'RESERVADO';
   costoAdquisicion?: number;
   valorResidual?: number;
   vidaUtilHoras?: number;
   horasUsadas?: number;
   depreciacionAcumulada?: number;
   fechaUltimoMantenimiento?: string;
+  stockReservado?: number;
+  stockMinimo?: number;
+}
+
+export type ReservaEstado = 'ACTIVA' | 'LIBERADA' | 'UTILIZADA';
+
+export interface Reserva {
+  id: number;
+  insumoId: number;
+  cantidad: number;
+  fechaReserva: string;
+  motivo?: string;
+  estado: ReservaEstado;
+  usuarioId: number;
+  actividadId?: number;
+  insumo?: Insumo;
+  createdAt?: string;
+}
+
+export interface CreateReservaInput {
+  insumoId: number;
+  cantidad: number;
+  motivo?: string;
+  fechaReserva?: string;
+  actividadId?: number;
 }
 
 export interface CreateActivoFijoInput {
@@ -114,6 +139,7 @@ export interface RemoveInsumoInput {
 export interface CreateCategoriaInsumoInput {
   nombre: string;
   descripcion?: string;
+  tipoInsumo?: 'CONSUMIBLE' | 'NO_CONSUMIBLE';
 }
 
 export interface UpdateCategoriaInsumoInput extends Partial<CreateCategoriaInsumoInput> { }

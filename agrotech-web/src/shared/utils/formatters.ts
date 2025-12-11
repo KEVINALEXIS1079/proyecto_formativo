@@ -22,7 +22,10 @@ export function formatDateTime(date: string | Date): string {
   });
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | undefined | null): string {
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return "$0";
+  }
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency: "COP",
