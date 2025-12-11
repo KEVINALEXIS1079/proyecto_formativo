@@ -1,180 +1,95 @@
 ---
-title: API de Cultivos
-description: Documentacion del modulo de cultivos con reglas de ubicacion (lote/sublote), auditoria y restricciones de unicidad
+title: Cultivos
+description: Documentación de los endpoints del módulo de cultivos
 ---
 
 # API de Cultivos
 
-## Vision general
+Gestiona el ciclo de vida de los cultivos, desde la siembra hasta la cosecha/finalización.
 
-El modulo de cultivos administra siembras asociadas a lotes o sublotes. Se aplica una regla XOR de ubicacion (loteId o subLoteId, nunca ambos) y se impide tener dos cultivos activos en la misma ubicacion. Las operaciones de edicion exigen motivo y registran historial de cambios. No se permite eliminar cultivos: se debe cerrar cambiando el estado.
+## Endpoints de Cultivos
 
-### Caracteristicas principales
+### Crear Cultivo
+Registra un nuevo cultivo en el sistema. Soporta la carga de una imagen opcional.
 
-- **XOR ubicacion**: se debe enviar `loteId` o `subLoteId`. Si un lote tiene sublotes, solo se permite asociar al sublote.
-- **Unicidad de cultivo activo**: solo un cultivo activo por lote o sublote.
-- **Auditoria**: cada actualizacion requiere `motivo` y guarda diffs en `cultivo_historial`.
-- **Estados**: inicia en `activo`; `fechaFinalizacion` marca `finalizado`. Borrado no permitido.
-- **Uploads**: imagen opcional con campo `img` (multipart/form-data), guardada en `uploads/cultivos`.
+- **URL**: `/cultivos`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `cultivos.crear`
+- **Content-Type**: `multipart/form-data` (si envía imagen) o `application/json`
 
-### Permisos clave
+**Body (FormData o JSON):**
+- `nombre`: string (requerido)
+- `tipoCultivo`: string (requerido, ej: "MAIZ")
+- `fechaSiembra`: string (ISO 8601, requerido)
+- `fechaCosechaEstimada`: string (ISO 8601, opcional)
+- `densidadPlantas`: number (opcional)
+- `loteId`: number (requerido)
+- `subLoteId`: number (opcional)
+- `img`: File (imagen del cultivo, opcional)
 
-- `cultivos.ver`, `cultivos.crear`, `cultivos.editar`, `cultivos.eliminar`
+**Respuesta Exitosa (201 Created):**
+Objeto JSON con los datos del cultivo creado.
 
-## Endpoints
+---
 
-Base path: `/cultivos`
+### Listar Cultivos
+Obtiene una lista de cultivos con opciones de filtrado.
 
-### POST /cultivos
+- **URL**: `/cultivos`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `cultivos.ver`
 
-**Permisos:** `cultivos.crear`  
-**Contenido:** `multipart/form-data` (campo de archivo opcional `img`)
+**Parámetros de Consulta (Query Params):**
+- `q`: Búsqueda por nombre (parcial)
+- `loteId`: Filtrar por ID de lote
+- `subLoteId`: Filtrar por ID de sublote
+- `estado`: Filtrar por estado (ej: 'ACTIVO', 'COSECHADO', 'FINALIZADO')
+- `tipoCultivo`: Filtrar por tipo
 
-**Body:**
+---
 
-```json
-{
-  "nombreCultivo": "Tomate Cherry",
-  "tipoCultivo": "hortaliza",
-  "descripcion": "Ciclo 2024",
-  "loteId": 3,
-  "fechaSiembra": "2024-11-30",
-  "estado": "activo"
-}
-```
+### Ver Detalles de Cultivo
+Obtiene la información completa de un cultivo específico.
 
-**Reglas de negocio:**
+- **URL**: `/cultivos/:id`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `cultivos.ver`
 
-- Requiere `loteId` XOR `subLoteId`. Si el lote tiene sublotes registrados, obliga a usar `subLoteId`.
-- Si ya existe un cultivo activo en la misma ubicacion, responde 400.
-- Estado inicial se fuerza a `activo`; `fechaCreacion` se setea automaticamente.
+---
 
-**Respuesta 201 (ejemplo):**
+### Actualizar Cultivo
+Actualiza la información de un cultivo. Soporta actualización de imagen.
 
-```json
-{
-  "id": 21,
-  "nombreCultivo": "Tomate Cherry",
-  "tipoCultivo": "hortaliza",
-  "descripcion": "Ciclo 2024",
-  "loteId": 3,
-  "subLoteId": null,
-  "imgCultivo": "uploads/cultivos/cultivo-1701701111.png",
-  "fechaSiembra": "2024-11-30",
-  "fechaFinalizacion": null,
-  "estado": "activo",
-  "fechaCreacion": "2024-12-04T14:00:00.000Z",
-  "createdAt": "2024-12-04T14:00:00.000Z",
-  "updatedAt": "2024-12-04T14:00:00.000Z"
-}
-```
+- **URL**: `/cultivos/:id`
+- **Método**: `PATCH`
+- **Auth**: Requiere autenticación y permiso `cultivos.editar`
+- **Content-Type**: `multipart/form-data` o `application/json`
 
-### GET /cultivos
+**Body (FormData):**
+- Campos opcionales de creación (nombre, fechas, etc.)
+- `img`: Nuevo archivo de imagen (si se desea actualizar)
 
-**Permisos:** `cultivos.ver`
+**Respuesta:**
+Objeto actualizado del cultivo.
 
-Filtros soportados (`query`):
+---
 
-- `q`: texto (busca en nombre, tipo, descripcion)
-- `loteId`, `subLoteId`: numericos
-- `estado`: ej. `activo`, `finalizado`
-- `tipoCultivo`: texto parcial
+### Eliminar Cultivo
+Elimina un cultivo del sistema (o realiza borrado lógico según implementación).
 
-Retorna cultivos con relaciones `lote` y `subLote`.
+- **URL**: `/cultivos/:id`
+- **Método**: `DELETE`
+- **Auth**: Requiere autenticación y permiso `cultivos.eliminar`
 
-### GET /cultivos/:id
+---
 
-**Permisos:** `cultivos.ver`  
-Incluye `lote`/`subLote`.  
-Errores: 404 si no existe.
+### Historial de Cultivos
+Obtiene un historial de cambios o eventos del cultivo.
 
-### GET /cultivos/historial
+- **URL**: `/cultivos/historial`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `cultivos.ver`
 
-**Permisos:** `cultivos.ver`
-
-**Query opcional:** `limit` (por defecto 50), `cultivoId` para filtrar historial de un cultivo.
-
-Retorna entradas de `cultivo_historial` con usuario y ubicacion enlazadas.
-
-### PATCH /cultivos/:id
-
-**Permisos:** `cultivos.editar`  
-**Contenido:** `multipart/form-data` (campo `img` opcional)
-
-**Body (ejemplo):**
-
-```json
-{
-  "nombreCultivo": "Tomate Cherry - Lote 3",
-  "estado": "activo",
-  "motivo": "Actualizacion de nombre y foto"
-}
-```
-
-**Reglas de negocio:**
-
-- Campo `motivo` es obligatorio siempre.
-- No permite enviar `loteId` y `subLoteId` juntos.
-- Al mover ubicacion: valida que el lote sin sublotes; si el lote tiene sublotes, exige `subLoteId`.
-- Vuelve a validar unicidad de cultivo activo en el destino.
-- Guarda historial con diffs `{ campo: { previo, nuevo } }`; si no hay cambios tambien registra la intencion con motivo.
-
-### DELETE /cultivos/:id
-
-**Permisos:** `cultivos.eliminar`
-
-- Bloqueado por regla de negocio: responde 400 indicando que no se pueden eliminar cultivos; se debe cambiar el estado (ej. `finalizado`/`inactivo`).
-
-## Validaciones principales
-
-- `nombreCultivo`: requerido, texto.
-- `loteId` XOR `subLoteId`: al menos uno, nunca ambos.
-- Lote con sublotes: solo se admite `subLoteId`.
-- Unicidad: un solo cultivo `activo` por lote o sublote.
-- `motivo`: requerido en todas las ediciones.
-- Fechas: `fechaSiembra` y `fechaFinalizacion` en formato `YYYY-MM-DD`.
-
-## Entidades relacionadas
-
-### Cultivo
-
-```typescript
-{
-  id: number;
-  nombreCultivo: string;
-  tipoCultivo?: string;
-  descripcion?: string;
-  loteId?: number | null;
-  subLoteId?: number | null;
-  imgCultivo?: string; // ruta en uploads/cultivos
-  fechaSiembra?: Date;
-  fechaFinalizacion?: Date;
-  estado: string; // 'activo' por defecto
-  fechaCreacion: Date;
-  lote?: Lote;
-  subLote?: SubLote;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt?: Date;
-}
-```
-
-### CultivoHistorial
-
-```typescript
-{
-  id: number;
-  cultivoId: number;
-  usuarioId: number;
-  motivo: string;
-  cambios: Record<string, { previo: any; nuevo: any }> | null;
-  createdAt: Date;
-}
-```
-
-## Respuestas de error comunes
-
-- **400 Bad Request**: falta `motivo`, ubicacion duplicada, lote con sublotes sin subLoteId, XOR no cumplido, intento de delete.
-- **401 Unauthorized**: token JWT invalido.
-- **403 Forbidden**: permisos insuficientes.
-- **404 Not Found**: cultivo inexistente.
+**Parámetros:**
+- `cultivoId`: ID del cultivo (opcional, para filtrar)
+- `limit`: Número máximo de registros (default: 50)

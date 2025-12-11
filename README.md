@@ -69,8 +69,8 @@ Cada módulo tiene su propio README con instrucciones detalladas de instalación
 
 ### Prerrequisitos Globales
 
-- **Node.js** 18.x
-- **npm** 9.x
+- **Node.js** 22.x
+- **npm** 10.x
 - **PostgreSQL** 15.x con PostGIS 3.x
 - **Git** para clonar el repositorio
 

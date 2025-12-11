@@ -1,69 +1,177 @@
 ---
-title: API de Inventario
+title: Inventario
 description: Documentación de los endpoints del módulo de inventario
 ---
 
 # API de Inventario
 
-Esta sección documenta los endpoints relacionados con la gestión de inventario (insumos, almacenes, proveedores).
+Gestiona insumos, activos fijos, movimientos de stock, proveedores, almacenes y reservas.
 
-## Endpoints
+## Insumos y Activos Fijos
 
-### GET /inventory/insumos
-Obtiene la lista de insumos.
+### Listar Insumos
+Obtiene la lista de insumos (consumibles), con filtros.
 
-**Respuesta exitosa (200):**
+- **URL**: `/insumos`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `inventario.ver`
+
+**Parámetros de Consulta:**
+- `page`, `limit`: Paginación
+- `q`: Búsqueda
+- `categoriaId`: Filtrar por categoría
+- `proveedorId`: Filtrar por proveedor
+- `almacenId`: Filtrar por almacén
+- `tipoInsumo`: 'CONSUMIBLE' (default)
+
+### Crear Insumo
+Registra un nuevo insumo.
+
+- **URL**: `/insumos`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `inventario.crear`
+
+**Body (JSON - CreateInsumoDto):**
 ```json
 {
-  "data": [
-    {
-      "id": "number",
-      "name": "string",
-      "quantity": "number",
-      "unit": "string",
-      "category": "string"
-    }
-  ]
+  "nombre": "Fertilizante NPK",
+  "descripcion": "Saco 50kg",
+  "categoriaId": 1,
+  "unidadMedida": "kg",
+  "stockMinimo": 10
 }
 ```
 
-### POST /inventory/insumos
-Crea un nuevo insumo.
+### Listar Activos Fijos
+Obtiene la lista de activos fijos (maquinaria, herramientas).
 
-**Parámetros de entrada:**
-- `name`: string (requerido)
-- `quantity`: number (requerido)
-- `unit`: string (requerido)
-- `category`: string (opcional)
+- **URL**: `/insumos/activos-fijos`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `inventario.ver`
 
-**Respuesta exitosa (201):**
+### Crear Activo Fijo
+Registra un nuevo activo fijo (maquinaria, herramienta).
+
+- **URL**: `/insumos/activos-fijos`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `inventario.crear`
+- **Content-Type**: `multipart/form-data`
+
+**Body (FormData):**
+- `nombre`: string
+- `marca`: string
+- `modelo`: string
+- `serial`: string
+- `costoAdquisicion`: number
+- `fechaAdquisicion`: date
+- `vidaUtilAnios`: number
+- `imagen`: File (opcional)
+
+### Actualizar Insumo/Activo
+- **URL**: `/insumos/:id`
+- **Método**: `PATCH`
+
+### Eliminar Insumo/Activo
+- **URL**: `/insumos/:id`
+- **Método**: `DELETE`
+
+---
+
+## Movimientos de Inventario
+
+### Registrar Movimiento
+Registra entradas, salidas, mermas o ajustes.
+
+- **URL**: `/insumos/movimientos`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `inventario.crear`
+
+**Body (JSON):**
 ```json
 {
-  "id": "number",
-  "name": "string",
-  "quantity": "number",
-  "unit": "string",
-  "category": "string"
+  "insumoId": 1,
+  "tipo": "ENTRADA", // ENTRADA, SALIDA, AJUSTE
+  "cantidad": 50,
+  "costoUnitario": 2000,
+  "detalle": "Compra factura #123"
 }
 ```
 
-### GET /inventory/almacenes
-Obtiene la lista de almacenes.
+### Historial de Movimientos
+- **URL**: `/insumos/movimientos`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `inventario.ver`
 
-**Respuesta exitosa (200):**
-```json
-{
-  "data": [
-    {
-      "id": "number",
-      "name": "string",
-      "location": "string"
-    }
-  ]
-}
-```
+**Parámetros:** `insumoId`, `tipoMovimiento`, `fechaDesde`, `fechaHasta`.
 
-## Respuestas de Error
-- `400 Bad Request`: Datos inválidos
-- `401 Unauthorized`: No autorizado
-- `404 Not Found`: Recurso no encontrado
+### Alertas de Stock
+Obtiene productos con stock bajo.
+
+- **URL**: `/insumos/alerts`
+- **Método**: `GET`
+
+---
+
+## Mantenimiento de Activos
+
+### Registrar Mantenimiento
+- **URL**: `/insumos/activos-fijos/:id/mantenimiento`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `inventario.editar`
+
+### Finalizar Mantenimiento
+- **URL**: `/insumos/activos-fijos/:id/finalizar-mantenimiento`
+- **Método**: `PATCH`
+
+### Dar de Baja Activo
+- **URL**: `/insumos/activos-fijos/:id/dar-baja`
+- **Método**: `POST`
+
+---
+
+## Catálogos (Almacenes, Proveedores, Categorías)
+
+### Almacenes
+CRUD de almacenes.
+- `GET /insumos/almacenes`
+- `POST /insumos/almacenes`
+- `PATCH /insumos/almacenes/:id`
+- `DELETE /insumos/almacenes/:id`
+
+### Proveedores
+CRUD de proveedores.
+- `GET /insumos/proveedores`
+- `POST /insumos/proveedores`
+- `PATCH /insumos/proveedores/:id`
+- `DELETE /insumos/proveedores/:id`
+
+### Categorías
+CRUD de categorías de insumos.
+- `GET /insumos/categorias`
+- `POST /insumos/categorias`
+- `PATCH /insumos/categorias/:id`
+- `DELETE /insumos/categorias/:id`
+
+---
+
+## Reservas
+
+Gestiona la reserva de insumos para actividades futuras.
+
+### Crear Reserva
+- **URL**: `/reservas`
+- **Método**: `POST`
+
+### Listar Reservas
+- **URL**: `/reservas`
+- **Método**: `GET`
+
+### Liberar Reserva
+Cancela la reserva y devuelve el stock.
+- **URL**: `/reservas/:id/liberar`
+- **Método**: `PATCH`
+
+### Utilizar Reserva
+Confirma el uso de la reserva (convierte en salida).
+- **URL**: `/reservas/:id/utilizar`
+- **Método**: `PATCH`

@@ -1,0 +1,1212 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "f5f3270a-63fe-4546-9c08-00eb2439d1d1",
+      "name": "Telegram Trigger1",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        100
+      ],
+      "webhookId": "2f509b79-e593-4b42-9d87-18f9a23d7769",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$json.text}}",
+        "rules": {
+          "rules": [
+            {
+              "operation": "regex",
+              "value2": "^\\/login"
+            },
+            {
+              "operation": "regex",
+              "value2": "^\\/verActividades",
+              "output": 1
+            },
+            {
+              "operation": "regex",
+              "value2": "^\\/historialActividades",
+              "output": 2
+            },
+            {
+              "operation": "regex",
+              "value2": "^\\/registrarActividad",
+              "output": 3
+            }
+          ]
+        }
+      },
+      "id": "16d23e09-0e34-4c9f-8bfb-3b79a33791ef",
+      "name": "Router Comandos1",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        920,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Obtenemos el texto del mensaje ya normalizado\nconst msg = $json.text || \"\";\nconst chatId = $json.chatId;\n\n// Dividir los valores\nconst parts = msg.trim().split(/\\s+/);\n\n// Validar formato: /login correo contraseña\nif (parts.length < 3) {\n  return [{\n    json: {\n      error: true,\n      message: '❌ Formato incorrecto. Usa:\\n\\n/login correo contraseña',\n      chatId\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    correo: parts[1],\n    password: parts[2],\n    chatId\n  }\n}];\n"
+      },
+      "id": "be773af8-b141-4151-85be-be43b78e1814",
+      "name": "Parse Login1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "http://host.docker.internal:4000/auth/login",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ { \n  correo: $json.correo, \n  password: $json.password \n} }}"
+      },
+      "id": "b53e88e5-87b3-487f-b158-96e1c039154d",
+      "name": "HTTP Login1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1940,
+        -380
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": false,
+      "maxTries": 2,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Guardar Login Data\"].json.chatId }}",
+        "text": "✅ *Login exitoso*\n\n/registrarActividad\n/verActividades\n/historialActividades",
+        "additionalFields": {}
+      },
+      "id": "27764195-ce11-4d49-bd5e-7eaca4594b97",
+      "name": "Mensaje Login OK1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        3020,
+        -660
+      ],
+      "webhookId": "d160d31c-5c2d-4294-a0ea-01907c74079c",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:4000/activities",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.token}}"
+            }
+          ]
+        }
+      },
+      "id": "39bb0c3c-a6ac-4424-9056-462c2fc2bcec",
+      "name": "HTTP Ver Actividades1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        2140,
+        20
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "functionCode": "const raw = items[0].json;\nconst chatId = $node['Obtener ChatId'].json.chatId;\n\n\n// Detectar error 401 o fallo de backend\nif (raw?.statusCode === 401 || raw?.message === 'Unauthorized') {\n\treturn [{\n\t\tjson: {\n\t\t\tchatId,\n\t\t\ttext: \"❌ *Sesión expirada*\\n\\nHaz login nuevamente:\\n`/login correo contraseña`\"\n\t\t}\n\t}];\n}\n\n// Normalizar respuesta\nlet acts = Array.isArray(raw)\n\t? raw\n\t: Array.isArray(raw.data)\n\t\t? raw.data\n\t\t: raw?.id ? [raw] : [];\n\n// Si no hay actividades\nif (!acts || acts.length === 0) {\n\treturn [{\n\t\tjson: {\n\t\t\tchatId,\n\t\t\ttext: \"📋 *Tus Actividades*\\n\\nNo se encontraron actividades.\"\n\t\t}\n\t}];\n}\n\n// Ordenar por fecha descendente\nacts = acts.sort((a, b) => {\n\tconst fa = new Date(a.fecha || a.createdAt).getTime();\n\tconst fb = new Date(b.fecha || b.createdAt).getTime();\n\treturn fb - fa;\n});\n\n// Tomar solo las 5 más recientes\nconst recentActs = acts.slice(0, 5);\n\n// Formateadores\nfunction fmtDate(iso) {\n\ttry { return new Date(iso).toLocaleDateString('es-CO'); } \n\tcatch { return iso; }\n}\n\nfunction money(n) { return n == null ? '-' : Number(n).toLocaleString('es-CO'); }\n\nfunction short(text, max = 150) {\n\tif (!text) return '-';\n\treturn text.length > max ? text.slice(0, max) + \"…\" : text;\n}\n\n// Construir mensaje\nlet msg = `📋 *Tus 5 Actividades Más Recientes* 🌱\\n\\n`;\n\nrecentActs.forEach(a => {\n\tconst icon =\n\t\t(a.subtipo || '').toUpperCase().includes('PLAG') ? '🐛' :\n\t\t(a.subtipo || '').toUpperCase().includes('SIEMB') ? '🌱' :\n\t\t'📌';\n\n\tmsg += `━━━━━━━━━━━━━━━━━━\\n`;\n\tmsg += `${icon} *${a.nombre || 'Actividad sin nombre'}*\\n\\n`;\n\n\tmsg += `📌 *Resumen*\\n`;\n\tmsg += `• Fecha: ${fmtDate(a.fecha || a.createdAt)}\\n`;\n\tmsg += `• Estado: ${a.estado || '-'}\\n`;\n\n\tif (a.creadoPorUsuario) {\n\t\tconst u = a.creadoPorUsuario;\n\t\tmsg += `• Creador: ${u.nombre} ${u.apellido} (ID: ${u.identificacion || '-'})\\n`;\n\t}\n\n\tmsg += `\\n`;\n\n\tif (a.descripcion) {\n\t\tmsg += `📝 *Descripción*\\n`;\n\t\tmsg += `${short(a.descripcion)}\\n\\n`;\n\t}\n\n\tmsg += `📍 *Ubicación*\\n`;\n\tif (a.lote?.nombre) msg += `• Lote: ${a.lote.nombre}\\n`;\n\tif (a.subLote?.nombre) msg += `• Sub-lote: ${a.subLote.nombre}\\n`;\n\tif (a.cultivo?.nombreCultivo) msg += `• Cultivo: ${a.cultivo.nombreCultivo}\\n`;\n\tmsg += `\\n`;\n\n\tconst responsables = Array.isArray(a.responsables) ? a.responsables : [];\n\tmsg += `👥 *Responsables (${responsables.length})*\\n`;\n\tresponsables.forEach(r => {\n\t\tif (r.usuario) {\n\t\t\tmsg += `• ${r.usuario.nombre} ${r.usuario.apellido} — ID: ${r.usuario.identificacion}\\n`;\n\t\t}\n\t});\n\tmsg += `\\n`;\n\n\tconst totalHorasMO = responsables.reduce((sum, r) => sum + (r.horas || 0), 0);\n\tconst totalCostoMO = a.costoManoObra || 0;\n\tconst precioHora = totalHorasMO > 0 ? Math.round(totalCostoMO / totalHorasMO) : 0;\n\n\tmsg += `🛠️ *Mano de Obra*\\n`;\n\tmsg += `• Horas: ${totalHorasMO}\\n`;\n\tmsg += `• Precio/hora: $${money(precioHora)}\\n`;\n\tmsg += `• Total MO: $${money(totalCostoMO)}\\n\\n`;\n\n\tlet totalServicios = 0;\n\tif (Array.isArray(a.servicios)) totalServicios = a.servicios.reduce((sum, s) => sum + (s.costo || 0), 0);\n\tmsg += `🔧 *Servicios*\\n`;\n\tmsg += `• Total servicios: $${money(totalServicios)}\\n\\n`;\n\n\tlet totalInsumos = 0;\n\tmsg += `🧪 *Insumos utilizados*\\n`;\n\tif (Array.isArray(a.insumosUso) && a.insumosUso.length > 0) {\n\t\ta.insumosUso.forEach(i => {\n\t\t\tconst name = i.insumo?.nombre || \"Insumo\";\n\t\t\tconst unidad = i.insumo?.unidadUso || '';\n\t\t\tmsg += `• ${name} — ${i.cantidadUso} ${unidad}\\n`;\n\t\t});\n\t\ttotalInsumos = a.insumosUso.reduce((sum, i) => sum + (i.costoTotal || 0), 0);\n\t\tmsg += `• Total insumos: $${money(totalInsumos)}\\n\\n`;\n\t} else {\n\t\tmsg += `• No hay insumos registrados\\n\\n`;\n\t}\n\n\tconst totalActividad = totalCostoMO + totalServicios + totalInsumos;\n\tmsg += `💲 *TOTAL ACTIVIDAD:* $${money(totalActividad)}\\n`;\n\tmsg += `━━━━━━━━━━━━━━━━━━\\n\\n`;\n});\n\nreturn [{ json: { chatId, text: msg } }];"
+      },
+      "id": "3997edfe-e1c3-4a08-8238-3d02f51771ec",
+      "name": "Formato Lista Actividades1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2500,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.text}}",
+        "additionalFields": {}
+      },
+      "id": "7f2e2dbc-055d-42b3-b8de-435558a13425",
+      "name": "Enviar Lista1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        2840,
+        -60
+      ],
+      "webhookId": "dcd2b853-4bee-4aa8-a459-0c1feb3bd72f",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:4000/reports/n8n/activities/pdf",
+        "responseFormat": "file",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "token",
+              "value": "={{$json.access_token}}"
+            }
+          ]
+        }
+      },
+      "id": "5dde7f75-20d9-4471-9f56-372fc52739a3",
+      "name": "HTTP Descargar PDF1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1900,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{$json.chatId}}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "id": "34e33882-8e6e-4c21-abad-515654172ea9",
+      "name": "Send PDF1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2720,
+        460
+      ],
+      "webhookId": "942a141a-129d-4247-8ab7-a610ecc06191",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "correo",
+              "value": "={{$json.correo}}"
+            },
+            {
+              "name": "password",
+              "value": "={{$json.password}}"
+            },
+            {
+              "name": "token",
+              "value": "={{$json.access_token}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f90db092-ff3c-420d-ba3e-a1b987300c40",
+      "name": "Set Temporal",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "correo",
+              "value": "={{$json.correo}}"
+            },
+            {
+              "name": "password",
+              "value": "={{$json.password}}"
+            },
+            {
+              "name": "token",
+              "value": "={{$json.access_token}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "21d06f9c-3a2d-44d7-b943-c673d7cc8428",
+      "name": "Set Temporal2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "chatId",
+              "value": "={{ $node[\"Telegram Trigger1\"].json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "465ad67c-c4fc-42e0-8c89-8341c1c1687d",
+      "name": "ChatID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        2140,
+        580
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO telegram_form_estado (user_id, step, data, estado, updated_at, access_token)\nVALUES ($1, 0, '{}', 'OK', NOW(), $2)\nON CONFLICT (user_id)\nDO UPDATE SET \n    access_token = EXCLUDED.access_token,\n    updated_at = NOW();",
+        "options": {
+          "queryReplacement": "={{$json.chatId}}, {{$json.token}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2640,
+        -660
+      ],
+      "id": "a49bce28-40cf-43ab-9f0a-67272023289b",
+      "name": "Postgres Guardar Token",
+      "credentials": {
+        "postgres": {
+          "id": "nvpjIEvyDOXxIJQA",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "token",
+              "value": "={{$json.access_token}}"
+            },
+            {
+              "name": "rolId",
+              "value": "={{$json.user.rolId}}"
+            },
+            {
+              "name": "chatId",
+              "value": "={{ $node[\"Telegram Trigger1\"].json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6fc8c4a5-0e81-4d7f-8ce4-9ffc74ee56e3",
+      "name": "Guardar Login Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        -660
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "chatId",
+              "value": "={{$node[\"Guardar Login Data\"].json.chatId}}"
+            },
+            {
+              "name": "token",
+              "value": "={{$node[\"Guardar Login Data\"].json.token}}"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": false
+        }
+      },
+      "id": "92933887-6167-4bca-98a2-310fb2a73c06",
+      "name": "Restaurar chatId",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        2820,
+        -660
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT access_token \nFROM telegram_form_estado\nWHERE user_id = $1;",
+        "options": {
+          "queryReplacement": "={{$json.chatId}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1680,
+        20
+      ],
+      "id": "c4077dbe-cc43-49b9-affd-1668996cd972",
+      "name": "PG Extract Token",
+      "credentials": {
+        "postgres": {
+          "id": "nvpjIEvyDOXxIJQA",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "chatId",
+              "value": "={{$json.chatId}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9c79daad-65f6-4d7a-982f-c4e0c62c2efe",
+      "name": "Obtener ChatId",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "token",
+              "value": "={{$json.access_token}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "53a97d86-f769-446c-ab6b-08eff356f16f",
+      "name": "Token Json",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT access_token FROM telegram_form_estado WHERE user_id = $1;",
+        "options": {
+          "queryReplacement": "={{$node[\"Registrar Actividad1\"].json.chatId}}"
+        }
+      },
+      "id": "06dce67a-7653-4cc4-abed-0465853acc14",
+      "name": "PG Extract Token2",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1380,
+        840
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "nvpjIEvyDOXxIJQA",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "boolean": [],
+          "number": [],
+          "string": [
+            {
+              "name": "nombre",
+              "value": "={{$json.valores.nombre}}"
+            },
+            {
+              "name": "tipo",
+              "value": "={{$json.valores.tipo}}"
+            },
+            {
+              "name": "subtipo",
+              "value": "={{$json.valores.subtipo}}"
+            },
+            {
+              "name": "loteId",
+              "value": "={{$json.valores.loteId}}"
+            },
+            {
+              "name": "subLoteId",
+              "value": "={{$json.valores.subLoteId}}"
+            },
+            {
+              "name": "cultivoId",
+              "value": "={{$json.valores.cultivoId}}"
+            },
+            {
+              "name": "fecha",
+              "value": "={{$json.valores.fecha}}"
+            },
+            {
+              "name": "descripcion",
+              "value": "={{$json.valores.descripcion}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5ee0a002-243a-47ae-affa-9d128a70f859",
+      "name": "Set Actividad",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.message.chat.id}}",
+        "text": "✏️ Vamos a registrar una actividad. Por favor responde las preguntas que aparecerán a continuación.",
+        "additionalFields": {}
+      },
+      "id": "4e3a80e3-c77d-4e74-99cd-a4d63a830e20",
+      "name": "Telegram Inicio Registro1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        560,
+        860
+      ],
+      "webhookId": "b5318454-29dd-47ae-ae50-84d80ab46b63",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4000/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$json.token}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "nombre",
+              "value": "={{$node[\"Set Actividad\"].json.nombre}}"
+            },
+            {
+              "name": "tipo",
+              "value": "={{$node[\"Set Actividad\"].json.tipo}}"
+            },
+            {
+              "name": "subtipo",
+              "value": "={{$node[\"Set Actividad\"].json.subtipo}}"
+            },
+            {
+              "name": "loteId",
+              "value": "={{$node[\"Set Actividad\"].json.loteId}}"
+            },
+            {
+              "name": "subLoteId",
+              "value": "={{$node[\"Set Actividad\"].json.subLoteId}}"
+            },
+            {
+              "name": "cultivoId",
+              "value": "={{$node[\"Set Actividad\"].json.cultivoId}}"
+            },
+            {
+              "name": "fecha",
+              "value": "={{$node[\"Set Actividad\"].json.fecha}}"
+            },
+            {
+              "name": "descripcion",
+              "value": "={{$node[\"Set Actividad\"].json.descripcion}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "25f707cf-0a22-4724-814e-c2b6a4467a8d",
+      "name": "HTTP Registrar Actividad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1900,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chatId}}",
+        "text": "✅ Actividad registrada correctamente",
+        "additionalFields": {}
+      },
+      "id": "e2765d9b-fd29-4f77-b308-7cecbc03976e",
+      "name": "Telegram Confirmación1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        840
+      ],
+      "webhookId": "dbad2197-e5c2-4b6c-9b51-867456d2075a",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "token",
+              "value": "={{$json[0].access_token}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8645bd78-75fb-48ae-85a3-9ad44d4eb4db",
+      "name": "Token Json1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Obtener mensaje desde Telegram\nconst msg = $json.message || {};\nconst text = (msg.text || \"\").trim();\n\n// Dividir por comas\nconst partes = text.split(\",\").map(v => v.trim());\n\n// Validar cantidad de campos (8)\nif (partes.length < 8) {\n  return [{\n    json: {\n      error: true,\n      chatId: msg.chat?.id,\n      message: \"❌ Formato inválido.\\n\\nDebes enviar *8 valores separados por comas*:\\n\\n`nombre, tipo, subtipo, loteId, subLoteId, cultivoId, fecha(YYYY-MM-DD), descripcion`\"\n    }\n  }];\n}\n\n// Asignar cada campo\nconst [\n  nombre,\n  tipo,\n  subtipo,\n  loteId,\n  subLoteId,\n  cultivoId,\n  fecha,\n  descripcion\n] = partes;\n\n// Retornar datos limpios\nreturn [{\n  json: {\n    ok: true,\n    chatId: msg.chat?.id,\n    nombre,\n    tipo,\n    subtipo,\n    loteId,\n    subLoteId,\n    cultivoId,\n    fecha,\n    descripcion\n  }\n}];\n"
+      },
+      "id": "1b4aa009-14c8-4510-a5e9-f3dafa471fde",
+      "name": "Registrar Actividad",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        840,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const message = items[0].json.message;\nconst chatId = message.chat.id;\nconst text = message.text || '';\nconst userId = message.from.id;\n\nreturn [{json: {chatId, userId, text}}];"
+      },
+      "name": "Extract Message",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        120
+      ],
+      "id": "721bc402-c544-4d30-bb8b-7eee258b6592"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.text}}",
+              "operation": "startsWith",
+              "value2": "/start"
+            }
+          ]
+        }
+      },
+      "name": "Is Start?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        60
+      ],
+      "id": "f13524fa-c285-473a-819e-7d133a97b2ad"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chatId}}",
+        "text": "={{ \"🌾 *¡Bienvenido a Agrotech\\\\!* 🚜\\n\\nPara acceder a tus actividades, inicia sesión con:\\n\\n*\\/login correo@ejemplo\\\\.com contraseña*\\n\\nPor ejemplo:\\n\\n*\\/login micorreo@correo\\\\.com MiPassword123*\" }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "name": "Send Welcome",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        900,
+        -160
+      ],
+      "id": "c9bbe354-b276-45ac-8906-fb31fc25a7c4",
+      "webhookId": "238426ee-c9e8-4e2e-a5ef-c8da07243bb6",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chatId}}",
+        "text": "=🛠️ En mantenimiento  \n\nEstamos trabajando en mejorar esta funcionalidad. Pronto podrás registrar actividades sin inconvenientes.\n\nGracias por tu paciencia. 🙌",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1180,
+        560
+      ],
+      "id": "11900d8e-f364-4358-8798-c40767293eaf",
+      "name": "Telegram",
+      "webhookId": "5b4baca1-f149-4274-83e4-02f1f5a31562",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "chatId",
+              "value": "={{$json.chatId}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0569f3b4-9db7-4118-9dff-93e8971af0da",
+      "name": "Obtener ChatId1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        980,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.error}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Has Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        -480
+      ],
+      "id": "233f4045-640d-4c17-a5f0-5add51243f0c"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.message}}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        -680
+      ],
+      "id": "459e2331-5811-4dcb-9915-0e306686b062",
+      "webhookId": "6464aa56-0fa3-4f02-899b-929824810b83",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Login OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        -360
+      ],
+      "id": "60c601ab-9f39-47c4-a861-19e402b0e4a5"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$node['Parse Login1'].json.chatId}}",
+        "text": "=❌ *No pudimos iniciar tu sesión*\n\nParece que el correo o la contraseña no coinciden\\.\nInténtalo nuevamente\\.\n\n*Ejemplo:*\n`\\/login correo@ejemplo\\.com MiContraseña123`",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "name": "Send Login Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        2380,
+        -240
+      ],
+      "id": "c4633484-b1f1-4541-b1d1-aff4b8804fe3",
+      "webhookId": "1a290dd4-08ee-410e-b2e5-2a5bf38e5b51",
+      "credentials": {
+        "telegramApi": {
+          "id": "y8p8lyvA7EdhasAC",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Extract Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Comandos1": {
+      "main": [
+        [
+          {
+            "node": "Parse Login1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener ChatId",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Temporal2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener ChatId1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Login1": {
+      "main": [
+        [
+          {
+            "node": "Has Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Login1": {
+      "main": [
+        [
+          {
+            "node": "Login OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Ver Actividades1": {
+      "main": [
+        [
+          {
+            "node": "Formato Lista Actividades1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formato Lista Actividades1": {
+      "main": [
+        [
+          {
+            "node": "Enviar Lista1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Descargar PDF1": {
+      "main": [
+        [
+          {
+            "node": "ChatID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Temporal": {
+      "main": [
+        [
+          {
+            "node": "HTTP Login1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Temporal2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Descargar PDF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ChatID": {
+      "main": [
+        [
+          {
+            "node": "Send PDF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Guardar Token": {
+      "main": [
+        [
+          {
+            "node": "Restaurar chatId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Login Data": {
+      "main": [
+        [
+          {
+            "node": "Postgres Guardar Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restaurar chatId": {
+      "main": [
+        [
+          {
+            "node": "Mensaje Login OK1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Extract Token": {
+      "main": [
+        [
+          {
+            "node": "Token Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener ChatId": {
+      "main": [
+        [
+          {
+            "node": "PG Extract Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token Json": {
+      "main": [
+        [
+          {
+            "node": "HTTP Ver Actividades1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG Extract Token2": {
+      "main": [
+        [
+          {
+            "node": "Token Json1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Registrar Actividad": {
+      "main": [
+        [
+          {
+            "node": "Telegram Confirmación1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Actividad": {
+      "main": [
+        [
+          {
+            "node": "PG Extract Token2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Inicio Registro1": {
+      "main": [
+        [
+          {
+            "node": "Registrar Actividad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token Json1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Registrar Actividad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Actividad": {
+      "main": [
+        [
+          {
+            "node": "Set Actividad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message": {
+      "main": [
+        [
+          {
+            "node": "Is Start?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Start?": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Router Comandos1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        []
+      ]
+    },
+    "Obtener ChatId1": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Error?": {
+      "main": [
+        [
+          {
+            "node": "Send Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Temporal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login OK?": {
+      "main": [
+        [
+          {
+            "node": "Guardar Login Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Login Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "787ae5dd-29ae-4e5b-ac39-63d8d47a046b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a5aeb7e3a33872c0b393d85f77e0dee1b47055ee01354ec33c0e9ca37f264d78"
+  },
+  "id": "PmU2hB0VVzWglfIE",
+  "tags": []
+}

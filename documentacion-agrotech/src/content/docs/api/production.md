@@ -1,86 +1,114 @@
 ---
-title: API de Producción
-description: Documentación de los endpoints del módulo de producción
+title: Producción y Ventas
+description: Documentación de los endpoints del módulo de producción y comercialización
 ---
 
 # API de Producción
 
-Esta sección documenta los endpoints relacionados con la producción agrícola (lotes, productos, ventas).
+Gestiona la transformación de cultivos en productos finales, lotes de producción y su comercialización.
 
-## Endpoints
+## Productos Agrícolas (Catálogo)
 
-### GET /production/productos
-Obtiene la lista de productos agro.
+### Listar Productos
+- **URL**: `/production/productos`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `produccion.ver`
 
-**Respuesta exitosa (200):**
+### Crear Producto
+Define un nuevo tipo de producto (ej: "Saco de Maíz 50kg").
+
+- **URL**: `/production/productos`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `produccion.crear`
+
+**Body (JSON):**
 ```json
 {
-  "data": [
+  "nombre": "Saco Maíz Premium",
+  "unidadMedida": "kg",
+  "pesoPromedio": 50,
+  "descripcion": "Maíz seleccionado calidad superior"
+}
+```
+
+---
+
+## Lotes de Producción
+
+### Listar Lotes de Producción
+- **URL**: `/production/lotes-produccion`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `produccion.ver`
+
+**Parámetros:** `productoAgroId`, `cultivoId`
+
+### Crear Lote de Producción
+Registra la cosecha o transformación.
+
+- **URL**: `/production/lotes-produccion`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `produccion.crear`
+
+**Body (JSON):**
+```json
+{
+  "codigoLote": "LOTE-MZ-2023-01",
+  "cultivoId": 1,
+  "productoAgroId": 1,
+  "cantidad": 100, // Número de unidades (ej: 100 sacos)
+  "fechaProduccion": "2023-11-01",
+  "fechaVencimiento": "2024-11-01"
+}
+```
+
+### Actualizar/Eliminar
+- `PATCH /production/lotes-produccion/:id`
+- `DELETE /production/lotes-produccion/:id`
+
+---
+
+## Ventas y Clientes
+
+### Listar Clientes
+- **URL**: `/production/clientes`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `ventas.ver`
+
+### Crear Cliente
+- **URL**: `/production/clientes`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `ventas.crear`
+
+### Registrar Venta
+Registra una venta de productos.
+
+- **URL**: `/production/ventas`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `ventas.crear`
+
+**Body (JSON):**
+```json
+{
+  "clienteId": 5,
+  "detalles": [
     {
-      "id": "number",
-      "name": "string",
-      "description": "string",
-      "price": "number"
+      "loteProduccionId": 10,
+      "cantidadKg": 500,
+      "precioUnitarioKg": 2000
     }
+  ],
+  "pagos": [
+    { "metodoPago": "EFECTIVO", "monto": 1000000 }
   ]
 }
 ```
 
-### POST /production/productos
-Crea un nuevo producto agro.
+### Consultar Ventas
+- **URL**: `/production/ventas`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `ventas.ver`
 
-**Parámetros de entrada:**
-- `name`: string (requerido)
-- `description`: string (opcional)
-- `price`: number (requerido)
-
-**Respuesta exitosa (201):**
-```json
-{
-  "id": "number",
-  "name": "string",
-  "description": "string",
-  "price": "number"
-}
-```
-
-### GET /production/lotes-produccion
-Obtiene la lista de lotes de producción.
-
-**Respuesta exitosa (200):**
-```json
-{
-  "data": [
-    {
-      "id": "number",
-      "productId": "number",
-      "quantity": "number",
-      "status": "string"
-    }
-  ]
-}
-```
-
-### POST /production/ventas
-Registra una nueva venta.
-
-**Parámetros de entrada:**
-- `productId`: number (requerido)
-- `quantity`: number (requerido)
-- `clientId`: number (opcional)
-
-**Respuesta exitosa (201):**
-```json
-{
-  "id": "number",
-  "productId": "number",
-  "quantity": "number",
-  "total": "number",
-  "date": "string"
-}
-```
-
-## Respuestas de Error
-- `400 Bad Request`: Datos inválidos
-- `401 Unauthorized`: No autorizado
-- `404 Not Found`: Recurso no encontrado
+### Anular Venta
+- **URL**: `/production/ventas/:id/anular`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `ventas.anular`

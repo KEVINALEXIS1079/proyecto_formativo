@@ -8,13 +8,18 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Agrotech API Documentation',
+			logo: {
+				src: './src/assets/logo.png',
+			},
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/KEVINALEXIS1079/proyecto_formativo.git' }],
 			sidebar: [
 				{
 					label: 'Guides',
 					items: [
 						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
+						{ label: 'Introducción', slug: 'guides/getting-started' },
+						{ label: 'Despliegue', slug: 'guides/deployment' },
+						{ label: 'Ejemplo', slug: 'guides/example' },
 					],
 				},
 				{

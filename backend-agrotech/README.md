@@ -200,19 +200,26 @@ NODE_ENV=development
 PORT=4000
 API_PREFIX=api
 
-# Base de Datos
+# JWT
+JWT_SECRET=mi_super_clave_secreta_muy_segura
+JWT_EXPIRES_IN=3600s
+JWT_EXPIRATION=3600s
+
+# CORREO
+EMAIL_USER=agrotechsena2025@gmail.com
+EMAIL_PASSWORD=pqkm mruj rocz lphf
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+
+# BASE DE DATOS
 DB_HOST=localhost
 DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-DB_DATABASE=agrotech_db
+DB_USERNAME=agrotech
+DB_PASSWORD=123
+DB_NAME=agrotech
 DB_SYNCHRONIZE=false
 DB_LOGGING=true
 
-# JWT
-JWT_SECRET=agrotech_sena_jwt_secret_key_2025_desarrollo_seguro
-JWT_EXPIRATION=1d
-JWT_REFRESH_SECRET=agrotech_sena_refresh_jwt_secret_key_2025_desarrollo_seguro
 JWT_REFRESH_EXPIRATION=7d
 
 # CORS

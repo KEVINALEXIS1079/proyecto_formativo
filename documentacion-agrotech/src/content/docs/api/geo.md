@@ -1,82 +1,95 @@
 ---
-title: API de Geografía
-description: Documentación de los endpoints del módulo de geografía
+title: Geografía y Lotes
+description: Documentación de los endpoints de gestión de lotes y sublotes
 ---
 
-# API de Geografía
+# API de Geografía (Lotes y Sublotes)
 
-Esta sección documenta los endpoints relacionados con la gestión geográfica (cultivos, lotes, sublotes).
+Gestiona la estructura geoespacial de la finca, dividiéndola en lotes y sublotes.
 
-## Endpoints
+## Lotes
 
-### GET /geo/cultivos
-Obtiene la lista de cultivos.
+### Listar Lotes
+Obtiene todos los lotes registrados.
 
-**Respuesta exitosa (200):**
+- **URL**: `/geo/lotes`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `lotes.ver`
+
+### Resumen de Lotes
+Obtiene un resumen ligero de los lotes (útil para selectores).
+
+- **URL**: `/geo/lotes/summary`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `lotes.ver`
+
+### Crear Lote
+Registra un nuevo lote.
+
+- **URL**: `/geo/lotes`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `lotes.crear`
+
+**Body (JSON):**
 ```json
 {
-  "data": [
-    {
-      "id": "number",
-      "name": "string",
-      "description": "string"
-    }
-  ]
+  "nombre": "Lote Norte",
+  "descripcion": "Zona norte de la finca",
+  "area": 10.5,
+  "unidadArea": "HECTAREAS"
 }
 ```
 
-### POST /geo/cultivos
-Crea un nuevo cultivo.
+### Actualizar Lote
+Actualiza la información de un lote.
 
-**Parámetros de entrada:**
-- `name`: string (requerido)
-- `description`: string (opcional)
+- **URL**: `/geo/lotes/:id`
+- **Método**: `PATCH`
+- **Auth**: Requiere autenticación y permiso `lotes.editar`
 
-**Respuesta exitosa (201):**
+### Eliminar Lote
+Elimina un lote.
+
+- **URL**: `/geo/lotes/:id`
+- **Método**: `DELETE`
+- **Auth**: Requiere autenticación y permiso `lotes.eliminar`
+
+---
+
+## Sublotes
+
+### Listar Sublotes
+Obtiene los sublotes, opcionalmente filtrados por lote padre.
+
+- **URL**: `/geo/sublotes`
+- **Método**: `GET`
+- **Auth**: Requiere autenticación y permiso `sublotes.ver`
+
+**Parámetros:**
+- `loteId`: ID del lote padre
+
+### Crear Sublote
+Registra una subdivisión de un lote.
+
+- **URL**: `/geo/sublotes`
+- **Método**: `POST`
+- **Auth**: Requiere autenticación y permiso `sublotes.crear`
+
+**Body (JSON):**
 ```json
 {
-  "id": "number",
-  "name": "string",
-  "description": "string"
+  "nombre": "Sublote A1",
+  "area": 2.5,
+  "loteId": 1
 }
 ```
 
-### GET /geo/lotes
-Obtiene la lista de lotes.
+### Actualizar Sublote
+- **URL**: `/geo/sublotes/:id`
+- **Método**: `PATCH`
+- **Auth**: Requiere autenticación y permiso `sublotes.editar`
 
-**Respuesta exitosa (200):**
-```json
-{
-  "data": [
-    {
-      "id": "number",
-      "name": "string",
-      "area": "number",
-      "cultivoId": "number"
-    }
-  ]
-}
-```
-
-### POST /geo/lotes
-Crea un nuevo lote.
-
-**Parámetros de entrada:**
-- `name`: string (requerido)
-- `area`: number (requerido)
-- `cultivoId`: number (requerido)
-
-**Respuesta exitosa (201):**
-```json
-{
-  "id": "number",
-  "name": "string",
-  "area": "number",
-  "cultivoId": "number"
-}
-```
-
-## Respuestas de Error
-- `400 Bad Request`: Datos inválidos
-- `401 Unauthorized`: No autorizado
-- `404 Not Found`: Recurso no encontrado
+### Eliminar Sublote
+- **URL**: `/geo/sublotes/:id`
+- **Método**: `DELETE`
+- **Auth**: Requiere autenticación y permiso `sublotes.eliminar`
