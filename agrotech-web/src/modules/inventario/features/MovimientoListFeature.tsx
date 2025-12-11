@@ -6,8 +6,7 @@ import { useRemoveMovimiento } from '../hooks/useRemoveMovimiento';
 import { MovimientoTable } from '../widgets/MovimientoTable';
 import { MovimientoForm } from '../widgets/MovimientoForm';
 import { MovimientoFilters } from '../widgets/MovimientoFilters';
-import { Modal, ModalContent, ModalHeader, ModalBody } from '@heroui/modal';
-import { Button } from '@heroui/button';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from '@heroui/react';
 import type { MovimientoInventario, MovimientoFilters as MovimientoFiltersType } from '../model/types';
 
 export interface MovimientoListRef {
@@ -134,8 +133,38 @@ export const MovimientoListFeature = forwardRef<MovimientoListRef>((_, ref) => {
                     setSelectedMovimiento(undefined);
                   }}
                   onSuccess={handleFormSubmit}
+                  hideFooter={true}
                 />
               </ModalBody>
+              <ModalFooter>
+                {/* View Mode Footer */}
+                {(!isEditMode && selectedMovimiento) ? (
+                  <Button variant="light" onPress={onClose}>
+                    Cerrar
+                  </Button>
+                ) : (
+                  /* Edit/Create Mode Footer */
+                  <div className="flex gap-2 justify-end w-full">
+                    <Button variant="light" onPress={() => {
+                      if (isEditMode && selectedMovimiento) {
+                        setIsEditMode(false);
+                      } else {
+                        onClose();
+                      }
+                    }}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      color="success"
+                      className="text-black font-medium shadow-md"
+                      form="movimiento-form"
+                    >
+                      {isEditMode ? "Guardar Cambios" : "Crear Movimiento"}
+                    </Button>
+                  </div>
+                )}
+              </ModalFooter>
             </>
           )}
         </ModalContent>

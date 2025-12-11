@@ -18,6 +18,7 @@ interface MovimientoFormProps {
   readOnly?: boolean;
   onToggleEdit?: () => void;
   onCancel?: () => void;
+  hideFooter?: boolean;
 }
 
 
@@ -27,7 +28,8 @@ export const MovimientoForm = ({
   onSuccess,
   readOnly = false,
   onToggleEdit,
-  onCancel
+  onCancel,
+  hideFooter = false
 }: MovimientoFormProps) => {
   const { data: insumosResponse } = useInsumoList({ limit: 100 });
   const { data: almacenes = [] } = useAlmacenList();
@@ -141,7 +143,7 @@ export const MovimientoForm = ({
 
 
   return (
-    <Form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 p-6 bg-white rounded-xl shadow-lg">
+    <Form id="movimiento-form" onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 p-6 bg-white rounded-xl shadow-lg">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select
           name="tipoMovimiento"
@@ -272,9 +274,11 @@ export const MovimientoForm = ({
         </div>
       )}
 
-      <div className="flex justify-end gap-3 mt-4">
-        {renderFooter()}
-      </div>
+      {!hideFooter && (
+        <div className="flex justify-end gap-3 mt-4">
+          {renderFooter()}
+        </div>
+      )}
 
       <ConfirmationModal
         isOpen={isModalOpen}

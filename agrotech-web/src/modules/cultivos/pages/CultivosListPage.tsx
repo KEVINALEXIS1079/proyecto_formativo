@@ -61,9 +61,7 @@ export default function CultivosListPage() {
   };
 
   const handleManage = (cultivo: Cultivo) => {
-    setSelectedCultivo(cultivo);
-    setIsEditMode(false);
-    setIsManageModalOpen(true);
+    setDetailId(cultivo.id);
   };
 
   const { data: cultivos = [], isLoading } = useCultivosList({
@@ -507,27 +505,31 @@ export default function CultivosListPage() {
             setIsEditMode(false);
           }
         }}
-        size="lg"
-        scrollBehavior="outside"
+        size="4xl"
+        scrollBehavior="inside"
+        classNames={{
+          base: "max-h-[90vh]",
+        }}
+        backdrop="blur"
       >
-        <ModalContent className="max-w-5xl">
+        <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader>
+              <ModalHeader className="border-b pb-4">
                 {selectedCultivo
                   ? isEditMode
-                    ? "Editar cultivo"
-                    : "Gestionar cultivo"
-                  : "Registrar cultivo"}
+                    ? "Editar información del cultivo"
+                    : "Detalles del cultivo"
+                  : "Registrar nuevo cultivo"}
               </ModalHeader>
-              <ModalBody>
+              <ModalBody className="py-6">
                 <CultivoForm
-                  cultivo={selectedCultivo}
+                  initialData={selectedCultivo}
                   readOnly={!isEditMode}
                   onToggleEdit={() => setIsEditMode(true)}
-                  onSuccess={() => {
+                  onSubmit={(data) => {
+                    console.log("Submit:", data);
                     onClose();
-                    setSelectedCultivo(null);
                   }}
                   onCancel={() => {
                     if (isEditMode && selectedCultivo) {
@@ -536,22 +538,45 @@ export default function CultivosListPage() {
                       onClose();
                     }
                   }}
-                  redirectOnSuccess={false}
+                  hideFooter={true}
                 />
               </ModalBody>
+              {!(!isEditMode && selectedCultivo) && (
+                <ModalFooter className="border-t py-4 bg-gray-50/50">
+                  <Button color="danger" variant="light" onPress={() => {
+                    if (isEditMode && selectedCultivo) {
+                      setIsEditMode(false);
+                    } else {
+                      onClose();
+                    }
+                  }}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    color="success"
+                    type="submit"
+                    form="cultivo-form"
+                    className="text-black font-semibold shadow-md"
+                  >
+                    Guardar Modelo
+                  </Button>
+                </ModalFooter>
+              )}
             </>
           )}
         </ModalContent>
       </Modal>
 
-      <CultivoDetailModal cultivoId={detailId} onClose={() => setDetailId(null)} />
+      <CultivoDetailModal
+        cultivoId={detailId}
+        onClose={() => setDetailId(null)}
+        onEdit={(cultivo) => {
+          setDetailId(null);
+          setSelectedCultivo(cultivo);
+          setIsEditMode(true);
+          setIsManageModalOpen(true);
+        }}
+      />
     </div>
   );
 }
-
-
-
-
-
-
-

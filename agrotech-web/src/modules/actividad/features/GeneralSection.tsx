@@ -8,15 +8,15 @@ import LeafletMap from "../../../components/LeafletMap";
 
 function LoteMapPreview({ loteId, lotes }: { loteId: number; lotes: any[] }) {
   const lote = lotes.find(l => l.id === loteId);
-  
+
   const polygon = useMemo(() => {
     if (!lote?.geom) return undefined;
     try {
       // Handle GeoJSON object or string
       const geo = typeof lote.geom === 'string' ? JSON.parse(lote.geom) : lote.geom;
       if (geo?.type === 'Polygon' && geo.coordinates) {
-         // Leaflet expects [lat, lng], GeoJSON is [lng, lat]
-         return geo.coordinates[0].map((c: number[]) => [c[1], c[0]]) as [number, number][];
+        // Leaflet expects [lat, lng], GeoJSON is [lng, lat]
+        return geo.coordinates[0].map((c: number[]) => [c[1], c[0]]) as [number, number][];
       }
     } catch (e) {
       console.warn("Failed to parse lote geometry", e);
@@ -24,20 +24,20 @@ function LoteMapPreview({ loteId, lotes }: { loteId: number; lotes: any[] }) {
     return undefined;
   }, [lote]);
 
-  const center : [number, number] | undefined = polygon && polygon.length > 0 
-    ? polygon[0] 
+  const center: [number, number] | undefined = polygon && polygon.length > 0
+    ? polygon[0]
     : undefined;
 
   if (!center) return null;
 
   return (
     <div className="rounded-lg overflow-hidden border border-gray-200 mt-2">
-       <LeafletMap 
-         center={center} 
-         zoom={14} 
-         polygon={polygon} 
-         height="200px" 
-       />
+      <LeafletMap
+        center={center}
+        zoom={14}
+        polygon={polygon}
+        height="200px"
+      />
     </div>
   );
 }
@@ -273,15 +273,15 @@ export default function GeneralSection({
           </div>
 
           {/* MAP EXTENSION */}
-          {selectedLoteId && (
+          {!!selectedLoteId && (
             <div className="mt-2">
               <span className="text-xs text-gray-400 mb-1 block">Ubicación del Lote</span>
               {/* Note: In a real app, we parse lote.geom. For now, we mock/try-parse if available. */}
-               {/* We need to import LeafletMap. Since imports are at top, we assume it's imported or we add it in next step/multi-replace.
+              {/* We need to import LeafletMap. Since imports are at top, we assume it's imported or we add it in next step/multi-replace.
                    Wait, I can't add import in this chunk if it's far away.
                    I will assume I can do a second replace for imports.
                 */}
-               <LoteMapPreview loteId={selectedLoteId} lotes={normalizedLotes} />
+              <LoteMapPreview loteId={selectedLoteId} lotes={normalizedLotes} />
             </div>
           )}
         </div>
@@ -319,13 +319,13 @@ export default function GeneralSection({
                   {...field}
                   value={field.value ? (field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value) : ""}
                   onChange={(e) => {
-                     const date = e.target.value ? new Date(e.target.value) : undefined;
-                     if (date) {
-                         // Adjust for timezone offset to avoid previous day issue
-                         const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-                         const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-                         field.onChange(adjustedDate);
-                     }
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    if (date) {
+                      // Adjust for timezone offset to avoid previous day issue
+                      const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+                      const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
+                      field.onChange(adjustedDate);
+                    }
                   }}
                 />
               )}

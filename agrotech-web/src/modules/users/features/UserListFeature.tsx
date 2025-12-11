@@ -115,19 +115,46 @@ export const UserListFeature = forwardRef<UserListRef>((_, ref) => {
         }}
         title={selectedUser ? (isEditMode ? `Editar Usuario: ${selectedUser.nombre}` : `Gestionar Usuario: ${selectedUser.nombre}`) : 'Nuevo Usuario'}
         size={selectedUser ? '3xl' : 'lg'}
-        footer={selectedUser ? (
-          !isEditMode ? (
+        footer={(
+          selectedUser ? (
+            !isEditMode ? (
+              <>
+                <Button variant="flat" onPress={() => setIsModalOpen(false)}>
+                  Cerrar
+                </Button>
+                <Button color="success" className="text-black font-semibold" onPress={() => setIsEditMode(true)}>
+                  Editar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="light" onPress={() => setIsEditMode(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  color="success"
+                  className="text-black font-semibold"
+                  onPress={async () => {
+                    try {
+                      if (activeTab === 'info') {
+                        await userFormRef.current?.save();
+                      } else {
+                        await userPermissionsRef.current?.save();
+                      }
+                      setIsEditMode(false);
+                    } catch (error) {
+                      console.error('Error saving:', error);
+                    }
+                  }}
+                >
+                  Guardar Cambios
+                </Button>
+              </>
+            )
+          ) : (
+            // Crear Usuario Footer
             <>
               <Button variant="flat" onPress={() => setIsModalOpen(false)}>
-                Cerrar
-              </Button>
-              <Button color="success" className="text-black font-semibold" onPress={() => setIsEditMode(true)}>
-                Editar
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="light" onPress={() => setIsEditMode(false)}>
                 Cancelar
               </Button>
               <Button
@@ -135,22 +162,17 @@ export const UserListFeature = forwardRef<UserListRef>((_, ref) => {
                 className="text-black font-semibold"
                 onPress={async () => {
                   try {
-                    if (activeTab === 'info') {
-                      await userFormRef.current?.save();
-                    } else {
-                      await userPermissionsRef.current?.save();
-                    }
-                    setIsEditMode(false);
+                    await userFormRef.current?.save();
                   } catch (error) {
-                    console.error('Error saving:', error);
+                    console.error('Error creating user:', error);
                   }
                 }}
               >
-                Guardar Cambios
+                Crear Usuario
               </Button>
             </>
           )
-        ) : undefined}
+        )}
       >
         {selectedUser ? (
           <div className="flex flex-col gap-4">

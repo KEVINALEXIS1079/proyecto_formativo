@@ -1,54 +1,30 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCreateInsumo } from "../hooks/useCreateInsumo";
-import { useUploadInsumoImage } from "../hooks/useUploadInsumoImage";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { InsumoForm } from "../widgets/InsumoForm";
-import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from "@heroui/react";
 import type { CreateInsumoInput } from "../model/types";
 
 export default function CrearInsumoPage() {
   const navigate = useNavigate();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
   const createMutation = useCreateInsumo();
-  const uploadMutation = useUploadInsumoImage();
 
-  const handleSubmit = async (data: CreateInsumoInput | any): Promise<{id?: number}> => {
+  const handleSubmit = async (data: CreateInsumoInput | any): Promise<{ id?: number }> => {
     return new Promise((resolve, reject) => {
       createMutation.mutate(data, {
         onSuccess: (result) => {
           toast.success("Insumo creado correctamente");
           const insumoId = result.id;
-          if (selectedFile) {
-            uploadMutation.mutate(
-              { id: insumoId, file: selectedFile },
-              {
-                onSuccess: () => {
-                  navigate(`/inventario/${insumoId}`);
-                  resolve({ id: insumoId });
-                },
-                onError: reject,
-              }
-            );
-          } else {
-            navigate(`/inventario/${insumoId}`);
-            resolve({ id: insumoId });
-          }
+          navigate(`/inventario/${insumoId}`);
+          resolve({ id: insumoId });
         },
         onError: reject,
       });
     });
   };
 
-  const handleFileChange = (file: File | null) => {
-    setSelectedFile(file);
-  };
 
-  const initialValues = {
-    fechaIngreso: new Date().toISOString().split('T')[0],
-  };
 
   return (
     <div className="mx-auto max-w-6xl p-4 md:p-6">
@@ -62,17 +38,32 @@ export default function CrearInsumoPage() {
         </button>
         <h1 className="text-3xl font-bold">Crear Insumo</h1>
       </div>
-      <Modal isOpen={true} size="4xl" onOpenChange={() => navigate(-1)}>
+      <Modal isOpen={true} size="5xl" onOpenChange={() => navigate(-1)} scrollBehavior="inside">
         <ModalContent>
-          <ModalHeader>Nuevo Insumo</ModalHeader>
-          <ModalBody>
+          <ModalHeader className="px-6 py-4 border-b border-gray-100">Nuevo Insumo</ModalHeader>
+          <ModalBody className="flex-1 overflow-y-auto p-6">
             <InsumoForm
               insumo={undefined}
               onClose={() => navigate(-1)}
               onSuccess={handleSubmit}
               isEdit={false}
+              hideFooter={true}
             />
           </ModalBody>
+          <ModalFooter className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4">
+            <Button type="button" variant="light" color="danger" onPress={() => navigate(-1)}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              form="insumo-form"
+              color="success"
+              isLoading={createMutation.isPending}
+              className="text-black font-semibold shadow-md"
+            >
+              Crear Insumo
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </div>

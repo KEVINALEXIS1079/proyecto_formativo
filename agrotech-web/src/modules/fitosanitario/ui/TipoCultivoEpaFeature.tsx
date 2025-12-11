@@ -181,7 +181,8 @@ const TipoCultivoEpaFeature = forwardRef<TipoCultivoEpaListRef>((_, ref) => {
               Cancelar
             </Button>
             <Button
-              color="primary"
+              color="success"
+              className="text-black"
               onPress={handleSubmit}
               isLoading={createMutation.isPending || updateMutation.isPending}
               isDisabled={!form.nombre?.trim()}

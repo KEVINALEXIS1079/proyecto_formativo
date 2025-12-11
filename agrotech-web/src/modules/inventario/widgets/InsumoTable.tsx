@@ -11,7 +11,7 @@ import {
   Image,
   Spinner,
 } from "@heroui/react";
-import { Eye, Edit, History, Trash2 } from "lucide-react";
+import { Eye, Edit, History } from "lucide-react";
 import Surface from "../../users/ui/Surface";
 
 interface InsumoTableProps {
@@ -19,7 +19,6 @@ interface InsumoTableProps {
   isLoading: boolean;
   onView?: (insumo: Insumo) => void;
   onEdit?: (insumo: Insumo) => void;
-  onDelete?: (insumo: Insumo) => void;
   onViewMovimientos?: (insumo: Insumo) => void;
   hasMovimientosMap: Map<number, boolean>;
 }
@@ -33,7 +32,6 @@ export const InsumoTable = ({
   isLoading,
   onView,
   onEdit,
-  onDelete,
   onViewMovimientos,
   hasMovimientosMap,
 }: InsumoTableProps) => {
@@ -151,15 +149,7 @@ export const InsumoTable = ({
                       Editar
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="light"
-                    color="danger"
-                    isIconOnly
-                    onPress={() => onDelete && onDelete(insumo)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+
                   {onViewMovimientos && hasMovimientosMap.get(insumo.id) && (
                     <Button
                       size="sm"

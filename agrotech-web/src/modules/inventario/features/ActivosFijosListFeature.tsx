@@ -2,7 +2,7 @@ import { useState, useImperativeHandle, forwardRef } from "react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Chip, Progress, Tooltip, Image, Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { getActivosFijos } from "../api/insumos.service";
-import { Eye, Trash2, Wrench, History } from "lucide-react";
+import { Eye, Wrench, History } from "lucide-react";
 import CreateActivoFijoModal from "../ui/CreateActivoFijoModal";
 import { HistorialActivoFijoModal } from "../ui/HistorialActivoFijoModal";
 import { MantenimientoActivoFijoModal } from "../ui/MantenimientoActivoFijoModal";
@@ -34,10 +34,7 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
         setIsMantenimientoOpen(true);
     };
 
-    const handleOpenBaja = (asset: any) => {
-        setSelectedAsset(asset);
-        setIsBajaOpen(true);
-    };
+
 
     const handleOpenView = (asset: any) => {
         setSelectedAsset(asset);

@@ -20,8 +20,8 @@ Aplicación móvil desarrollada con React Native y Expo que permite a los usuari
 
 ## 📦 Prerrequisitos
 
-- **Node.js** 18.x
-- **npm** 9.x
+- **Node.js** 22.x
+- **npm** 10.x
 - **Expo CLI** (se instalará automáticamente)
 - **Backend** corriendo en red local o servidor accesible
 
@@ -36,8 +36,8 @@ Aplicación móvil desarrollada con React Native y Expo que permite a los usuari
 ### Verificar versiones
 
 ```bash
-node --version  # Debe ser v18.x
-npm --version   # Debe ser 9.x
+node --version  # Debe ser v22.x
+npm --version   # Debe ser 10.x
 ```
 
 ## 🚀 Instalación

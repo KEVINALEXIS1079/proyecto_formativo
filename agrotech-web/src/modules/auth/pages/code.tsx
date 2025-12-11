@@ -18,7 +18,7 @@ import { useCompleteRegister } from "../hooks/useRegister";
 // import { useRecoverChange } from "../hooks/useRecover";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeInUp, stagger } from "@/lib/motion";
-import { Button } from "@heroui/react";
+
 
 export default function CodePage() {
   const location = useLocation() as any;

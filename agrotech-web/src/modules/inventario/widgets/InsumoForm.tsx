@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@heroui/button";
-import { Input } from "@heroui/input";
+import { Input, Textarea } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import { DatePicker } from "@heroui/date-picker";
 import { Form } from "@heroui/form";
 import { parseDate } from "@internationalized/date";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
-import { Plus } from "lucide-react";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Card, CardBody } from "@heroui/react";
+import { Plus, Upload, Package, DollarSign, FileText } from "lucide-react";
+import ImageUpload from "@/modules/inventario/widgets/ImageUpload";
 import { useCategoriaInsumoList } from "../hooks/useCategoriaInsumoList";
 import { useProveedorList } from "../hooks/useProveedorList";
 import { useAlmacenList } from "../hooks/useAlmacenList";
@@ -24,14 +25,15 @@ interface InsumoFormProps {
   onClose: () => void;
   onSuccess: (data: CreateInsumoInput | UpdateInsumoInput) => Promise<{ id?: number }>;
   isEdit?: boolean;
+  hideFooter?: boolean;
 }
-
 
 export const InsumoForm = ({
   insumo,
   onClose,
   onSuccess,
-  isEdit = !!insumo?.nombre
+  isEdit = !!insumo?.nombre,
+  hideFooter = false
 }: InsumoFormProps) => {
   const { data: categorias = [] } = useCategoriaInsumoList();
   const { data: proveedores = [] } = useProveedorList();
@@ -55,15 +57,11 @@ export const InsumoForm = ({
   const [newAlmacenName, setNewAlmacenName] = useState("");
   const [newAlmacenUbicacion, setNewAlmacenUbicacion] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagenUrl, setImagenUrl] = useState<string>(insumo?.imagenUrl || "");
-
-  const FILES_BASE = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace('/api/v1', '');
 
   // Limpiar estado cuando el formulario se resetea
   useEffect(() => {
-    setImagenUrl(insumo?.imagenUrl || "");
     setSelectedFile(null);
-  }, [insumo?.id]); // Resetear cuando cambia el ID del insumo (nuevo vs editar)
+  }, [insumo?.id]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -76,7 +74,6 @@ export const InsumoForm = ({
       return;
     }
 
-    const imagenUrl = formData.get("imagenUrl") as string;
     const presentacionUnidad = formData.get("presentacionUnidad") as UnidadPresentacion;
     const conversion = CONVERSION_TABLE[presentacionUnidad];
     if (!conversion) {
@@ -85,16 +82,15 @@ export const InsumoForm = ({
     }
 
     const tipoMateriaValue = formData.get("tipoMateria") as string;
-
-    // Manejar la fecha correctamente
     const fechaIngresoValue = formData.get("fechaIngreso") as string;
     const fechaIngreso = fechaIngresoValue || new Date().toISOString().split('T')[0];
 
+    // Check for optional image url from input (hidden or not) if needed, but we rely on state mostly
+    // For now, construct the object
     const data = {
       nombre: formData.get("nombre") as string,
       descripcion: descripcion.trim(),
       tipoMateria: (tipoMateriaValue || "solido") as TipoMateria,
-      ...(imagenUrl && { imagenUrl }),
       presentacionTipo: formData.get("presentacionTipo") as TipoEmpaque,
       presentacionCantidad: parseFloat(formData.get("presentacionCantidad") as string),
       presentacionUnidad,
@@ -106,7 +102,7 @@ export const InsumoForm = ({
       idCategoria: parseInt(formData.get("idCategoria") as string),
       idProveedor: parseInt(formData.get("idProveedor") as string),
       idAlmacen: parseInt(formData.get("idAlmacen") as string),
-      creadoPorUsuarioId: user?.id, // Agregar ID del usuario actual
+      creadoPorUsuarioId: user?.id,
     };
 
     setPendingData(data);
@@ -119,26 +115,21 @@ export const InsumoForm = ({
       try {
         const result = await onSuccess(dataWithDescription);
 
-        // Si hay un archivo seleccionado, subirlo después de crear/actualizar el insumo
         if (selectedFile && result?.id) {
           try {
             await uploadInsumoImage(result.id, selectedFile);
-            // Actualizar la URL de la imagen en el estado local
-            const imageUrl = URL.createObjectURL(selectedFile);
-            setImagenUrl(imageUrl);
             if (!isEdit) alert('Insumo creado correctamente');
           } catch (uploadError) {
             console.error('Error subiendo imagen:', uploadError);
-            // No lanzar el error para evitar que falle toda la operación
-            alert('Insumo creado/actualizado, pero hubo un error subiendo la imagen. Puede reintentar editando el insumo.');
+            alert('Insumo creado/actualizado, pero hubo un error subiendo la imagen.');
           }
         }
 
         setPendingData(null);
       } catch (error) {
         console.error('Error guardando insumo:', error);
-        alert('Error al guardar el insumo. Verifique la consola para más detalles.');
-        return; // No cerrar el modal si hay error
+        alert('Error al guardar el insumo. Verifique la consola.');
+        return;
       }
     }
     setIsModalOpen(false);
@@ -147,398 +138,315 @@ export const InsumoForm = ({
   const handleModalClose = () => {
     setIsModalOpen(false);
     setPendingData(null);
-    setSelectedFile(null); // Limpiar archivo seleccionado
+    setSelectedFile(null);
   };
 
-  // Funciones para crear catálogos
   const handleCreateCategoria = () => {
     if (newCategoriaName.trim()) {
-      createCategoriaMutation.mutate(
-        { nombre: newCategoriaName.trim() },
-        {
-          onSuccess: () => {
-            setIsCreateCategoriaModalOpen(false);
-            setNewCategoriaName("");
-          },
+      createCategoriaMutation.mutate({ nombre: newCategoriaName.trim() }, {
+        onSuccess: () => {
+          setIsCreateCategoriaModalOpen(false);
+          setNewCategoriaName("");
         }
-      );
+      });
     }
   };
 
   const handleCreateProveedor = () => {
     if (newProveedorName.trim()) {
-      createProveedorMutation.mutate(
-        { nombre: newProveedorName.trim() },
-        {
-          onSuccess: () => {
-            setIsCreateProveedorModalOpen(false);
-            setNewProveedorName("");
-          },
+      createProveedorMutation.mutate({ nombre: newProveedorName.trim() }, {
+        onSuccess: () => {
+          setIsCreateProveedorModalOpen(false);
+          setNewProveedorName("");
         }
-      );
+      });
     }
   };
 
   const handleCreateAlmacen = () => {
     if (newAlmacenName.trim()) {
-      createAlmacenMutation.mutate(
-        {
-          nombre: newAlmacenName.trim(),
-          descripcion: newAlmacenUbicacion.trim() || undefined,
-        },
-        {
-          onSuccess: () => {
-            setIsCreateAlmacenModalOpen(false);
-            setNewAlmacenName("");
-            setNewAlmacenUbicacion("");
-          },
+      createAlmacenMutation.mutate({
+        nombre: newAlmacenName.trim(),
+        descripcion: newAlmacenUbicacion.trim() || undefined,
+      }, {
+        onSuccess: () => {
+          setIsCreateAlmacenModalOpen(false);
+          setNewAlmacenName("");
+          setNewAlmacenUbicacion("");
         }
-      );
+      });
     }
   };
 
   const action = isEdit ? "editar" : "crear";
 
   return (
-    <Form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 p-6 bg-white rounded-xl shadow-lg">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          name="nombre"
-          label="Nombre del insumo"
-          placeholder="Ingrese el nombre"
-          defaultValue={insumo?.nombre}
-          required
-          className="rounded-lg"
-        />
-        <Input
-          name="descripcion"
-          label="Descripción"
-          placeholder="Ingrese la descripción"
-          defaultValue={insumo?.descripcion}
-          required
-          className="rounded-lg"
-        />
-      </div>
+    <Form id="insumo-form" onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-      <div className="grid grid-cols-1 gap-4">
-        {(imagenUrl || selectedFile) && (
-          <div className="flex justify-center">
-            <img
-              src={selectedFile ? URL.createObjectURL(selectedFile) : imagenUrl ? (
-                /^(data:|blob:|https?:\/\/)/i.test(imagenUrl)
-                  ? imagenUrl
-                  : `${FILES_BASE.replace(/\/+$/, "")}/${imagenUrl.replace(/^\/+/, "")}`
-              ) : undefined}
-              alt="Imagen del insumo"
-              className="w-32 h-32 object-cover rounded-lg border"
-            />
+        {/* Left Column: Image & Quick Info */}
+        <div className="lg:col-span-4 space-y-4">
+          <Card shadow="none" className="border border-gray-200 bg-white">
+            <CardBody className="p-4">
+              <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <Upload className="w-4 h-4 text-gray-500" /> Imagen del Insumo
+              </label>
+              <ImageUpload
+                onFileChange={setSelectedFile}
+                label="Subir foto"
+              />
+            </CardBody>
+          </Card>
+
+          <Card shadow="none" className="border border-gray-200 bg-white">
+            <CardBody className="p-4 space-y-4">
+              <div className="text-xs text-gray-500">
+                <p className="font-semibold mb-1">Nota:</p>
+                <p>Asegúrese de seleccionar la <strong>Unidad de Presentación</strong> correcta para que las conversiones automáticas funcionen (ej. Litros, Kg).</p>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Right Column: Form Fields */}
+        <div className="lg:col-span-8 space-y-5">
+
+          {/* General Information */}
+          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-600" /> Información General
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                name="nombre"
+                label="Nombre del insumo"
+                placeholder="Ej. Fertilizante Triple 15"
+                defaultValue={insumo?.nombre}
+                required
+                variant="bordered"
+                className="rounded-lg"
+              />
+              <Textarea
+                name="descripcion"
+                label="Descripción"
+                placeholder="Detalles sobre el insumo..."
+                defaultValue={insumo?.descripcion}
+                required
+                minRows={2}
+                variant="bordered"
+                className="rounded-lg"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex gap-2">
+                <Select
+                  name="idCategoria"
+                  label="Categoría"
+                  placeholder="Seleccione"
+                  defaultSelectedKeys={insumo?.categoria?.id ? [insumo.categoria.id.toString()] : []}
+                  required
+                  variant="bordered"
+                  className="flex-1"
+                >
+                  {categorias.map((cat) => (
+                    <SelectItem key={cat?.id?.toString() || Math.random()} textValue={cat?.nombre || 'Sin nombre'}>{cat?.nombre || 'Sin nombre'}</SelectItem>
+                  ))}
+                </Select>
+                <Button size="sm" isIconOnly variant="flat" color="success" onPress={() => setIsCreateCategoriaModalOpen(true)} className="mt-1">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <Select
+                name="tipoMateria"
+                label="Tipo de Materia"
+                placeholder="Seleccione"
+                defaultSelectedKeys={insumo?.tipoMateria ? [insumo.tipoMateria] : ['solido']}
+                required
+                variant="bordered"
+              >
+                {TIPO_MATERIA_OPTIONS.map((option) => (
+                  <SelectItem key={option.key} textValue={option.label}>{option.label}</SelectItem>
+                ))}
+              </Select>
+            </div>
           </div>
-        )}
-        <Input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-          label="Seleccionar imagen"
-          className="rounded-lg"
-        />
-      </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <Select
-          name="tipoMateria"
-          label="Tipo de materia"
-          placeholder="Seleccione tipo de materia"
-          defaultSelectedKeys={insumo?.tipoMateria ? [insumo.tipoMateria] : ['solido']}
-          required
-          className="rounded-lg"
-        >
-          {TIPO_MATERIA_OPTIONS.map((option) => (
-            <SelectItem key={option.key} textValue={option.label}>{option.label}</SelectItem>
-          ))}
-        </Select>
-      </div>
+          {/* Presentation & Stock */}
+          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2 flex items-center gap-2">
+              <Package className="w-4 h-4 text-orange-600" /> Presentación y Stock
+            </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select
-          name="presentacionTipo"
-          label="Tipo de presentación"
-          placeholder="Seleccione tipo"
-          defaultSelectedKeys={insumo?.presentacionTipo ? [insumo.presentacionTipo] : []}
-          required
-          className="rounded-lg"
-        >
-          {TIPO_EMPAQUE_OPTIONS.map((option) => (
-            <SelectItem key={option.key} textValue={option.label}>{option.label}</SelectItem>
-          ))}
-        </Select>
-        <Input
-          name="presentacionCantidad"
-          label="Cantidad de presentación"
-          type="number"
-          step="0.01"
-          placeholder="0.00"
-          defaultValue={insumo?.presentacionCantidad?.toString()}
-          required
-          className="rounded-lg"
-        />
-        <Select
-          name="presentacionUnidad"
-          label="Unidad de presentación"
-          placeholder="Seleccione unidad"
-          defaultSelectedKeys={insumo?.presentacionUnidad ? [insumo.presentacionUnidad] : []}
-          required
-          className="rounded-lg"
-        >
-          {UNIDAD_PRESENTACION_OPTIONS.map((option) => (
-            <SelectItem key={option.key} textValue={option.label}>{option.label}</SelectItem>
-          ))}
-        </Select>
-      </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Select
+                name="presentacionTipo"
+                label="Empaque"
+                placeholder="Tipo"
+                defaultSelectedKeys={insumo?.presentacionTipo ? [insumo.presentacionTipo] : []}
+                required
+                variant="bordered"
+              >
+                {TIPO_EMPAQUE_OPTIONS.map((option) => (
+                  <SelectItem key={option.key} textValue={option.label}>{option.label}</SelectItem>
+                ))}
+              </Select>
+              <Input
+                name="presentacionCantidad"
+                label="Cant. Presentación"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                defaultValue={insumo?.presentacionCantidad?.toString()}
+                required
+                variant="bordered"
+              />
+              <Select
+                name="presentacionUnidad"
+                label="Unidad"
+                placeholder="Unidad"
+                defaultSelectedKeys={insumo?.presentacionUnidad ? [insumo.presentacionUnidad] : []}
+                required
+                variant="bordered"
+              >
+                {UNIDAD_PRESENTACION_OPTIONS.map((option) => (
+                  <SelectItem key={option.key} textValue={option.label}>{option.label}</SelectItem>
+                ))}
+              </Select>
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          name="stockPresentaciones"
-          label="Stock en presentaciones"
-          type="number"
-          placeholder="0"
-          defaultValue={insumo?.stockPresentaciones?.toString()}
-          required
-          className="rounded-lg"
-        />
-        <Input
-          name="precioUnitario"
-          label="Precio unitario"
-          type="number"
-          step="0.01"
-          placeholder="0.00"
-          defaultValue={insumo?.precioUnitarioUso?.toString()}
-          required
-          className="rounded-lg"
-        />
-      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                name="stockPresentaciones"
+                label="Stock (Presentaciones)"
+                type="number"
+                placeholder="0"
+                defaultValue={insumo?.stockPresentaciones?.toString()}
+                required
+                variant="bordered"
+                description="Cantidad de paquetes/bultos disponibles"
+              />
+              <div className="flex gap-2">
+                <Select
+                  name="idAlmacen"
+                  label="Almacén"
+                  placeholder="Ubicación"
+                  defaultSelectedKeys={insumo?.almacen?.id ? [insumo.almacen.id.toString()] : []}
+                  required
+                  variant="bordered"
+                  className="flex-1"
+                >
+                  {almacenes.map((alm) => (
+                    <SelectItem key={alm?.id?.toString() || Math.random()} textValue={alm?.nombre || 'Sin nombre'}>{alm?.nombre || 'Sin nombre'}</SelectItem>
+                  ))}
+                </Select>
+                <Button size="sm" isIconOnly variant="flat" color="success" onPress={() => setIsCreateAlmacenModalOpen(true)} className="mt-1">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <DatePicker
-          name="fechaIngreso"
-          label="Fecha de ingreso"
-          defaultValue={insumo?.fechaIngreso ? parseDate(insumo.fechaIngreso.split('T')[0]) : parseDate(new Date().toISOString().split('T')[0])}
-          isRequired
-          className="rounded-lg"
-        />
-      </div>
+          {/* Pricing & Provider */}
+          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-green-600" /> Precios y Proveedor
+            </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="flex gap-2">
-          <Select
-            name="idCategoria"
-            label="Categoría"
-            placeholder="Seleccione categoría"
-            defaultSelectedKeys={insumo?.categoria?.id ? [insumo.categoria.id.toString()] : []}
-            required
-            className="rounded-lg flex-1"
-            aria-label="Seleccionar categoría"
-          >
-            {categorias.map((cat) => (
-              <SelectItem key={cat?.id?.toString() || Math.random()} textValue={cat?.nombre || 'Sin nombre'}>{cat?.nombre || 'Sin nombre'}</SelectItem>
-            ))}
-          </Select>
-          <Button
-            type="button"
-            size="sm"
-            variant="flat"
-            color="success"
-            className="mt-6 text-black"
-            onPress={() => setIsCreateCategoriaModalOpen(true)}
-            isIconOnly
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <Select
-            name="idProveedor"
-            label="Proveedor"
-            placeholder="Seleccione proveedor"
-            defaultSelectedKeys={insumo?.proveedor?.id ? [insumo.proveedor.id.toString()] : []}
-            required
-            className="rounded-lg flex-1"
-            aria-label="Seleccionar proveedor"
-          >
-            {proveedores.map((prov) => (
-              <SelectItem key={prov?.id?.toString() || Math.random()} textValue={prov?.nombre || 'Sin nombre'}>{prov?.nombre || 'Sin nombre'}</SelectItem>
-            ))}
-          </Select>
-          <Button
-            type="button"
-            size="sm"
-            variant="flat"
-            color="success"
-            className="mt-6 text-black"
-            onPress={() => setIsCreateProveedorModalOpen(true)}
-            isIconOnly
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <Select
-            name="idAlmacen"
-            label="Almacén"
-            placeholder="Seleccione almacén"
-            defaultSelectedKeys={insumo?.almacen?.id ? [insumo.almacen.id.toString()] : []}
-            required
-            className="rounded-lg flex-1"
-            aria-label="Seleccionar almacén"
-          >
-            {almacenes.map((alm) => (
-              <SelectItem key={alm?.id?.toString() || Math.random()} textValue={alm?.nombre || 'Sin nombre'}>{alm?.nombre || 'Sin nombre'}</SelectItem>
-            ))}
-          </Select>
-          <Button
-            type="button"
-            size="sm"
-            variant="flat"
-            color="success"
-            className="mt-6 text-black"
-            isIconOnly
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                name="precioUnitario"
+                label="Precio Unitario"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                defaultValue={insumo?.precioUnitarioUso?.toString()}
+                required
+                variant="bordered"
+                startContent={<span className="text-gray-400">$</span>}
+              />
+              <DatePicker
+                name="fechaIngreso"
+                label="Fecha Ingreso"
+                defaultValue={insumo?.fechaIngreso ? parseDate(insumo.fechaIngreso.split('T')[0]) : parseDate(new Date().toISOString().split('T')[0])}
+                isRequired
+                variant="bordered"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Select
+                name="idProveedor"
+                label="Proveedor"
+                placeholder="Seleccione proveedor"
+                defaultSelectedKeys={insumo?.proveedor?.id ? [insumo.proveedor.id.toString()] : []}
+                required
+                variant="bordered"
+                className="flex-1"
+              >
+                {proveedores.map((prov) => (
+                  <SelectItem key={prov?.id?.toString() || Math.random()} textValue={prov?.nombre || 'Sin nombre'}>{prov?.nombre || 'Sin nombre'}</SelectItem>
+                ))}
+              </Select>
+              <Button size="sm" isIconOnly variant="flat" color="success" onPress={() => setIsCreateProveedorModalOpen(true)} className="mt-1">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 mt-4">
-        <Button type="button" variant="flat" onPress={onClose} className="px-6 py-2 rounded-lg">
-          Cancelar
-        </Button>
-        <Button type="submit" color="success" className="px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-shadow text-black font-semibold">
-          {isEdit ? "Actualizar" : "Crear"}
-        </Button>
-      </div>
+      {!hideFooter && (
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <Button type="button" variant="light" color="danger" onPress={onClose} className="px-6">
+            Cancelar
+          </Button>
+          <Button type="submit" color="success" className="px-6 text-black font-semibold shadow-sm">
+            {isEdit ? "Actualizar Insumo" : "Crear Insumo"}
+          </Button>
+        </div>
+      )}
 
-      {/* Modal para crear categoría */}
-      <Modal
-        isOpen={isCreateCategoriaModalOpen}
-        onOpenChange={setIsCreateCategoriaModalOpen}
-        size="sm"
-      >
+      {/* Modals for Quick Creation (Category, Provider, Almacen) */}
+      <Modal isOpen={isCreateCategoriaModalOpen} onOpenChange={setIsCreateCategoriaModalOpen} size="sm">
         <ModalContent>
-          <ModalHeader>Crear Nueva Categoría</ModalHeader>
+          <ModalHeader>Nueva Categoría</ModalHeader>
           <ModalBody>
-            <Input
-              label="Nombre de la categoría"
-              placeholder="Ingrese el nombre"
-              value={newCategoriaName}
-              onChange={(e) => setNewCategoriaName(e.target.value)}
-              required
-            />
+            <Input label="Nombre" value={newCategoriaName} onChange={(e) => setNewCategoriaName(e.target.value)} />
           </ModalBody>
           <ModalFooter>
-            <Button
-              variant="flat"
-              onPress={() => {
-                setIsCreateCategoriaModalOpen(false);
-                setNewCategoriaName("");
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              color="success"
-              className="text-black font-medium"
-              onPress={handleCreateCategoria}
-              isLoading={createCategoriaMutation.isPending}
-              disabled={!newCategoriaName.trim()}
-            >
-              Crear
-            </Button>
+            <Button variant="light" onPress={() => setIsCreateCategoriaModalOpen(false)}>Cancelar</Button>
+            <Button color="success" className="text-black" onPress={handleCreateCategoria}>Crear</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      {/* Modal para crear proveedor */}
-      <Modal
-        isOpen={isCreateProveedorModalOpen}
-        onOpenChange={setIsCreateProveedorModalOpen}
-        size="sm"
-      >
+      <Modal isOpen={isCreateProveedorModalOpen} onOpenChange={setIsCreateProveedorModalOpen} size="sm">
         <ModalContent>
-          <ModalHeader>Crear Nuevo Proveedor</ModalHeader>
+          <ModalHeader>Nuevo Proveedor</ModalHeader>
           <ModalBody>
-            <Input
-              label="Nombre del proveedor"
-              placeholder="Ingrese el nombre"
-              value={newProveedorName}
-              onChange={(e) => setNewProveedorName(e.target.value)}
-              required
-            />
+            <Input label="Nombre" value={newProveedorName} onChange={(e) => setNewProveedorName(e.target.value)} />
           </ModalBody>
           <ModalFooter>
-            <Button
-              variant="flat"
-              onPress={() => {
-                setIsCreateProveedorModalOpen(false);
-                setNewProveedorName("");
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              color="success"
-              className="text-black font-medium"
-              onPress={handleCreateProveedor}
-              isLoading={createProveedorMutation.isPending}
-              disabled={!newProveedorName.trim()}
-            >
-              Crear
-            </Button>
+            <Button variant="light" onPress={() => setIsCreateProveedorModalOpen(false)}>Cancelar</Button>
+            <Button color="success" className="text-black" onPress={handleCreateProveedor}>Crear</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      {/* Modal para crear almacén */}
-      <Modal
-        isOpen={isCreateAlmacenModalOpen}
-        onOpenChange={setIsCreateAlmacenModalOpen}
-        size="sm"
-      >
+      <Modal isOpen={isCreateAlmacenModalOpen} onOpenChange={setIsCreateAlmacenModalOpen} size="sm">
         <ModalContent>
-          <ModalHeader>Crear Nuevo Almacén</ModalHeader>
-          <ModalBody className="space-y-4">
-            <Input
-              label="Nombre del almacén"
-              placeholder="Ingrese el nombre"
-              value={newAlmacenName}
-              onChange={(e) => setNewAlmacenName(e.target.value)}
-              required
-            />
-            <Input
-              label="Ubicación (opcional)"
-              placeholder="Ingrese la ubicación física"
-              value={newAlmacenUbicacion}
-              onChange={(e) => setNewAlmacenUbicacion(e.target.value)}
-            />
+          <ModalHeader>Nuevo Almacén</ModalHeader>
+          <ModalBody className="space-y-3">
+            <Input label="Nombre" value={newAlmacenName} onChange={(e) => setNewAlmacenName(e.target.value)} />
+            <Input label="Ubicación" value={newAlmacenUbicacion} onChange={(e) => setNewAlmacenUbicacion(e.target.value)} />
           </ModalBody>
           <ModalFooter>
-            <Button
-              variant="flat"
-              onPress={() => {
-                setIsCreateAlmacenModalOpen(false);
-                setNewAlmacenName("");
-                setNewAlmacenUbicacion("");
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              color="success"
-              className="text-black font-medium"
-              onPress={handleCreateAlmacen}
-              isLoading={createAlmacenMutation.isPending}
-              disabled={!newAlmacenName.trim()}
-            >
-              Crear
-            </Button>
+            <Button variant="light" onPress={() => setIsCreateAlmacenModalOpen(false)}>Cancelar</Button>
+            <Button color="success" className="text-black" onPress={handleCreateAlmacen}>Crear</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

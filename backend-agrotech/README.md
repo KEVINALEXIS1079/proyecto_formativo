@@ -21,8 +21,8 @@ API REST desarrollada con NestJS que proporciona todos los servicios backend par
 
 Antes de comenzar, asegúrate de tener instalado:
 
-- **Node.js** 18.x
-- **npm** 9.x
+- **Node.js** 22.x
+- **npm** 10.x
 - **PostgreSQL** 15.x
 - **PostGIS** 3.x (extensión de PostgreSQL)
 - **Git**
@@ -32,8 +32,8 @@ Antes de comenzar, asegúrate de tener instalado:
 ### Verificar versiones
 
 ```bash
-node --version  # Debe ser v18.x
-npm --version   # Debe ser 9.x
+node --version  # Debe ser v22.x
+npm --version   # Debe ser 10.x
 psql --version  # Debe ser 15.x
 docker --version  # (opcional)
 docker-compose --version  # (opcional)

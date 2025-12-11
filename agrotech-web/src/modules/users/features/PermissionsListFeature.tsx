@@ -140,19 +140,42 @@ export const PermissionsListFeature = forwardRef<PermissionsListRef>((_, ref) =>
           setIsEditMode(false);
         }}
         title={selectedPermiso ? (isEditMode ? 'Editar Permiso' : 'Gestionar Permiso') : 'Nuevo Permiso'}
-        footer={selectedPermiso ? (
-          !isEditMode ? (
+        footer={(
+          selectedPermiso ? (
+            !isEditMode ? (
+              <>
+                <Button variant="flat" onPress={() => setIsModalOpen(false)}>
+                  Cerrar
+                </Button>
+                <Button color="success" className="text-black font-semibold" onPress={() => setIsEditMode(true)}>
+                  Editar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="light" onPress={() => setIsEditMode(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  color="success"
+                  className="text-black font-semibold"
+                  onPress={async () => {
+                    try {
+                      await permissionFormRef.current?.save();
+                      setIsEditMode(false);
+                    } catch (error) {
+                      console.error('Error saving:', error);
+                    }
+                  }}
+                >
+                  Guardar Cambios
+                </Button>
+              </>
+            )
+          ) : (
+            // Crear Permiso Footer
             <>
               <Button variant="flat" onPress={() => setIsModalOpen(false)}>
-                Cerrar
-              </Button>
-              <Button color="success" className="text-black font-semibold" onPress={() => setIsEditMode(true)}>
-                Editar
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="light" onPress={() => setIsEditMode(false)}>
                 Cancelar
               </Button>
               <Button
@@ -161,17 +184,16 @@ export const PermissionsListFeature = forwardRef<PermissionsListRef>((_, ref) =>
                 onPress={async () => {
                   try {
                     await permissionFormRef.current?.save();
-                    setIsEditMode(false);
                   } catch (error) {
-                    console.error('Error saving:', error);
+                    console.error('Error creating permission:', error);
                   }
                 }}
               >
-                Guardar Cambios
+                Crear Permiso
               </Button>
             </>
           )
-        ) : undefined}
+        )}
       >
         <PermissionForm
           ref={permissionFormRef}
