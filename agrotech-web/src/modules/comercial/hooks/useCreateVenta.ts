@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ventaService } from "../api/ventas.service";
-import type { CreateVentaDTO, Venta } from "../model/types";
+import type { CreateVentaDto as CreateVentaDTO, Venta } from "../models/types/sales.types";
 
 export function useCreateVenta() {
   const [loading, setLoading] = useState(false);

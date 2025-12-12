@@ -135,7 +135,6 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
         insumos={insumos}
         isLoading={isLoading}
         onView={handleView}
-        onDelete={undefined} // Disabled: Insumos should not be deleted
         onViewMovimientos={handleViewMovimientos}
         hasMovimientosMap={hasMovimientosMap}
       />

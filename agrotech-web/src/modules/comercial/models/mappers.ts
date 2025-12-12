@@ -1,4 +1,23 @@
 import type { Venta, CreateVentaDto } from "./types/sales.types";
+import type { ProductoAgro, CreateProductoAgroDto } from "./types/production.types";
+
+export function mapProductoFromApi(data: any): ProductoAgro {
+    return {
+        id: data.id,
+        nombre: data.nombre,
+        unidadBase: data.unidadBase,
+        descripcion: data.descripcion,
+        imagen: data.imagen || undefined
+    };
+}
+
+export function mapProductoToApi(dto: CreateProductoAgroDto): any {
+    return {
+        nombre: dto.nombre,
+        unidadBase: dto.unidadBase,
+        descripcion: dto.descripcion
+    };
+}
 
 export function mapVentaFromApi(data: any): Venta {
     return {

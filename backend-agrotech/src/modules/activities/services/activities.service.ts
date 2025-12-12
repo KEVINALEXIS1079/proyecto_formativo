@@ -260,6 +260,8 @@ export class ActivitiesService {
         actividadCosechaId: saved.id,
         cantidadKg: data.kgRecolectados,
         fecha: new Date(data.fecha),
+        usuarioId: saved.creadoPorUsuarioId,
+        productoAgroId: saved.productoAgroId,
       });
     }
 
@@ -303,6 +305,7 @@ export class ActivitiesService {
   }, userId?: number) {
     const qb = this.actividadRepo
       .createQueryBuilder('actividad')
+      .addSelect(['actividad.cantidadPlantas', 'actividad.kgRecolectados', 'actividad.subtipo', 'actividad.productoAgroId']) // Explicitly select subtipo for frontend logic
       .leftJoinAndSelect('actividad.cultivo', 'cultivo')
       .leftJoinAndSelect('actividad.lote', 'lote')
       .leftJoinAndSelect('actividad.subLote', 'subLote')
@@ -348,6 +351,7 @@ export class ActivitiesService {
       relations: [
         'cultivo',
         'lote',
+        'lote.cultivos', // Loaded to fallback if activity.cultivoId is null
         'subLote',
         'responsables',
         'responsables.usuario',
@@ -399,6 +403,9 @@ export class ActivitiesService {
         'subLoteId',
         'fecha',
         'descripcion',
+        'cantidadPlantas',
+        'kgRecolectados',
+        'productoAgroId',
       ];
 
       const prevSnapshot: Record<string, any> = {};
@@ -840,7 +847,8 @@ export class ActivitiesService {
             actividadCosechaId: id,
             cantidadKg: data.produccion.cantidad,
             fecha: data.fechaReal ? new Date(data.fechaReal) : new Date(),
-            costoCultivo: cultivo.costoTotal // Passes the total accumulated cost
+            costoCultivo: cultivo.costoTotal, // Passes the total accumulated cost
+            usuarioId, // Passed from context
           }, manager);
 
           // Optional: Close Cultivo

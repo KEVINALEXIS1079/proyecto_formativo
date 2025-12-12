@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ventaService } from "../api/ventas.service";
-import type { Venta, VentaFilters } from "../model/types";
+import type { Venta } from "../models/types/sales.types";
+import type { VentaFilters } from "../model/types"; // VentaFilters IS in model/types.ts
 
 interface UseVentaListReturn {
   ventas: Venta[];

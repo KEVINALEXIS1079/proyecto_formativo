@@ -1,6 +1,7 @@
 import type { ProductoAgro } from '../models/types/production.types';
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Spinner } from "@heroui/react";
-import { Eye } from 'lucide-react';
+import { Eye, Image as ImageIcon } from 'lucide-react';
+import { getImageUrl } from "../../production/utils/image-helper";
 
 import Surface from '../ui/Surface';
 
@@ -27,6 +28,7 @@ export const ProductTable = ({ products, isLoading, onEdit }: ProductTableProps)
         <Surface>
             <Table aria-label="Tabla de productos" removeWrapper className="[&_[data-slot=td]]:py-3">
                 <TableHeader>
+                    <TableColumn>IMAGEN</TableColumn>
                     <TableColumn>NOMBRE</TableColumn>
                     <TableColumn>UNIDAD BASE</TableColumn>
                     <TableColumn>DESCRIPCIÓN</TableColumn>
@@ -35,6 +37,19 @@ export const ProductTable = ({ products, isLoading, onEdit }: ProductTableProps)
                 <TableBody items={products}>
                     {(product) => (
                         <TableRow key={product.id} className="hover:bg-gray-50/50 transition-colors">
+                            <TableCell>
+                                <div className="w-10 h-10 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center border border-gray-200">
+                                    {product.imagen ? (
+                                        <img 
+                                            src={getImageUrl(product.imagen)} 
+                                            alt={product.nombre} 
+                                            className="w-full h-full object-cover" 
+                                        />
+                                    ) : (
+                                        <ImageIcon size={16} className="text-gray-300" />
+                                    )}
+                                </div>
+                            </TableCell>
                             <TableCell>{product.nombre}</TableCell>
                             <TableCell>{product.unidadBase}</TableCell>
                             <TableCell>{product.descripcion || '-'}</TableCell>

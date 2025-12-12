@@ -11,9 +11,11 @@ import { Venta } from './entities/venta.entity';
 import { VentaDetalle } from './entities/venta-detalle.entity';
 import { Pago } from './entities/pago.entity';
 import { Factura } from './entities/factura.entity';
+import { HistorialPrecioLote } from './entities/historial-precio-lote.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
+import { ImageUploadService } from '../../common/services/image-upload.service';
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { AuthModule } from '../auth/auth.module';
       VentaDetalle,
       Pago,
       Factura,
+      HistorialPrecioLote,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -37,7 +40,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [ProductionController],
-  providers: [ProductionService, ProductionGateway, ProductionController],
+  providers: [ProductionService, ProductionGateway, ProductionController, ImageUploadService],
   exports: [ProductionService],
 })
 export class ProductionModule {}

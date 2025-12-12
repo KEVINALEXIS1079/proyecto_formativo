@@ -389,6 +389,7 @@ export class InventoryController {
     const mappedData = {
       nombre: data.nombre_categoria_insumo || data.nombre,
       descripcion: data.descripcion,
+      tipoInsumo: data.tipoInsumo,
     };
 
     return this.inventoryService.createCategoria(mappedData);

@@ -1,29 +1,42 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { forwardRef, useImperativeHandle, useState, useMemo } from "react";
 import { useGeoData } from "../hooks/useGeoData";
 import GeoMap from "../widgets/GeoMap";
 import GeoFilters from "../ui/GeoFilters";
 import SectionTitle from "../ui/SectionTitle";
 import { Card, CardBody, Tabs, Tab, Button, Chip, Select, SelectItem, Spinner } from "@heroui/react";
-import { List, Map as MapIcon, Edit, MapPin, Ruler, Layers, Trash2 } from "lucide-react";
+import { List, Map as MapIcon, Edit, MapPin, Ruler, Layers, Ban, CheckCircle } from "lucide-react";
 import SubloteModal from "../widgets/SubloteModal";
 import type { Sublote } from "../../cultivos/model/types";
+import { DeleteModal } from "@/shared/components/ui/DeleteModal";
 
 export interface SubloteListRef {
   openCreateModal: () => void;
 }
 
 export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
-  const { data: lotes = [], isLoading } = useGeoData();
+  const qc = useQueryClient();
+  const { data: lotes = [], isLoading, refetch } = useGeoData({ estado: 'activo' });
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("activo");
+
+  const { data: lotesFiltered, isFetching } = useGeoData({ estado: statusFilter });
+  const displayLotes = lotesFiltered || [];
+
   const [selectedLoteId, setSelectedLoteId] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSublote, setSelectedSublote] = useState<Sublote | undefined>(undefined);
 
   const [activeTab, setActiveTab] = useState<string>("info");
 
+  // Toggle Status State
+  const [isToggleModalOpen, setIsToggleModalOpen] = useState(false);
+  const [subloteToToggle, setSubloteToToggle] = useState<Sublote | undefined>(undefined);
+  const [isToggling, setIsToggling] = useState(false);
+
   const filteredSublotes = useMemo(() => {
     // Ensure nested array exists and filter out nulls immediately
-    let allSublotes = lotes.flatMap(l => l.sublotes ?? []);
+    let allSublotes = displayLotes.flatMap(l => l.sublotes ?? []);
 
     // Filter by selected Lote
     if (selectedLoteId !== "all") {
@@ -31,7 +44,7 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
         if (!s) return false;
         // extended property check
         const sWithLote = s as any;
-        const parentLote = lotes.find(l => l.nombre_lote === sWithLote.loteNombre);
+        const parentLote = displayLotes.find(l => l.nombre_lote === sWithLote.loteNombre);
         return parentLote?.id_lote_pk?.toString() === selectedLoteId;
       });
     }
@@ -45,14 +58,14 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
     if (!q.trim()) return sortedSublotes;
     const lowerQ = q.toLowerCase();
     return sortedSublotes.filter(s => s && s.nombre_sublote && s.nombre_sublote.toLowerCase().includes(lowerQ));
-  }, [lotes, q, selectedLoteId]);
+  }, [displayLotes, q, selectedLoteId]);
 
   const filteredLotesForMap = useMemo(() => {
-    let lotesToMap = lotes;
+    let lotesToMap = displayLotes;
 
     // Filter by selected Lote
     if (selectedLoteId !== "all") {
-      lotesToMap = lotes.filter(l => l.id_lote_pk?.toString() === selectedLoteId);
+      lotesToMap = displayLotes.filter(l => l.id_lote_pk?.toString() === selectedLoteId);
     }
 
     if (!q.trim()) return lotesToMap;
@@ -62,7 +75,7 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
       ...l,
       sublotes: (l.sublotes ?? []).filter((s: Sublote) => s && s.nombre_sublote && s.nombre_sublote.toLowerCase().includes(lowerQ))
     })).filter(l => l.sublotes && l.sublotes.length > 0);
-  }, [lotes, q, selectedLoteId]);
+  }, [displayLotes, q, selectedLoteId]);
 
   useImperativeHandle(ref, () => ({
     openCreateModal: () => {
@@ -80,12 +93,44 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
     setActiveTab("mapa");
   };
 
+  const handleToggleStatus = (sublote: Sublote) => {
+    setSubloteToToggle(sublote);
+    setIsToggleModalOpen(true);
+  };
+
+  const handleConfirmToggle = async () => {
+    if (!subloteToToggle) return;
+
+    setIsToggling(true);
+    try {
+      const isInactive = (subloteToToggle as any).estado?.toLowerCase() === 'inactivo';
+      const geoApi = await import("../api/geo.service");
+      
+      // Update sublote status
+      if (subloteToToggle.id_sublote_pk) {
+        await geoApi.geoService.updateSubLote(subloteToToggle.id_sublote_pk, { estado: isInactive ? 'activo' : 'inactivo' } as any);
+      }
+      
+      qc.invalidateQueries({ queryKey: ["geo"] });
+      refetch();
+      setIsToggleModalOpen(false);
+      setSubloteToToggle(undefined);
+    } catch (err) {
+      console.error("Error changing status", err);
+      alert("Error al actualizar estado del sublote");
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  const isActivating = subloteToToggle ? (subloteToToggle as any).estado?.toLowerCase() === 'inactivo' : false;
+
   const handleLoteChange = (keys: any) => {
     const value = Array.from(keys)[0] as string;
     setSelectedLoteId(value || "all");
   };
 
-  if (isLoading) return (
+  if (isLoading && !lotesFiltered) return (
     <div className="flex justify-center p-4">
       <Spinner color="success" label="Cargando sublotes..." />
     </div>
@@ -93,7 +138,13 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
 
   return (
     <div className="space-y-6">
-      <GeoFilters q={q} setQ={setQ} placeholder="Buscar sublotes...">
+      <GeoFilters 
+        q={q} 
+        setQ={setQ} 
+        placeholder="Buscar sublotes..."
+        statusFilter={statusFilter}
+        onStatusChange={(val) => setStatusFilter(val)}
+      >
         <div className="w-full sm:w-auto min-w-[200px]">
           <SectionTitle>Filtrar por Lote</SectionTitle>
           <Select
@@ -110,7 +161,7 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
           >
             {[
               <SelectItem key="all">Todos</SelectItem>,
-              ...lotes.map((lote) => (
+              ...displayLotes.map((lote) => (
                 <SelectItem key={String(lote.id_lote_pk)}>
                   {lote.nombre_lote}
                 </SelectItem>
@@ -164,14 +215,27 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
                       <div className="p-5 pb-3">
                         <div className="flex justify-between items-center mb-1">
                           <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-sm shadow-sm">
+                            <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm shadow-sm ${
+                            (sublote as any).estado === 'inactivo' 
+                              ? "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-gray-500" 
+                              : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                          }`}>
                               {sublote.id_sublote_pk || "#"}
                             </div>
-                            <h4 className="font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-green-600 transition-colors line-clamp-1">
+                            <h4 className={`font-bold text-lg transition-colors line-clamp-1 ${
+                            (sublote as any).estado === 'inactivo'
+                              ? "text-gray-400 dark:text-gray-500 line-through"
+                              : "text-gray-900 dark:text-gray-100 group-hover:text-green-600"
+                          }`}>
                               {sublote.nombre_sublote || "Sin Nombre"}
                             </h4>
                           </div>
-                          <Chip size="sm" color="success" variant="flat" className="font-medium">Sublote</Chip>
+                          <div className="flex gap-2">
+                            {(sublote as any).estado === 'inactivo' && (
+                              <Chip size="sm" color="default" variant="flat" className="font-medium">Inactivo</Chip>
+                            )}
+                            <Chip size="sm" color="success" variant="flat" className="font-medium">Sublote</Chip>
+                          </div>
                         </div>
                       </div>
 
@@ -242,18 +306,14 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
                         </Button>
                         <Button
                           size="sm"
-                          color="danger"
+                          color={(sublote as any).estado?.toLowerCase() === 'inactivo' ? "success" : "danger"}
                           variant="flat"
                           isIconOnly
-                          className="text-danger"
-                          onPress={() => {
-                            if (confirm(`¿Estás seguro de inhabilitar el sublote ${sublote.nombre_sublote}?`)) {
-                              console.log("Inhabilitar sublote", sublote.id_sublote_pk);
-                            }
-                          }}
-                          title="Inhabilitar"
+                          className={(sublote as any).estado?.toLowerCase() === 'inactivo' ? "text-success" : "text-danger"}
+                          onPress={() => handleToggleStatus(sublote)}
+                          title={(sublote as any).estado?.toLowerCase() === 'inactivo' ? "Habilitar" : "Inhabilitar"}
                         >
-                          <Trash2 size={16} />
+                          {(sublote as any).estado?.toLowerCase() === 'inactivo' ? <CheckCircle size={16} /> : <Ban size={16} />}
                         </Button>
                       </div>
                     </CardBody>
@@ -277,6 +337,21 @@ export const SubloteListFeature = forwardRef<SubloteListRef>((_, ref) => {
           </div>
         </Tab>
       </Tabs>
+
+      {/* Delete/Restore Confirmation Modal */}
+      <DeleteModal
+        isOpen={isToggleModalOpen}
+        onClose={() => setIsToggleModalOpen(false)}
+        onConfirm={handleConfirmToggle}
+        title={isActivating ? "Habilitar Sublote" : "Inhabilitar Sublote"}
+        description={isActivating
+          ? `¿Estás seguro de habilitar el sublote ${subloteToToggle?.nombre_sublote}? El sublote estará disponible nuevamente.`
+          : `¿Estás seguro de inhabilitar el sublote ${subloteToToggle?.nombre_sublote}?`
+        }
+        isLoading={isToggling}
+        confirmText={isActivating ? "Habilitar" : "Inhabilitar"}
+        confirmColor={isActivating ? "success" : "danger"}
+      />
 
       <SubloteModal
         isOpen={isModalOpen}

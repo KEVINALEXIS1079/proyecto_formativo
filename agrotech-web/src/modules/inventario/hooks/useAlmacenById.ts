@@ -13,8 +13,6 @@ export function useAlmacenById(id: number) {
     },
     enabled: !!id,
     staleTime: 15_000,
-    onError: (error) => {
-      console.error('DEBUG: Error fetching almacen with id:', id, error);
-    },
+
   });
 }

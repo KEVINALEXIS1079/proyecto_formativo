@@ -41,6 +41,7 @@ export function adaptLote(raw: any): Lote {
     // Parse geom to coordinates
     coordenadas_lote: parseGeoJSONCoords(raw?.geom ?? raw?.coordenadas, false),
     sublotes: Array.isArray(raw?.sublotes) ? raw.sublotes.map(adaptSublote) : [],
+    estado: raw?.estado ?? 'activo',
   };
 }
 
@@ -62,6 +63,7 @@ export function adaptSublote(raw: any): Sublote {
     descripcion: raw?.descripcion ?? "",
     area_sublote: Number(raw?.areaM2 ?? raw?.area_sublote ?? 0),
     coordenadas_sublote: coords,
+    estado: raw?.estado ?? 'activo',
   };
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { productoService } from "../api/productos.service";
-import type { Producto } from "../model/types";
+import type { ProductoAgro as Producto } from "../models/types/production.types";
 
 interface UseProductoListReturn {
   productos: Producto[];

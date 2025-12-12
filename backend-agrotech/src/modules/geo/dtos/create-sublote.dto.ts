@@ -15,6 +15,10 @@ export class CreateSubLoteDto {
   @MaxLength(500, { message: 'La descripción no puede exceder 500 caracteres' })
   descripcion?: string;
 
+  @IsOptional()
+  @IsString()
+  estado?: string;
+
   @IsObject({ message: 'La geometría debe ser un objeto GeoJSON válido' })
   @IsNotEmpty({ message: 'La geometría es requerida' })
   geom: any; // GeoJSON Polygon

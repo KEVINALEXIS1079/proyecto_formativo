@@ -24,6 +24,34 @@ export const useCreateProducto = () => {
     });
 };
 
+export const useUploadProductoImagen = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, file }: { id: number; file: File }) => api.uploadProductoImagen(id, file),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['productos'] });
+            toast.success('Imagen actualizada correctamente');
+        },
+        onError: (error: any) => {
+            toast.error(error.message || 'Error al subir imagen');
+        }
+    });
+};
+
+export const useUpdateProducto = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number; data: Partial<CreateProductoAgroDto> }) => api.updateProducto(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['productos'] });
+            toast.success('Producto actualizado correctamente');
+        },
+        onError: (error: any) => {
+            toast.error(error.message || 'Error al actualizar producto');
+        }
+    });
+};
+
 export const useLotesProduccion = (filters?: { productoAgroId?: number; cultivoId?: number }) => {
     return useQuery({
         queryKey: ['lotes-produccion', filters],

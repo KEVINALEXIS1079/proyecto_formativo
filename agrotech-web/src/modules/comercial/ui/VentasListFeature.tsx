@@ -88,24 +88,24 @@ export default function VentasListFeature() {
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {ventas.map((venta) => (
-            <Card key={venta.id_venta_pk} className="hover:shadow-md transition-shadow">
+            <Card key={venta.id} className="hover:shadow-md transition-shadow">
               <CardBody>
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-lg font-semibold">{venta.cliente_venta}</h3>
+                    <h3 className="text-lg font-semibold">{venta.cliente?.nombre || 'Cliente General'}</h3>
                     <p className="text-sm text-gray-600">
-                      Fecha: {new Date(venta.fecha_venta).toLocaleDateString()}
+                      Fecha: {new Date(venta.fecha).toLocaleDateString()}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Total: ${venta.total_venta.toFixed(2)}
+                      Total: ${venta.total.toFixed(2)}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Productos: {venta.detalles.length}
+                      Productos: {venta.detalles?.length || 0}
                     </p>
                   </div>
                   <Button
                     as={Link}
-                    to={`/finanzas/ventas/${venta.id_venta_pk}`}
+                    to={`/finanzas/ventas/${venta.id}`}
                     color="primary"
                     variant="light"
                   >

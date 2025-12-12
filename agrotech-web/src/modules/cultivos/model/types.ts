@@ -15,6 +15,7 @@ export interface Lote {
   area_lote?: number;
   coordenadas_lote?: { latitud_lote: number; longitud_lote: number }[];
   sublotes?: Sublote[];
+  estado?: string;
 }
 
 export interface Sublote {
@@ -27,6 +28,7 @@ export interface Sublote {
   area_sublote?: number;
   coordenadas_sublote?: { latitud_sublote: number; longitud_sublote: number }[];
   id_lote_fk?: number;
+  estado?: string;
 }
 
 export interface Cultivo {
@@ -57,6 +59,8 @@ export interface CreateCultivoInput {
   idSublote?: number;
   img?: File | null;
   estado?: EstadoCultivo;
+  fechaSiembra?: string;
+  fechaFinalizacion?: string;
 }
 
 export interface UpdateCultivoInput extends Partial<CreateCultivoInput> {

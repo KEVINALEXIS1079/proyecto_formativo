@@ -42,6 +42,7 @@ export default function HistorialActividadesTable({
     { key: "cantidadInsumos", label: "Cantidad" },
     { key: "valorInsumos", label: "Valor Insumos" },
     { key: "totalInsumos", label: "Total Insumos" },
+    { key: "herramientas", label: "Herramientas" },
     { key: "servicios", label: "Servicios" },
     { key: "horasServicios", label: "Horas Servicio" },
     { key: "valorServicios", label: "Servicio ($/h)" },
@@ -181,6 +182,32 @@ export default function HistorialActividadesTable({
           <p className="text-sm font-semibold text-orange-700">
             {COP.format(totalInputsCost)}
           </p>
+        );
+
+      case "herramientas":
+        const uniqueTools = new Set<string>();
+        // Add planned tools
+        actividad.herramientas?.forEach((h: any) => {
+          if (h.activoFijo?.nombre) uniqueTools.add(`${h.activoFijo.nombre} (Plan)`);
+        });
+        // Add used tools
+        actividad.usosHerramientas?.forEach((u: any) => {
+          if (u.insumo?.nombre) uniqueTools.add(`${u.insumo.nombre} (Uso)`);
+        });
+        
+        const toolsList = Array.from(uniqueTools).join(", ");
+        const toolsCount = uniqueTools.size;
+
+        return (
+          <div title={toolsList}>
+            {toolsCount > 0 ? (
+              <Chip size="sm" color="warning" variant="flat">
+                {toolsCount} Und
+              </Chip>
+            ) : (
+              <span className="text-gray-400">-</span>
+            )}
+          </div>
         );
 
       case "servicios":

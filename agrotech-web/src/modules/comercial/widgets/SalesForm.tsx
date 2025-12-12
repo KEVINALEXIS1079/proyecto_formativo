@@ -127,8 +127,8 @@ export const SalesForm = ({ onClose, onSuccess }: SalesFormProps) => {
                                     {lotes
                                         .filter(l => l.stockDisponibleKg > 0)
                                         .map(l => (
-                                            <SelectItem key={l.id} textValue={`${l.productoAgro?.nombre} - Stock: ${l.stockDisponibleKg}kg`}>
-                                                {l.productoAgro?.nombre} (Stock: {l.stockDisponibleKg}kg) - ${l.precioSugeridoKg}/kg
+                                            <SelectItem key={l.id} textValue={`${l.productoAgro?.nombre} [${(l.cultivo as any)?.nombre || (l.cultivo as any)?.nombreCultivo || 'Cultivo ' + (l.cultivoId || '?')}] - Stock: ${l.stockDisponibleKg}kg`}>
+                                                {l.productoAgro?.nombre} <span className="text-xs text-gray-500">({(l.cultivo as any)?.nombre || (l.cultivo as any)?.nombreCultivo || 'ID:' + l.cultivoId})</span> (Stock: {l.stockDisponibleKg}kg) - ${l.precioSugeridoKg}/kg
                                             </SelectItem>
                                         ))}
                                 </Select>

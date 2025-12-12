@@ -1,6 +1,7 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { SubLote } from './sublote.entity';
+import { Cultivo } from '../../cultivos/entities/cultivo.entity';
 
 @Entity('lotes')
 export class Lote extends BaseEntity {
@@ -27,4 +28,7 @@ export class Lote extends BaseEntity {
 
   @OneToMany(() => SubLote, subLote => subLote.lote)
   sublotes: SubLote[];
+
+  @OneToMany(() => Cultivo, cultivo => cultivo.lote)
+  cultivos: Cultivo[];
 }

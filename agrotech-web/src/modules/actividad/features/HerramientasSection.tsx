@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Control } from "react-hook-form";
-import { useFieldArray } from "react-hook-form";
+import { useFieldArray, Controller } from "react-hook-form";
 import { Button, Input, Select, SelectItem, Card, CardBody } from "@heroui/react";
 import { Plus, Trash2, Wrench } from "lucide-react";
 import { api } from "@/shared/api/client";
@@ -55,17 +55,30 @@ export default function HerramientasSection({ control }: HerramientasSectionProp
                         <CardBody>
                             <div className="flex gap-4 items-end">
                                 <div className="flex-1">
-                                    <Select
-                                        label="Herramienta / Maquinaria"
-                                        placeholder="Seleccione un activo"
-                                        {...control.register(`herramientas.${index}.activoFijoId` as const, { required: true })}
-                                    >
-                                        {activosFijos.map((activo) => (
-                                            <SelectItem key={String(activo.id)} textValue={activo.nombre}>
-                                                {activo.nombre} ({activo.codigo})
-                                            </SelectItem>
-                                        ))}
-                                    </Select>
+                                    <Controller
+                                        control={control}
+                                        name={`herramientas.${index}.activoFijoId`}
+                                        rules={{ required: "Seleccione una herramienta" }}
+                                        render={({ field, fieldState }) => (
+                                            <Select
+                                                label="Herramienta / Maquinaria"
+                                                placeholder="Seleccione un activo"
+                                                selectedKeys={field.value ? [String(field.value)] : []}
+                                                onSelectionChange={(keys) => {
+                                                    const val = Array.from(keys)[0];
+                                                    field.onChange(Number(val));
+                                                }}
+                                                errorMessage={fieldState.error?.message}
+                                                isInvalid={!!fieldState.error}
+                                            >
+                                                {activosFijos.map((activo) => (
+                                                    <SelectItem key={String(activo.id)} textValue={activo.nombre}>
+                                                        {activo.nombre} ({activo.codigo})
+                                                    </SelectItem>
+                                                ))}
+                                            </Select>
+                                        )}
+                                    />
                                 </div>
                                 <div className="w-32">
                                     <Input

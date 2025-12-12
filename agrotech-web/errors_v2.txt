@@ -1,0 +1,69 @@
+src/app/layout/AppLayout.tsx(21,27): error TS2307: Cannot find module '../../modules/usuarios/perfil/hooks/usePerfil' or its corresponding type declarations.
+src/app/layout/AppLayout.tsx(113,52): error TS2339: Property 'nivel' does not exist on type 'RawAlert'.
+src/app/layout/AppLayout.tsx(113,63): error TS2339: Property 'severidad' does not exist on type 'RawAlert'.
+src/app/layout/AppLayout.tsx(114,60): error TS2339: Property 'body' does not exist on type 'RawAlert'.
+src/modules/actividad/index.ts(1,72): error TS2307: Cannot find module './model/types' or its corresponding type declarations.
+src/modules/actividad/models/schemas.ts(58,3): error TS1117: An object literal cannot have multiple properties with the same name.
+src/modules/actividad/models/schemas.ts(59,3): error TS1117: An object literal cannot have multiple properties with the same name.
+src/modules/actividad/ui/FinalizeActivityModal.tsx(39,5): error TS2322: Type 'Resolver<{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: unknown; }[]; produccion?: { cantidad: unknown; unidad?: string | undefined; } | undefined; }, any, { fechaReal: Date; insumosReales: { ...; }[]; produccion?: { ...; } | undefined; }>' is not assignable to type 'Resolver<{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: number; }[]; produccion?: { cantidad: number; unidad: string; } | undefined; }, any, { fechaReal: Date; insumosReales: { ...; }[]; produccion?: { ...; } | undefined; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: number; }[]; produccion?: { cantidad: number; unidad: string; } | undefined; }>' is not assignable to type 'ResolverOptions<{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: unknown; }[]; produccion?: { cantidad: unknown; unidad?: string | undefined; } | undefined; }>'.
+      Type '{ insumoId: number; cantidad: unknown; }[]' is not assignable to type '{ insumoId: number; cantidad: number; }[]'.
+        Type '{ insumoId: number; cantidad: unknown; }' is not assignable to type '{ insumoId: number; cantidad: number; }'.
+          Types of property 'cantidad' are incompatible.
+            Type 'unknown' is not assignable to type 'number'.
+src/modules/actividad/ui/FinalizeActivityModal.tsx(105,40): error TS2345: Argument of type '(data: FinalizarActividadData) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: number; }[]; produccion?: { cantidad: number; unidad: string; } | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: number; }[]; produccion?: { cantidad: number; unidad: string; } | undefined; }': fechaReal, insumosReales
+src/modules/actividad/widgets/CreateProductModal.tsx(81,23): error TS2322: Type '(string | undefined)[]' is not assignable to type '"all" | Iterable<Key> | undefined'.
+  Type '(string | undefined)[]' is not assignable to type 'Iterable<Key>'.
+    The types returned by '[Symbol.iterator]().next(...)' are incompatible between these types.
+      Type 'IteratorResult<string | undefined, undefined>' is not assignable to type 'IteratorResult<Key, any>'.
+        Type 'IteratorYieldResult<string | undefined>' is not assignable to type 'IteratorResult<Key, any>'.
+          Type 'IteratorYieldResult<string | undefined>' is not assignable to type 'IteratorYieldResult<Key>'.
+            Type 'string | undefined' is not assignable to type 'Key'.
+              Type 'undefined' is not assignable to type 'Key'.
+src/modules/auth/hooks/useChangePassword.ts(3,10): error TS2305: Module '"../api/auth.service"' has no exported member 'recoverChange'.
+src/modules/comercial/features/ProductListFeature.tsx(55,21): error TS2322: Type '{ product: ProductoAgro | null; readOnly: boolean; onToggleEdit: () => void; onCancel: () => void; onClose: () => void; onSuccess: () => void; }' is not assignable to type 'IntrinsicAttributes & ProductFormProps'.
+  Property 'readOnly' does not exist on type 'IntrinsicAttributes & ProductFormProps'.
+src/modules/comercial/ui/SalesReceipt.tsx(197,20): error TS2322: Type '{ children: string; jsx: true; global: true; }' is not assignable to type 'DetailedHTMLProps<StyleHTMLAttributes<HTMLStyleElement>, HTMLStyleElement>'.
+  Property 'jsx' does not exist on type 'DetailedHTMLProps<StyleHTMLAttributes<HTMLStyleElement>, HTMLStyleElement>'.
+src/modules/comercial/ui/VentaDetailFeature.tsx(42,51): error TS2339: Property 'cliente_venta' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentaDetailFeature.tsx(43,58): error TS2339: Property 'fecha_venta' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentaDetailFeature.tsx(44,50): error TS2339: Property 'total_venta' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentaDetailFeature.tsx(46,20): error TS2339: Property 'id_cultivo_fk' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentaDetailFeature.tsx(48,56): error TS2339: Property 'id_cultivo_fk' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentaDetailFeature.tsx(61,14): error TS18048: 'venta.detalles' is possibly 'undefined'.
+src/modules/comercial/ui/VentasListFeature.tsx(91,30): error TS2339: Property 'id_venta_pk' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentasListFeature.tsx(95,66): error TS2339: Property 'cliente_venta' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentasListFeature.tsx(97,46): error TS2339: Property 'fecha_venta' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentasListFeature.tsx(100,38): error TS2339: Property 'total_venta' does not exist on type 'Venta'.
+src/modules/comercial/ui/VentasListFeature.tsx(103,35): error TS18048: 'venta.detalles' is possibly 'undefined'.
+src/modules/comercial/ui/VentasListFeature.tsx(108,51): error TS2339: Property 'id_venta_pk' does not exist on type 'Venta'.
+src/modules/comercial/widgets/SalesForm.tsx(81,17): error TS2322: Type '{ loteProduccionId: number; cantidadKg: number; precioUnitarioKg: number; }[]' is not assignable to type 'CreateVentaDetalleDTO[]'.
+  Type '{ loteProduccionId: number; cantidadKg: number; precioUnitarioKg: number; }' is missing the following properties from type 'CreateVentaDetalleDTO': id_producto_fk, cantidad, precio_unitario
+src/modules/comercial/widgets/VentaForm.tsx(5,15): error TS2724: '"../models/types/sales.types"' has no exported member named 'CreateVentaDTO'. Did you mean 'CreateVentaDto'?
+src/modules/cultivos/hooks/useCultivos.ts(48,9): error TS2561: Object literal may only specify known properties, but 'tipoCultivo' does not exist in type '{ page?: number | undefined; limit?: number | undefined; q?: string | undefined; loteId?: number | undefined; tipoCultivoId?: number | undefined; estado?: string | undefined; }'. Did you mean to write 'tipoCultivoId'?
+src/modules/cultivos/hooks/useCultivos.ts(89,46): error TS2353: Object literal may only specify known properties, and 'cultivoId' does not exist in type '{ limit?: number | undefined; }'.
+src/modules/cultivos/pages/CultivoCreatePage.tsx(6,8): error TS2739: Type '{}' is missing the following properties from type 'CultivoFormProps': onSubmit, onCancel
+src/modules/cultivos/pages/CultivoEditPage.tsx(21,20): error TS2322: Type '{ cultivo: Cultivo; }' is not assignable to type 'IntrinsicAttributes & CultivoFormProps'.
+  Property 'cultivo' does not exist on type 'IntrinsicAttributes & CultivoFormProps'.
+src/modules/fitosanitario/ui/EpaFilters.tsx(89,13): error TS2322: Type 'Element[]' is not assignable to type 'CollectionElement<object>'.
+src/modules/geo/api/geo.service.ts(2,24): error TS2459: Module '"../models/types"' declares 'Sublote' locally, but it is not exported.
+src/modules/geo/pages/GeoPage.tsx(28,63): error TS18048: 's' is possibly 'undefined'.
+src/modules/inventario/features/InsumoListFeature.tsx(138,9): error TS2322: Type '{ insumos: Insumo[]; isLoading: boolean; onView: (insumo: Insumo) => void; onDelete: undefined; onViewMovimientos: (insumo: Insumo) => void; hasMovimientosMap: Map<number, boolean>; }' is not assignable to type 'IntrinsicAttributes & InsumoTableProps'.
+  Property 'onDelete' does not exist on type 'IntrinsicAttributes & InsumoTableProps'.
+src/modules/inventario/hooks/useAlmacenById.ts(16,5): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, (number | "inventario" | "almacen")[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'onError' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, (number | "inventario" | "almacen")[]>'.
+  Overload 2 of 3, '(options: UndefinedInitialDataOptions<Almacen, Error, Almacen, (number | "inventario" | "almacen")[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'onError' does not exist in type 'UndefinedInitialDataOptions<Almacen, Error, Almacen, (number | "inventario" | "almacen")[]>'.
+  Overload 3 of 3, '(options: UseQueryOptions<Almacen, Error, Almacen, (number | "inventario" | "almacen")[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'onError' does not exist in type 'UseQueryOptions<Almacen, Error, Almacen, (number | "inventario" | "almacen")[]>'.
+src/modules/inventario/hooks/useAlmacenById.ts(16,15): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/modules/production/widgets/EditLoteModal.tsx(93,22): error TS2322: Type '{ type: string; label: string; placeholder: string; variant: "bordered"; startContent: Element; errorMessage: string | undefined; isInvalid: boolean; onChange: (...event: any[]) => void; ... 4 more ...; ref: RefCallBack; }' is not assignable to type 'IntrinsicAttributes & MergeWithAs<Omit<DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>, "ref">, Omit<...>, InputProps, "input">'.
+  Type '{ type: string; label: string; placeholder: string; variant: "bordered"; startContent: Element; errorMessage: string | undefined; isInvalid: boolean; onChange: (...event: any[]) => void; ... 4 more ...; ref: RefCallBack; }' is not assignable to type 'InputProps'.
+    Types of property 'value' are incompatible.
+      Type 'number | undefined' is not assignable to type 'string | (readonly string[] & string) | undefined'.
+        Type 'number' is not assignable to type 'string | (readonly string[] & string) | undefined'.

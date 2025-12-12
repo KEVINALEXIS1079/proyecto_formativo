@@ -11,7 +11,7 @@ export class Venta extends BaseEntity {
   @Column()
   fecha: Date;
 
-  @Column()
+  @Column({ nullable: true })
   clienteId: number;
 
   @Column('float')

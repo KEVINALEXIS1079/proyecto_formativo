@@ -1,10 +1,11 @@
-import { Input, Select, SelectItem, Textarea, Card, CardBody } from "@heroui/react";
-import { useEffect, useMemo } from "react";
+import { Input, Select, SelectItem, Textarea, Card, CardBody, Button } from "@heroui/react";
+import { useEffect, useMemo, useState } from "react";
 import type { Control, UseFormWatch, UseFormSetValue } from "react-hook-form";
 import { Controller } from "react-hook-form";
 import type { ActividadFormData } from "../models/schemas";
-import { AlertCircle, Leaf, Sprout, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Leaf, Sprout, CheckCircle2, Plus } from "lucide-react";
 import LeafletMap from "../../../components/LeafletMap";
+import CreateProductModal from "../widgets/CreateProductModal";
 
 function LoteMapPreview({ loteId, lotes }: { loteId: number; lotes: any[] }) {
   const lote = lotes.find(l => l.id === loteId);
@@ -59,6 +60,7 @@ interface GeneralSectionProps {
   cultivos: any[];
   lotes: any[];
   subLotes?: any[];
+  productosAgro?: any[]; // Added
 }
 
 export default function GeneralSection({
@@ -68,7 +70,11 @@ export default function GeneralSection({
   cultivos,
   lotes,
   subLotes = [],
-}: GeneralSectionProps) {
+  productosAgro = [],
+  onProductCreated, // New prop
+}: GeneralSectionProps & { onProductCreated?: (product: any) => void }) {
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  
   const tipo = watch("tipo");
   const subtipo = watch("subtipo");
   const selectedLoteId = watch("loteId");
@@ -396,10 +402,56 @@ export default function GeneralSection({
               <span>Registro de Cosecha / Producción</span>
             </div>
 
-            <div className="p-2 bg-white rounded-md border border-orange-100">
-              <span className="text-sm font-semibold text-gray-600">Producto Cosechado: </span>
-              <span className="text-orange-700 font-bold">{selectedCultivoNombre || "Seleccione un cultivo arriba"}</span>
+            <div className="p-4 bg-white rounded-md border border-orange-100 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold text-gray-600 block">Producto a Cosechar: </span>
+                <Button 
+                  size="sm" 
+                  color="warning" 
+                  variant="flat" 
+                  startContent={<Plus size={16} />}
+                  onPress={() => setIsProductModalOpen(true)}
+                >
+                  Nuevo Producto
+                </Button>
+              </div>
+              <Controller
+                name="productoAgroId"
+                control={control}
+                rules={{ required: subtipo === "COSECHA" ? "Debe seleccionar un producto" : false }}
+                render={({ field, fieldState }) => (
+                  <Select
+                    selectedKeys={field.value ? [String(field.value)] : []}
+                    onSelectionChange={(keys) => {
+                      const key = Array.from(keys)[0];
+                      field.onChange(key ? Number(key) : undefined);
+                    }}
+                    label="Seleccione Producto"
+                    placeholder="Ej. Papaya, Tomate..."
+                    errorMessage={fieldState.error?.message}
+                    isInvalid={!!fieldState.error}
+                    variant="bordered"
+                    color="warning"
+                    items={productosAgro || []}
+                  >
+                    {(product: any) => (
+                      <SelectItem key={String(product.id)} textValue={product.nombre}>
+                        {product.nombre}
+                      </SelectItem>
+                    )}
+                  </Select>
+                )}
+              />
             </div>
+            
+            <CreateProductModal 
+              isOpen={isProductModalOpen} 
+              onClose={() => setIsProductModalOpen(false)}
+              onSuccess={(newProduct) => {
+                if(onProductCreated) onProductCreated(newProduct);
+                setValue("productoAgroId", newProduct.id); // Auto-select new product
+              }}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Controller

@@ -1,0 +1,2 @@
+src/modules/cultivos/hooks/useCultivos.ts(48,9): error TS2561: Object literal may only specify known properties, but 'tipoCultivo' does not exist in type '{ page?: number | undefined; limit?: number | undefined; q?: string | undefined; loteId?: number | undefined; tipoCultivoId?: number | undefined; estado?: string | undefined; }'. Did you mean to write 'tipoCultivoId'?
+src/modules/fitosanitario/ui/EpaFilters.tsx(89,13): error TS2322: Type 'Element[]' is not assignable to type 'CollectionElement<object>'.

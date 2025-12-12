@@ -14,7 +14,7 @@ import {
   Divider,
 } from "@heroui/react";
 import { useState } from "react";
-import { useAddEvidencia } from "../hooks/useActividades";
+import { useAddEvidencia, useActividad } from "../hooks/useActividades";
 import {
   Camera,
   Save,
@@ -46,10 +46,14 @@ interface GestionarActividadModalProps {
 export default function GestionarActividadModal({
   isOpen,
   onClose,
-  actividad,
+  actividad: initialData,
   onEdit,
   onFinalize,
 }: GestionarActividadModalProps) {
+  // Fetch fresh data
+  const { data: activityData, isLoading } = useActividad(initialData?.id);
+  const actividad = activityData || initialData;
+
   const addEvidenciaMutation = useAddEvidencia();
   const [descripcion, setDescripcion] = useState("");
   const [imagenUrl, setImagenUrl] = useState("");
@@ -122,7 +126,7 @@ export default function GestionarActividadModal({
   const activityPricePerHour = actividad.precioHoraActividad || 0;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="outside">
       <ModalContent>
         {(onClose) => (
           <>
@@ -172,6 +176,40 @@ export default function GestionarActividadModal({
                 </span>
               </div>
 
+               {/* HARVEST DATA SECTION (Logic replicated from VerActividadModal) */}
+              {actividad.subtipo?.toString().trim().toUpperCase() === "COSECHA" && (
+                <Card shadow="sm" className="mb-4 border border-orange-200 bg-orange-50">
+                  <CardBody className="p-4">
+                    <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
+                      <Package className="w-5 h-5" />
+                      Datos de Cosecha
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InfoCard
+                        label="Plantas Cosechadas"
+                        value={
+                          actividad.cantidadPlantas !== undefined &&
+                          actividad.cantidadPlantas !== null
+                            ? `${actividad.cantidadPlantas} plantas`
+                            : "N/A"
+                        }
+                        icon={<Users className="w-4 h-4 text-orange-700" />} // Sprout icon not imported, using Users temporarily or none
+                      />
+                      <InfoCard
+                        label="Cantidad Recolectada"
+                        value={
+                          actividad.kgRecolectados !== undefined &&
+                          actividad.kgRecolectados !== null
+                            ? `${actividad.kgRecolectados} Kg`
+                            : "N/A"
+                        }
+                        icon={<Package className="w-4 h-4 text-orange-700" />}
+                      />
+                    </div>
+                  </CardBody>
+                </Card>
+              )}
+
               <Tabs
                 aria-label="Detalles de la actividad"
                 color="success"
@@ -205,7 +243,17 @@ export default function GestionarActividadModal({
                           />
                           <InfoCard
                             label="Cultivo"
-                            value={actividad.cultivo?.nombre || "N/A"}
+                            value={
+                              actividad.cultivo?.nombreCultivo ||
+                              actividad.cultivo?.nombre ||
+                              actividad.lote?.cultivos?.find(
+                                (c: any) =>
+                                  !["FINALIZADO", "INACTIVO"].includes(
+                                    c.estado?.toUpperCase()
+                                  )
+                              )?.nombreCultivo ||
+                              "N/A"
+                            }
                             icon={<Package className="w-4 h-4" />}
                           />
                         </div>
@@ -551,16 +599,46 @@ export default function GestionarActividadModal({
                                     </p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="text-xs text-gray-500">
-                                      Depreciación
+                                    <div className="flex flex-col items-end">
+                                      <Chip size="sm" color="secondary" variant="flat" className="mb-1">
+                                        Registrado
+                                      </Chip>
+                                      <div className="text-xs text-gray-500">
+                                        Depreciación: <span className="font-semibold text-purple-700">
+                                          {new Intl.NumberFormat("es-CO", {
+                                            style: "currency",
+                                            currency: "COP",
+                                            maximumFractionDigits: 0,
+                                          }).format(uso.depreciacionGenerada)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardBody>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : actividad.herramientas && actividad.herramientas.length > 0 ? (
+                          /* SHOW PLANNED TOOLS */
+                          <div className="space-y-2">
+                            {actividad.herramientas.map((tool: any) => (
+                              <Card
+                                key={tool.id}
+                                className="border border-purple-100 bg-purple-50/30"
+                              >
+                                <CardBody className="p-3 flex flex-row items-center justify-between">
+                                  <div>
+                                    <p className="font-medium text-gray-800">
+                                      {tool.activoFijo?.nombre || "Herramienta Planificada"}
                                     </p>
-                                    <p className="font-semibold text-purple-700">
-                                      {new Intl.NumberFormat("es-CO", {
-                                        style: "currency",
-                                        currency: "COP",
-                                        maximumFractionDigits: 0,
-                                      }).format(uso.depreciacionGenerada)}
+                                    <p className="text-sm text-gray-500">
+                                      {tool.horasEstimadas} hrs estimadas
                                     </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <Chip size="sm" color="warning" variant="flat">
+                                      Asignada / Planificada
+                                    </Chip>
                                   </div>
                                 </CardBody>
                               </Card>
@@ -568,7 +646,7 @@ export default function GestionarActividadModal({
                           </div>
                         ) : (
                           <p className="text-gray-400 italic text-sm text-center py-4">
-                            No se utilizaron herramientas en esta actividad
+                            No se han asignado herramientas a esta actividad
                           </p>
                         )}
                       </CardBody>
@@ -712,12 +790,12 @@ export default function GestionarActividadModal({
                 </Button>
 
                 <div className="flex flex-col items-end gap-1">
-                  {actividad.estado === "Pendiente" && onFinalize && (
+                  {["Pendiente", "PENDIENTE"].includes(actividad.estado || "") && onFinalize && (
                     <span className="text-xs text-green-600 font-medium px-2">
                       ¿Actividad completada? Confirma insumos y cierra la actividad.
                     </span>
                   )}
-                  {actividad.estado === "Pendiente" && onFinalize && (
+                  {["Pendiente", "PENDIENTE"].includes(actividad.estado || "") && onFinalize && (
                     <Button
                       color="success"
                       className="text-black shadow-md shadow-green-200 font-medium"

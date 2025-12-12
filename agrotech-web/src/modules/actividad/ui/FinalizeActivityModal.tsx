@@ -36,7 +36,7 @@ export default function FinalizeActivityModal({
     reset,
     formState: { errors },
   } = useForm<FinalizarActividadData>({
-    resolver: zodResolver(finalizarActividadSchema),
+    resolver: zodResolver(finalizarActividadSchema) as any,
     defaultValues: {
       fechaReal: new Date(),
       insumosReales: [],

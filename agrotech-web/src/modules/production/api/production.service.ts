@@ -67,7 +67,31 @@ export interface CreateVentaPayload {
 export const productionApi = {
     // Lotes (Inventory)
     getLotes: async (params?: { productoAgroId?: number; cultivoId?: number }) => {
-        const { data } = await api.get<LoteProduccion[]>("/production/lotes", { params });
+        const { data } = await api.get<LoteProduccion[]>("/production/lotes-produccion", { params });
+        return data;
+    },
+
+    updateProducto: async (id: number, payload: { imagen?: string }) => {
+        const { data } = await api.patch<ProductoAgro>(`/production/productos/${id}`, payload);
+        return data;
+    },
+
+    uploadProductImage: async (id: number, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const { data } = await api.post<ProductoAgro>(`/production/productos/${id}/imagen`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return data;
+    },
+
+    updateLote: async (id: number, payload: { calidad?: string; precioSugeridoKg?: number }) => {
+        const { data } = await api.patch<LoteProduccion>(`/production/lotes-produccion/${id}`, payload);
+        return data;
+    },
+
+    getHistorialPrecios: async (id: number) => {
+        const { data } = await api.get<{ id: number; precioAnterior: number; precioNuevo: number; fecha: string; usuario: { nombre: string } }[]>(`/production/lotes-produccion/${id}/historial-precios`);
         return data;
     },
 

@@ -8,6 +8,7 @@ import { listProveedores } from "../api/proveedores.service";
 import { useCreateCategoria } from "../hooks/useCreateCategoria";
 import { useCreateProveedor } from "../hooks/useCreateProveedor";
 import { useCreateAlmacen } from "../hooks/useCreateAlmacen";
+import { useCategoriaInsumoList } from "../hooks/useCategoriaInsumoList";
 import { toast } from "react-hot-toast";
 import { useEffect, useState } from "react";
 import ImageUpload from "@/modules/inventario/widgets/ImageUpload";
@@ -32,10 +33,7 @@ export default function CreateActivoFijoModal({ isOpen, onClose }: CreateActivoF
     const [newAlmacenName, setNewAlmacenName] = useState("");
     const [newAlmacenUbicacion, setNewAlmacenUbicacion] = useState("");
 
-    const { data: categorias } = useQuery({
-        queryKey: ['categorias-insumo', 'NO_CONSUMIBLE'],
-        queryFn: () => listCategoriasInsumo({ tipoInsumo: 'NO_CONSUMIBLE' })
-    });
+    const { data: categorias } = useCategoriaInsumoList({ tipoInsumo: 'NO_CONSUMIBLE' });
     const { data: almacenes } = useQuery({ queryKey: ['almacenes'], queryFn: () => listAlmacenes() });
     const { data: proveedores } = useQuery({ queryKey: ['proveedores'], queryFn: () => listProveedores() });
 
@@ -209,12 +207,12 @@ export default function CreateActivoFijoModal({ isOpen, onClose }: CreateActivoF
                                                         rules={{ required: "Requerido" }}
                                                         render={({ field }) => (
                                                             <Select
-                                                                {...field}
                                                                 label="Categoría"
                                                                 variant="bordered"
                                                                 errorMessage={errors.categoriaId?.message as string}
                                                                 isInvalid={!!errors.categoriaId}
                                                                 selectedKeys={field.value ? [String(field.value)] : []}
+                                                                onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
                                                                 className="flex-1"
                                                             >
                                                                 {(categorias || []).map((cat) => (
@@ -235,12 +233,12 @@ export default function CreateActivoFijoModal({ isOpen, onClose }: CreateActivoF
                                                         rules={{ required: "Requerido" }}
                                                         render={({ field }) => (
                                                             <Select
-                                                                {...field}
                                                                 label="Almacén"
                                                                 variant="bordered"
                                                                 errorMessage={errors.almacenId?.message as string}
                                                                 isInvalid={!!errors.almacenId}
                                                                 selectedKeys={field.value ? [String(field.value)] : []}
+                                                                onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
                                                                 className="flex-1"
                                                             >
                                                                 {(almacenes || []).map((alm: any) => (
@@ -286,6 +284,7 @@ export default function CreateActivoFijoModal({ isOpen, onClose }: CreateActivoF
                                                             label="Proveedor (Opcional)"
                                                             variant="bordered"
                                                             selectedKeys={field.value ? [String(field.value)] : []}
+                                                            onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
                                                             className="flex-1"
                                                         >
                                                             {(proveedores || []).map((prov: any) => (

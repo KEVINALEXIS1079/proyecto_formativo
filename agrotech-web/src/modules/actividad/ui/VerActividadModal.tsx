@@ -42,6 +42,9 @@ export default function VerActividadModal({
   actividad,
 }: VerActividadModalProps) {
   if (!actividad) return null;
+  console.log("VerActividadModal Data:", actividad);
+
+  const isCosecha = actividad.subtipo?.toString().trim().toUpperCase() === "COSECHA";
 
   // Calculate totals
   const responsablesCount = actividad.responsables?.length || 0;
@@ -59,7 +62,7 @@ export default function VerActividadModal({
   const activityPricePerHour = actividad.precioHoraActividad || 0;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="outside">
       <ModalContent>
         {(onClose) => (
           <>
@@ -102,9 +105,34 @@ export default function VerActividadModal({
             </ModalHeader>
 
             <ModalBody className="py-4">
+
               <div className="p-3 mb-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
                 Modificar una actividad es delicado: valida responsablemente los cambios de lote/sublote, fechas, descripción y evidencias.
               </div>
+
+              {/* Harvest Data - Prominent Display */}
+              {isCosecha && (
+                <Card shadow="sm" className="mb-4 border border-orange-200 bg-orange-50">
+                  <CardBody className="p-4">
+                    <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
+                      <Leaf className="w-5 h-5" />
+                      Datos de Cosecha
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InfoCard
+                        label="Plantas Cosechadas"
+                        value={actividad.cantidadPlantas !== undefined && actividad.cantidadPlantas !== null ? `${actividad.cantidadPlantas} plantas` : "N/A"}
+                        icon={<Sprout className="w-4 h-4 text-orange-700" />}
+                      />
+                      <InfoCard
+                        label="Cantidad Recolectada"
+                        value={actividad.kgRecolectados !== undefined && actividad.kgRecolectados !== null ? `${actividad.kgRecolectados} Kg` : "N/A"}
+                        icon={<Package className="w-4 h-4 text-orange-700" />}
+                      />
+                    </div>
+                  </CardBody>
+                </Card>
+              )}
 
               <Tabs
                 aria-label="Detalles de la actividad"
@@ -145,30 +173,6 @@ export default function VerActividadModal({
                         </div>
                       </CardBody>
                     </Card>
-
-                    {/* Activity Details */}
-                    {actividad.subtipo === "COSECHA" && (
-                      <Card shadow="sm" className="border border-orange-200 bg-orange-50 mb-4">
-                        <CardBody className="p-4">
-                          <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
-                            <Leaf className="w-5 h-5" />
-                            Datos de Cosecha
-                          </h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InfoCard
-                              label="Plantas Cosechadas"
-                              value={actividad.cantidadPlantas ? `${actividad.cantidadPlantas} plantas` : "N/A"}
-                              icon={<Sprout className="w-4 h-4 text-orange-700" />}
-                            />
-                            <InfoCard
-                              label="Cantidad Recolectada"
-                              value={actividad.kgRecolectados ? `${actividad.kgRecolectados} Kg` : "N/A"}
-                              icon={<Package className="w-4 h-4 text-orange-700" />}
-                            />
-                          </div>
-                        </CardBody>
-                      </Card>
-                    )}
 
                     <Card shadow="sm" className="border border-gray-200">
                       <CardBody className="p-4">

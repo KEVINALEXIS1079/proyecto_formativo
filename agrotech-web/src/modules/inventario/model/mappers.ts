@@ -45,6 +45,15 @@ export function adaptInsumo(raw: any): Insumo {
     categoria: raw.categoria ? adaptCategoriaInsumo(raw.categoria) : { id: 0, nombre: 'Sin categoría', descripcion: '' },
     proveedor: raw.proveedor ? adaptProveedor(raw.proveedor) : { id: 0, nombre: 'Sin proveedor' },
     almacen: raw.almacen ? adaptAlmacen(raw.almacen) : { id: 0, nombre: 'Sin almacén', descripcion: '' },
+    // Campos de Activos Fijos
+    costoAdquisicion: raw.costoAdquisicion,
+    valorResidual: raw.valorResidual,
+    vidaUtilHoras: raw.vidaUtilHoras,
+    horasUsadas: raw.horasUsadas,
+    depreciacionAcumulada: raw.depreciacionAcumulada,
+    estado: raw.estado,
+    stockReservado: raw.stockReservado,
+    tipoInsumo: raw.tipoInsumo,
   };
 }
 

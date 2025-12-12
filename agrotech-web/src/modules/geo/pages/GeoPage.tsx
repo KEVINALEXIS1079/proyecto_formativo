@@ -23,7 +23,7 @@ export default function GeoPage() {
       const areaM2 = lotes.reduce((acc, l) => acc + Number(l.area_lote || 0), 0);
       return { countLabel: "Total Lotes", count, areaM2 };
     } else {
-      const sublotes = lotes.flatMap(l => l.sublotes);
+      const sublotes = lotes.flatMap(l => l.sublotes || []);
       const count = sublotes.length;
       const areaM2 = sublotes.reduce((acc, s) => acc + Number(s.area_sublote || 0), 0);
       return { countLabel: "Total Sublotes", count, areaM2 };

@@ -14,4 +14,8 @@ export class CreateLoteDto {
   @IsObject({ message: 'La geometría debe ser un objeto GeoJSON válido' })
   @IsNotEmpty({ message: 'La geometría es requerida' })
   geom: any; // GeoJSON Polygon
+  
+  @IsOptional()
+  @IsString()
+  estado?: string;
 }

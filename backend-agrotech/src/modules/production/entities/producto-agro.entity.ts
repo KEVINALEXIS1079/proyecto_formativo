@@ -13,6 +13,9 @@ export class ProductoAgro extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   descripcion: string;
 
+  @Column({ type: 'text', nullable: true })
+  imagen: string;
+
   @OneToMany(() => LoteProduccion, (lote) => lote.productoAgro)
   lotesProduccion: LoteProduccion[];
 }

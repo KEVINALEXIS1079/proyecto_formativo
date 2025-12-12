@@ -39,15 +39,11 @@ export default function VentaDetailFeature({ id }: VentaDetailFeatureProps) {
         <CardBody>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p><strong>Cliente:</strong> {venta.cliente_venta}</p>
-              <p><strong>Fecha:</strong> {new Date(venta.fecha_venta).toLocaleDateString()}</p>
-              <p><strong>Total:</strong> ${venta.total_venta.toFixed(2)}</p>
+              <p><strong>Cliente:</strong> {venta.cliente?.nombre || 'Cliente General'}</p>
+              <p><strong>Fecha:</strong> {new Date(venta.fecha).toLocaleDateString()}</p>
+              <p><strong>Total:</strong> ${venta.total.toFixed(2)}</p>
             </div>
-            {venta.id_cultivo_fk && (
-              <div>
-                <p><strong>ID Cultivo:</strong> {venta.id_cultivo_fk}</p>
-              </div>
-            )}
+            {/* id_cultivo removed as it is not in Venta interface */}
           </div>
         </CardBody>
       </Card>
@@ -58,17 +54,17 @@ export default function VentaDetailFeature({ id }: VentaDetailFeatureProps) {
         </CardHeader>
         <CardBody>
           <div className="space-y-4">
-            {venta.detalles.map((detalle: any) => (
-              <div key={detalle.id_venta_detalle_pk} className="border rounded p-4">
+            {venta.detalles?.map((detalle: any) => (
+              <div key={detalle.id} className="border rounded p-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <p><strong>Producto:</strong> {detalle.producto?.nombre_producto || 'N/A'}</p>
+                    <p><strong>Producto:</strong> {detalle.loteProduccion?.productoAgro?.nombre || 'Producto'}</p>
                   </div>
                   <div>
-                    <p><strong>Cantidad:</strong> {detalle.cantidad}</p>
+                    <p><strong>Cantidad:</strong> {detalle.cantidadKg} kg</p>
                   </div>
                   <div>
-                    <p><strong>Precio Unitario:</strong> ${detalle.precio_unitario.toFixed(2)}</p>
+                    <p><strong>Precio Unitario:</strong> ${detalle.precioUnitarioKg.toFixed(2)}</p>
                   </div>
                   <div>
                     <p><strong>Subtotal:</strong> ${detalle.subtotal.toFixed(2)}</p>

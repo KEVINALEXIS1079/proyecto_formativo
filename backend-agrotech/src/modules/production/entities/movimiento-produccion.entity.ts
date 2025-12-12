@@ -30,6 +30,9 @@ export class MovimientoProduccion extends BaseEntity {
   @Column()
   usuarioId: number;
 
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  fecha: Date;
+
   @ManyToOne(() => LoteProduccion, (lote) => lote.movimientos)
   @JoinColumn({ name: 'loteProduccionId' })
   loteProduccion: LoteProduccion;

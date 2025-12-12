@@ -111,4 +111,10 @@ export class Actividad extends BaseEntity {
   @Column('float', { nullable: true })
   kgRecolectados: number; // "Cuanto fue la cantidad que salio"
 
+  @Column({ nullable: true })
+  productoAgroId: number;
+
+  @ManyToOne('ProductoAgro')
+  @JoinColumn({ name: 'productoAgroId' })
+  productoAgro: any;
 }

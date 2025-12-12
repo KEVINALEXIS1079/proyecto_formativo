@@ -29,14 +29,14 @@ export class GeoController {
 
   @Get('lotes/summary')
   @RequirePermissions('lotes.ver')
-  async findAllLotesSummaryHttp() {
-    return this.geoService.findAllLotesSummary();
+  async findAllLotesSummaryHttp(@Query('estado') estado?: string) {
+    return this.geoService.findAllLotesSummary(estado);
   }
 
   @Get('lotes')
   @RequirePermissions('lotes.ver')
-  async findAllLotesHttp() {
-    return this.findAllLotes();
+  async findAllLotesHttp(@Query('estado') estado?: string) {
+    return this.findAllLotes(estado);
   }
 
   @Get('lotes/:id')
@@ -69,8 +69,8 @@ export class GeoController {
 
   @Get('sublotes')
   @RequirePermissions('sublotes.ver')
-  async findAllSubLotesHttp(@Query('loteId') loteId?: number) {
-    return this.findAllSubLotes(loteId);
+  async findAllSubLotesHttp(@Query('loteId') loteId?: number, @Query('estado') estado?: string) {
+    return this.findAllSubLotes(loteId, estado);
   }
 
   @Get('sublotes/:id')
@@ -98,8 +98,8 @@ export class GeoController {
 
   // Internal method for WebSocket: handles finding all lotes by calling the service
   // Flow: Gateway calls this method -> calls geoService.findAllLotes -> returns lotes list
-  async findAllLotes() {
-    return this.geoService.findAllLotes();
+  async findAllLotes(estado?: string) {
+    return this.geoService.findAllLotes(estado);
   }
 
   // Internal method for WebSocket: handles finding a lote by ID by calling the service
@@ -132,8 +132,8 @@ export class GeoController {
 
   // Internal method for WebSocket: handles finding all sublotes with optional loteId filter by calling the service
   // Flow: Gateway calls this method -> calls geoService.findAllSubLotes -> returns sublotes list
-  async findAllSubLotes(loteId?: number) {
-    return this.geoService.findAllSubLotes(loteId);
+  async findAllSubLotes(loteId?: number, estado?: string) {
+    return this.geoService.findAllSubLotes(loteId, estado);
   }
 
   // Internal method for WebSocket: handles finding a sublote by ID by calling the service

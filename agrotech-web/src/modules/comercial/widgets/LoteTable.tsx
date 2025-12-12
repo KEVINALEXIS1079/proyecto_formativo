@@ -39,7 +39,7 @@ export const LoteTable = ({ lotes, isLoading, onEdit }: LoteTableProps) => {
                     {(lote) => (
                         <TableRow key={lote.id} className="hover:bg-gray-50/50 transition-colors">
                             <TableCell>{lote.productoAgro?.nombre || '-'}</TableCell>
-                            <TableCell>{lote.cultivoId || '-'}</TableCell>
+                            <TableCell>{(lote.cultivo as any)?.nombre || (lote.cultivo as any)?.nombreCultivo || lote.cultivoId || '-'}</TableCell>
                             <TableCell>{lote.calidad}</TableCell>
                             <TableCell>{lote.stockDisponibleKg}</TableCell>
                             <TableCell>${lote.costoUnitarioKg.toFixed(2)}</TableCell>

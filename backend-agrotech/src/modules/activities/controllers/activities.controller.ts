@@ -23,6 +23,8 @@ import type { Request } from 'express';
 import { ActivitiesService } from '../services/activities.service';
 import { CreateActivityDto } from '../dtos/create-activity.dto';
 import { UpdateActivityDto } from '../dtos/update-activity.dto';
+import { FinalizeActivityDto } from '../dtos/finalize-activity.dto';
+import { CreateActivityEvidenciaDto, CreateActivityServicioDto } from '../dtos/create-activity.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -50,6 +52,64 @@ export class ActivitiesController {
 
   // ==================== HTTP ENDPOINTS ====================
 
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No se ha proporcionado ningún archivo');
+    // Save to 'activities' subfolder
+    const url = await this.imageUploadService.uploadImage(file, { folder: 'activities' });
+    return { url };
+  }
+
+  @Patch(':id/finalize')
+  @RequirePermissions('actividades.editar')
+  @UsePipes(new ValidationPipe())
+  async finalizeActivityHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: FinalizeActivityDto,
+    @Req() req: Request
+  ) {
+    const userId = this.extractUserId(req);
+    // Convert DTO to format expected by service (dates mostly)
+    const data = {
+      ...dto,
+      fechaReal: dto.fechaReal ? new Date(dto.fechaReal) : undefined,
+    };
+    return this.activitiesService.finalizarActividad(id, data, userId);
+  }
+
+  @Post(':id/evidencias')
+  @RequirePermissions('actividades.editar')
+  @UsePipes(new ValidationPipe())
+  async addEvidenciaHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateActivityEvidenciaDto,
+  ) {
+    return this.activitiesService.addEvidencia(id, dto);
+  }
+
+  @Post(':id/servicios')
+  @RequirePermissions('actividades.editar')
+  @UsePipes(new ValidationPipe())
+  async addServicioHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateActivityServicioDto,
+  ) {
+    return this.activitiesService.addServicio(id, dto);
+  }
+
+  @Post(':id/insumos')
+  @RequirePermissions('actividades.editar')
+  async addInsumoHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: any, // Simplify for now or use specific DTO
+    @Req() req: Request
+  ) {
+    const userId = this.extractUserId(req);
+    return this.activitiesService.consumirInsumo(id, dto, userId);
+  }
+
+
   @Post()
   @RequirePermissions('actividades.crear')
   @UsePipes(new ValidationPipe())
@@ -74,6 +134,30 @@ export class ActivitiesController {
     const userId = this.extractUserId(req);
     // Optional: Extract role if needed, e.g., const userRole = (req.user as any)?.role;
     return this.findAll(filters, userId);
+  }
+
+  @Get(':id')
+  @RequirePermissions('actividades.ver')
+  async findOneActivityHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.findOne(id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('actividades.editar')
+  @UsePipes(new ValidationPipe())
+  async updateActivityHttp(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateActivityDto,
+    @Req() req: Request,
+  ) {
+    const userId = this.extractUserId(req);
+    return this.update(id, dto, userId);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('actividades.eliminar')
+  async deleteActivityHttp(@Param('id', ParseIntPipe) id: number) {
+    return this.remove(id);
   }
   // ...
   // Internal method for WebSocket: handles creating an activity by calling the service

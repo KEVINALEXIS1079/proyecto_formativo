@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ventaService } from "../api/ventas.service";
-import type { Venta } from "../model/types";
+import type { Venta } from "../models/types/sales.types";
 
 interface UseVentaByIdReturn {
   venta: Venta | null;

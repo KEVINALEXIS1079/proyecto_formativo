@@ -1,5 +1,5 @@
-import type { Producto, CreateProductoDTO } from "../model/types";
-import { mapProductoFromApi, mapProductoToApi } from "../model/mappers";
+import type { ProductoAgro as Producto, CreateProductoAgroDto as CreateProductoDTO } from "../models/types/production.types";
+import { mapProductoFromApi, mapProductoToApi } from "../models/mappers";
 import { api } from "@/shared/api/client";
 
 class ProductoService {

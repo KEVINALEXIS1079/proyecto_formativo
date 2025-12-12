@@ -21,6 +21,7 @@ import { useLotesList, useSublotesList } from "../hooks/useLotes";
 import { useLotesRealtime } from "../hooks/useLotesRealtime";
 import { useCultivosRealtime } from "../hooks/useCultivosRealtime";
 import { useTiposCultivoList, useTipoCultivoCreate } from "../hooks/useTiposCultivo";
+import { useCultivoCreate } from "../hooks/useCultivos";
 import type { Cultivo } from "../model/types";
 
 import CultivoForm from "../widgets/CultivoForm";
@@ -83,6 +84,7 @@ export default function CultivosListPage() {
   const { data: sublotes = [] } = useSublotesList(loteId || 0);
   const { data: tiposCultivo = [] } = useTiposCultivoList();
   const createTipoMutation = useTipoCultivoCreate();
+  const createCultivoMutation = useCultivoCreate();
   const { data: historial = [], isLoading: isLoadingHist } = useCultivoHistorial({ limit: 200 });
   const [histQ, setHistQ] = useState("");
   const [histLoteId, setHistLoteId] = useState<number | undefined>();
@@ -573,9 +575,31 @@ export default function CultivosListPage() {
                   initialData={selectedCultivo}
                   readOnly={!isEditMode}
                   onToggleEdit={() => setIsEditMode(true)}
-                  onSubmit={(data) => {
-                    console.log("Submit:", data);
-                    onClose();
+                  onSubmit={async (data) => {
+                    try {
+                      // Map Tipo Cultivo ID to Name if needed (Backend expects String Name or ID? DTO says string)
+                      // However, if we sent ID, the backend generic ILIKE filter suggests it wants a string.
+                      // Let's ensure we send the name if types are objects. 
+                      // Form uses `tipoCultivoId`.
+                      const selectedTipo = tiposCultivo.find((t) => t.id === Number(data.tipoCultivoId));
+                      const tipoNombre = selectedTipo ? selectedTipo.nombre : String(data.tipoCultivoId);
+
+                      await createCultivoMutation.mutateAsync({
+                        nombre: data.nombre,
+                        tipoCultivo: tipoNombre,
+                        descripcion: data.descripcion,
+                        idLote: data.loteId ? Number(data.loteId) : undefined,
+                        idSublote: data.subloteId ? Number(data.subloteId) : undefined,
+                        img: data.imagenFile,
+                        estado: data.estado,
+                        fechaSiembra: data.fechaSiembra || data.fechaInicio,
+                        fechaFinalizacion: data.fechaFin
+                      });
+                      onClose();
+                    } catch (error) {
+                      console.error("Error al crear cultivo:", error);
+                      // Ideally show a toast/alert here
+                    }
                   }}
                   onCancel={() => {
                     if (isEditMode && selectedCultivo) {

@@ -86,11 +86,12 @@ export default function EpaFilters({
             }}
           >
             <SelectItem key="all" textValue="Todos">Todos</SelectItem>
-            {tiposCultivoEpa.map((tipo) => (
+            {/* @ts-ignore */}
+            {(tiposCultivoEpa.map((tipo) => (
               <SelectItem key={String(tipo.id)} textValue={tipo.nombre}>
                 {tipo.nombre}
               </SelectItem>
-            ))}
+            )) as any)}
           </Select>
         </div>
       </div>

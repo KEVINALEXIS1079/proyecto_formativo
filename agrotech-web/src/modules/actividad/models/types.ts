@@ -142,6 +142,7 @@ export interface Actividad {
   lote?: {
     id: number;
     nombre: string;
+    cultivos?: any[]; // For inferred crop display
   };
   subLote?: {
     id: number;
@@ -150,6 +151,7 @@ export interface Actividad {
   cultivo?: {
     id: number;
     nombre: string;
+    nombreCultivo?: string; // Correct property from Backend Entity
   };
   creadoPorUsuario?: {
     id: number;
@@ -178,6 +180,7 @@ export interface CreateActividadPayload {
   precioHoraActividad?: number;
   kgRecolectados?: number; // Para Cosecha
   cantidadPlantas?: number; // Para Cosecha
+  productoAgroId?: number; // Para Cosecha
   fechaSiembra?: string; // Para Siembra
   responsables?: CreateActivityResponsablePayload[];
   insumos?: CreateActivityInsumoPayload[];

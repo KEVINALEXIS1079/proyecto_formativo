@@ -20,23 +20,24 @@ export const actividadSchema = z.object({
   horasActividad: z.coerce.number().min(0, "Las horas no pueden ser negativas"),
   precioHoraActividad: z.coerce.number().min(0, "El precio por hora no puede ser negativo"),
 
-  // Harvest specifics (Validated only if subtipo is COSECHA in frontend logic or refinements)
+  // Harvest specifics
   cantidadPlantas: z.coerce.number().optional(),
   kgRecolectados: z.coerce.number().optional(),
+  productoAgroId: z.coerce.number().optional(),
 
   // Arrays
   responsables: z.array(z.object({
-    usuarioId: z.number(),
-    horas: z.number().min(0),
-    precioHora: z.number().min(0),
+    usuarioId: z.coerce.number(),
+    horas: z.coerce.number().min(0),
+    precioHora: z.coerce.number().min(0),
     // Frontend helper for UI
     tempId: z.string().optional(),
   })).optional(),
 
   insumos: z.array(z.object({
-    insumoId: z.number(),
-    cantidadUso: z.number().min(0.01, "La cantidad debe ser mayor a 0"),
-    costoUnitarioUso: z.number().min(0).default(0),
+    insumoId: z.coerce.number(),
+    cantidadUso: z.coerce.number().min(0.01, "La cantidad debe ser mayor a 0"),
+    costoUnitarioUso: z.coerce.number().min(0).default(0),
     descripcion: z.string().optional(),
     tempId: z.string().optional(),
   })).optional(),
@@ -53,9 +54,10 @@ export const actividadSchema = z.object({
     imagenes: z.array(z.string()),
   })).optional(),
 
+  // Cosecha fields - defined above
   herramientas: z.array(z.object({
-    activoFijoId: z.number(),
-    horasUso: z.number().min(0),
+    activoFijoId: z.coerce.number(),
+    horasUso: z.coerce.number().min(0),
     tempId: z.string().optional(),
   })).optional(),
 });

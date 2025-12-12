@@ -110,12 +110,12 @@ export const ActivosFijosListFeature = forwardRef<ActivosFijosListRef>((_, ref) 
                             <TableRow key={activo.id}>
                                 <TableCell>
                                     <div className="flex justify-center">
-                                        {activo.fotoUrl ? (
+                                        {activo.imagenUrl ? (
                                             <Image
                                                 src={
-                                                    /^(data:|blob:|https?:\/\/)/i.test(activo.fotoUrl)
-                                                        ? activo.fotoUrl
-                                                        : `${FILES_BASE.replace(/\/+$/, "")}/${activo.fotoUrl.replace(/^\/+/, "")}`
+                                                    /^(data:|blob:|https?:\/\/)/i.test(activo.imagenUrl)
+                                                        ? activo.imagenUrl
+                                                        : encodeURI(`${FILES_BASE.replace(/\/+$/, "")}/${activo.imagenUrl.replace(/^\/+/, "")}`)
                                                 }
                                                 alt={activo.nombre}
                                                 width={40}

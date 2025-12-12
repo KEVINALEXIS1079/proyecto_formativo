@@ -194,7 +194,7 @@ export function SalesReceipt({ venta }: SalesReceiptProps) {
             </Card>
 
             {/* Print Styles */}
-            <style jsx global>{`
+            <style>{`
         @media print {
           body * {
             visibility: hidden;

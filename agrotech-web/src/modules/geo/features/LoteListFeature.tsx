@@ -4,9 +4,10 @@ import { useGeoData } from "../hooks/useGeoData";
 import GeoMap from "../widgets/GeoMap";
 import GeoFilters from "../ui/GeoFilters";
 import { Card, CardBody, Tabs, Tab, Button, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Spinner } from "@heroui/react";
-import { List, Map as MapIcon, Edit, MapPin, Ruler, Ban } from "lucide-react";
+import { List, Map as MapIcon, Edit, MapPin, Ruler, Ban, CheckCircle } from "lucide-react";
 import LoteModal from "../widgets/LoteModal";
 import type { Lote } from "../../cultivos/model/types";
+import { DeleteModal } from "@/shared/components/ui/DeleteModal";
 
 export interface LoteListRef {
   openCreateModal: () => void;
@@ -14,8 +15,16 @@ export interface LoteListRef {
 
 export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
   const qc = useQueryClient();
-  const { data: lotes = [], isLoading } = useGeoData();
+  const { data: lotes = [], isLoading, refetch } = useGeoData({ estado: 'activo' }); // Initial query will be updated by state
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("activo");
+  
+  // Re-query when filter changes
+  const { data: lotesFiltered, isFetching } = useGeoData({ estado: statusFilter });
+  
+  // Use the filtered data source
+  const displayLotes = lotesFiltered || [];
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLote, setSelectedLote] = useState<Lote | undefined>(undefined);
 
@@ -24,13 +33,18 @@ export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Toggle Status State
+  const [isToggleModalOpen, setIsToggleModalOpen] = useState(false);
+  const [loteToToggle, setLoteToToggle] = useState<Lote | undefined>(undefined);
+  const [isToggling, setIsToggling] = useState(false);
+
   const filteredLotes = useMemo(() => {
     // Sort by ID to maintain consistent order
-    const sortedLotes = [...lotes].sort((a, b) => (a.id_lote_pk || 0) - (b.id_lote_pk || 0));
+    const sortedLotes = [...displayLotes].sort((a, b) => (a.id_lote_pk || 0) - (b.id_lote_pk || 0));
     if (!q.trim()) return sortedLotes;
     const lowerQ = q.toLowerCase();
     return sortedLotes.filter(l => (l.nombre_lote || "").toLowerCase().includes(lowerQ));
-  }, [lotes, q]);
+  }, [displayLotes, q]);
 
   useImperativeHandle(ref, () => ({
     openCreateModal: () => {
@@ -53,15 +67,67 @@ export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
     setErrorModalOpen(true);
   };
 
-  if (isLoading) return (
+  const handleToggleStatus = (lote: Lote) => {
+    const isInactive = (lote as any).estado?.toLowerCase() === 'inactivo';
+    
+    // Only validate when trying to DISABLE (active -> inactive)
+    if (!isInactive) {
+      // 1. Validate Sublotes
+      if (lote.sublotes && lote.sublotes.length > 0) {
+        handleError("No se puede inhabilitar este lote porque tiene sublotes asociados.");
+        return;
+      }
+    }
+
+    setLoteToToggle(lote);
+    setIsToggleModalOpen(true);
+  };
+
+  const handleConfirmToggle = async () => {
+    if (!loteToToggle) return;
+
+    setIsToggling(true);
+    try {
+      const isInactive = (loteToToggle as any).estado === 'inactivo';
+      const geoApi = await import("../api/geo.service");
+      
+      // Update status
+      if (loteToToggle.id_lote_pk) {
+        await geoApi.geoService.updateLote(loteToToggle.id_lote_pk, { estado: isInactive ? 'activo' : 'inactivo' } as any);
+      }
+      
+      // Invalidate queries
+      qc.invalidateQueries({ queryKey: ["geo", "lotes"] });
+      // Force immediate refetch
+      refetch();
+      
+      setIsToggleModalOpen(false);
+      setLoteToToggle(undefined);
+    } catch (err) {
+      console.error("Error changing status", err);
+      handleError("Error al actualizar estado del lote");
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
+  if (isLoading && !lotesFiltered) return (
     <div className="flex justify-center p-8">
       <Spinner color="success" label="Cargando lotes..." />
     </div>
   );
 
+  const isActivating = loteToToggle ? (loteToToggle as any).estado === 'inactivo' : false;
+
   return (
     <div className="space-y-6">
-      <GeoFilters q={q} setQ={setQ} placeholder="Buscar lotes..." />
+      <GeoFilters 
+        q={q} 
+        setQ={setQ} 
+        placeholder="Buscar lotes..." 
+        statusFilter={statusFilter}
+        onStatusChange={(val) => setStatusFilter(val)}
+      />
 
       <Tabs
         aria-label="Vistas"
@@ -105,14 +171,27 @@ export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
                     <div className="p-5 pb-3">
                       <div className="flex justify-between items-center mb-1">
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold text-sm shadow-sm">
+                          <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm shadow-sm ${
+                            (lote as any).estado === 'inactivo' 
+                              ? "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-gray-500" 
+                              : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                          }`}>
                             {lote.id_lote_pk || "#"}
                           </div>
-                          <h4 className="font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-green-600 transition-colors line-clamp-1">
+                          <h4 className={`font-bold text-lg transition-colors line-clamp-1 ${
+                            (lote as any).estado === 'inactivo'
+                              ? "text-gray-400 dark:text-gray-500 line-through"
+                              : "text-gray-900 dark:text-gray-100 group-hover:text-green-600"
+                          }`}>
                             {lote.nombre_lote || "Sin Nombre"}
                           </h4>
                         </div>
-                        <Chip size="sm" color="success" variant="flat" className="font-medium">Lote</Chip>
+                        <div className="flex gap-2">
+                          {(lote as any).estado === 'inactivo' && (
+                            <Chip size="sm" color="default" variant="flat" className="font-medium">Inactivo</Chip>
+                          )}
+                          <Chip size="sm" color="success" variant="flat" className="font-medium">Lote</Chip>
+                        </div>
                       </div>
                     </div>
 
@@ -182,51 +261,14 @@ export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
                       </Button>
                       <Button
                         size="sm"
-                        color="danger"
+                        color={(lote as any).estado?.toLowerCase() === 'inactivo' ? "success" : "danger"}
                         variant="flat"
                         isIconOnly
-                        className="text-danger"
-                        onPress={async () => {
-                          // 1. Validate Sublotes
-                          if (lote.sublotes && lote.sublotes.length > 0) {
-                            handleError("No se puede inhabilitar este lote porque tiene sublotes asociados.");
-                            return;
-                          }
-
-                          // 2. Validate Cultivos (Active)
-                          // We use a direct fetch to check for active crops
-                          try {
-                            const activeCrops = await qc.fetchQuery({
-                              queryKey: ["cultivos", "list", { loteId: lote.id_lote_pk, estado: 'activo' }],
-                              queryFn: () => import("../../cultivos/api/cultivos.service").then(m => m.listCultivos({ loteId: lote.id_lote_pk, estado: 'activo' }))
-                            });
-
-                            // Check if we have results
-                            const count = Array.isArray(activeCrops) ? activeCrops.length : (activeCrops as any).data?.length || 0;
-
-                            if (count > 0) {
-                              handleError(`No se puede inhabilitar este lote porque tiene ${count} cultivo(s) activos.`);
-                              return;
-                            }
-
-                            // 3. Confirm
-                            if (confirm(`¿Estás seguro de inhabilitar el lote ${lote.nombre_lote}?`)) {
-                              console.log("Inhabilitar lote", lote.id_lote_pk);
-                              // Logic to call API would go here (e.g., call removeLote)
-                              // await removeLote(lote.id_lote_pk);
-                            }
-
-                          } catch (e) {
-                            console.error("Error validating cultivos", e);
-                            // Fallback if check fails
-                            if (confirm(`No se pudo verificar cultivos. ¿Deseas inhabilitar el lote ${lote.nombre_lote} de todas formas?`)) {
-                              console.log("Inhabilitar lote force", lote.id_lote_pk);
-                            }
-                          }
-                        }}
-                        title="Inhabilitar"
+                        className={(lote as any).estado?.toLowerCase() === 'inactivo' ? "text-success" : "text-danger"}
+                        onPress={() => handleToggleStatus(lote)}
+                        title={(lote as any).estado?.toLowerCase() === 'inactivo' ? "Habilitar" : "Inhabilitar"}
                       >
-                        <Ban size={16} />
+                        {(lote as any).estado?.toLowerCase() === 'inactivo' ? <CheckCircle size={16} /> : <Ban size={16} />}
                       </Button>
                     </div>
                   </CardBody>
@@ -269,6 +311,21 @@ export const LoteListFeature = forwardRef<LoteListRef>((_, ref) => {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {/* Delete/Restore Confirmation Modal */}
+      <DeleteModal
+        isOpen={isToggleModalOpen}
+        onClose={() => setIsToggleModalOpen(false)}
+        onConfirm={handleConfirmToggle}
+        title={isActivating ? "Habilitar Lote" : "Inhabilitar Lote"}
+        description={isActivating
+          ? `¿Estás seguro de habilitar el lote ${loteToToggle?.nombre_lote}? El lote estará disponible nuevamente.`
+          : `¿Estás seguro de inhabilitar el lote ${loteToToggle?.nombre_lote}?`
+        }
+        isLoading={isToggling}
+        confirmText={isActivating ? "Habilitar" : "Inhabilitar"}
+        confirmColor={isActivating ? "success" : "danger"}
+      />
 
       <LoteModal
         isOpen={isModalOpen}

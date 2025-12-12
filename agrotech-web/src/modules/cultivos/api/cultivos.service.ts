@@ -12,6 +12,8 @@ function mapCreateDtoToApi(dto: CreateCultivoInput) {
     loteId: hasSub ? undefined : dto.idLote !== undefined ? Number(dto.idLote) : undefined,
     subLoteId: hasSub ? Number(dto.idSublote) : undefined,
     estado: dto.estado,
+    fechaSiembra: dto.fechaSiembra,
+    fechaFinalizacion: dto.fechaFinalizacion,
   };
 }
 
@@ -170,4 +172,4 @@ export const listCultivos = (params?: { page?: number; limit?: number; q?: strin
 export const getCultivo = (id: number) => cultivosService.get(id);
 export const createCultivo = (payload: CreateCultivoInput) => cultivosService.create(payload);
 export const updateCultivo = (id: number, payload: UpdateCultivoInput) => cultivosService.update(id, payload);
-export const listHistorial = (params?: { limit?: number }) => cultivosService.listHistorial(params);
+export const listHistorial = (params?: { limit?: number; cultivoId?: number }) => cultivosService.listHistorial(params);

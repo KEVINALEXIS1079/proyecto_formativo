@@ -19,6 +19,22 @@ export const createProducto = async (dto: CreateProductoAgroDto): Promise<Produc
     return data;
 };
 
+export const updateProducto = async (id: number, dto: Partial<CreateProductoAgroDto>): Promise<ProductoAgro> => {
+    const { data } = await api.patch<ProductoAgro>(`/production/productos/${id}`, dto);
+    return data;
+};
+
+export const uploadProductoImagen = async (id: number, file: File): Promise<ProductoAgro> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await api.post<ProductoAgro>(`/production/productos/${id}/imagen`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return data;
+};
+
 // ==================== LOTES PRODUCCION ====================
 
 export const getLotesProduccion = async (filters?: { productoAgroId?: number; cultivoId?: number }): Promise<LoteProduccion[]> => {

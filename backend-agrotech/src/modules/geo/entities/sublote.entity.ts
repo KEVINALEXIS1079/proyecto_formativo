@@ -28,4 +28,7 @@ export class SubLote extends BaseEntity {
 
   @Column({ nullable: true })
   descripcion: string;
+
+  @Column({ default: 'activo' })
+  estado: string;
 }

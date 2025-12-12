@@ -19,6 +19,7 @@ import {
     Package,
     Tag
 } from "lucide-react";
+import { getImageUrl } from "../utils/image-helper";
 import CheckoutModal from "../widgets/CheckoutModal";
 
 interface CartItem {
@@ -122,14 +123,21 @@ export default function PosPage() {
                                             ${lote.precioSugeridoKg?.toLocaleString()}
                                         </Chip>
 
-                                        <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center mb-1 overflow-hidden">
-                                            {/* Placeholder or Image */}
-                                            <Package className="text-gray-300 w-12 h-12 group-hover:scale-110 transition-transform" />
+                                        <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center mb-1 overflow-hidden relative">
+                                            {(lote.productoAgro as any)?.imagen ? (
+                                                <img 
+                                                    src={getImageUrl((lote.productoAgro as any).imagen)} 
+                                                    alt={lote.productoAgro?.nombre} 
+                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                />
+                                            ) : (
+                                                <Package className="text-gray-300 w-12 h-12 group-hover:scale-110 transition-transform" />
+                                            )}
                                         </div>
 
                                         <div>
                                             <h4 className="font-bold text-gray-800 leading-tight truncate">{lote.productoAgro?.nombre}</h4>
-                                            <p className="text-xs text-gray-500 truncate">{lote.cultivo?.nombre || "Lote General"}</p>
+                                            <p className="text-xs text-gray-500 truncate">{(lote.cultivo as any)?.nombre || (lote.cultivo as any)?.nombreCultivo || lote.cultivoId || "Lote General"}</p>
                                         </div>
 
                                         <div className="flex justify-between items-center text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-md">
@@ -163,8 +171,16 @@ export default function PosPage() {
                     ) : (
                         cart.map(item => (
                             <div key={item.lote.id} className="flex gap-3 items-center bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-                                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                                    <Package size={20} className="text-gray-400" />
+                                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-gray-200">
+                                    {(item.lote.productoAgro as any)?.imagen ? (
+                                        <img 
+                                            src={getImageUrl((item.lote.productoAgro as any).imagen)} 
+                                            alt="" 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <Package size={20} className="text-gray-400" />
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-semibold text-gray-800 text-sm truncate">{item.lote.productoAgro?.nombre}</p>

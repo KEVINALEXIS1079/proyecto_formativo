@@ -80,7 +80,7 @@ export default function CheckoutModal({ isOpen, onClose, cart, total, onSuccess 
                 detalles: cart.map(item => ({
                     loteProduccionId: item.lote.id,
                     cantidadKg: item.cantidad,
-                    precioUnitarioKg: item.precio
+                    precioUnitarioKg: item.precio / 1.19 // Backend expects Net, adds 19% Tax
                 })),
                 pagos: [
                     { metodoPago: paymentMethod, monto: paid }

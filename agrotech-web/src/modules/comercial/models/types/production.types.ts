@@ -4,6 +4,7 @@ export interface ProductoAgro {
     nombre: string;
     unidadBase: string;
     descripcion?: string;
+    imagen?: string;
 }
 
 export interface LoteProduccion {

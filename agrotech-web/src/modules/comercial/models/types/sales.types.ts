@@ -51,13 +51,19 @@ export interface CreateClienteDto {
 
 export interface CreateVentaDto {
     clienteId?: number;
-    detalles: Array<{
-        loteProduccionId: number;
-        cantidadKg: number;
-        precioUnitarioKg: number;
-    }>;
+    detalles: CreateVentaDetalleDTO[];
     pagos: Array<{
         metodoPago: string;
         monto: number;
     }>;
+}
+
+export interface CreateVentaDetalleDTO {
+    loteProduccionId: number;
+    id_producto_fk?: number;
+    cantidad?: number; // For UI
+    precio_unitario?: number; // For UI
+    // Backend expects:
+    cantidadKg: number;
+    precioUnitarioKg: number;
 }

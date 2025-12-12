@@ -46,20 +46,33 @@ export class GeoService {
     return this.loteRepo.save(lote);
   }
 
-  async findAllLotes() {
+  async findAllLotes(estado?: string) {
+    const where: any = {};
+    if (estado && estado !== 'all') where.estado = estado;
+
     return this.loteRepo.find({
+      where,
       relations: ['sublotes'],
     });
   }
 
-  async findAllLotesSummary() {
+  async findAllLotesSummary(estado: string = 'activo') {
     // OPTIMIZED: Use raw query to avoid ORM overhead or accidental eager loading
-    const raw = await this.loteRepo.query(`
-      SELECT l.id, l.nombre 
+    let query = `
+      SELECT l.id, l.nombre, l.estado 
       FROM lotes l 
-      WHERE l.estado = 'activo'
-      ORDER BY l.nombre ASC
-    `);
+      WHERE 1=1
+    `;
+    
+    const params: any[] = [];
+    if (estado && estado !== 'all') {
+      query += ` AND l.estado = $1`;
+      params.push(estado);
+    }
+    
+    query += ` ORDER BY l.nombre ASC`;
+
+    const raw = await this.loteRepo.query(query, params);
 
     // Fetch sublotes separately or in a second light query if needed, 
     // or just return lots first to verify speed. 
@@ -67,7 +80,7 @@ export class GeoService {
     // Actually, distinct query for sublotes is faster than large join if many rows.
 
     const sublotes = await this.subLoteRepo.query(`
-      SELECT s.id, s.nombre, s.lote_id as "loteId" 
+      SELECT s.id, s.nombre, s.lote_id as "loteId", s.estado 
       FROM sublotes s
     `);
 
@@ -158,9 +171,10 @@ export class GeoService {
     return savedSubLote;
   }
 
-  async findAllSubLotes(loteId?: number) {
+  async findAllSubLotes(loteId?: number, estado?: string) {
     const where: any = {};
     if (loteId) where.loteId = loteId;
+    if (estado && estado !== 'all') where.estado = estado;
 
     return this.subLoteRepo.find({
       where,

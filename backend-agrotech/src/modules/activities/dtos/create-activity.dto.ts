@@ -20,10 +20,13 @@ export enum TipoActividad {
 
 export enum SubtipoActividad {
   SIEMBRA = 'SIEMBRA',
+  PREPARACION_SUELO = 'PREPARACION_SUELO',
   RIEGO = 'RIEGO',
   FERTILIZACION = 'FERTILIZACION',
   CONTROL_PLAGAS = 'CONTROL_PLAGAS',
+
   PODA = 'PODA',
+  DESYERBE = 'DESYERBE',
   COSECHA = 'COSECHA',
   FINALIZACION = 'FINALIZACION',
   OTRA = 'OTRA',
@@ -161,7 +164,12 @@ export class CreateActivityDto {
   @ValidateIf((o) => o.subtipo === SubtipoActividad.COSECHA)
   @IsNumber({}, { message: 'Los kg recolectados deben ser un número' })
   @Min(0, { message: 'Los kg no pueden ser negativos' })
+  @Min(0, { message: 'Los kg no pueden ser negativos' })
   kgRecolectados?: number;
+
+  @ValidateIf((o) => o.subtipo === SubtipoActividad.COSECHA)
+  @IsNumber({}, { message: 'El producto es requerido para cosecha' })
+  productoAgroId?: number;
 
   @IsOptional()
   @IsArray()

@@ -133,12 +133,12 @@ export const ViewActivoFijoModal: React.FC<ViewActivoFijoModalProps> = ({
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 {/* Image */}
                                                 <div className="flex justify-center items-start">
-                                                    {activo.fotoUrl ? (
+                                                    {activo.imagenUrl ? (
                                                         <Image
                                                             src={
-                                                                /^(data:|blob:|https?:\/\/)/i.test(activo.fotoUrl)
-                                                                    ? activo.fotoUrl
-                                                                    : `${FILES_BASE.replace(/\/+$/, "")}/${activo.fotoUrl.replace(/^\/+/, "")}`
+                                                                /^(data:|blob:|https?:\/\/)/i.test(activo.imagenUrl)
+                                                                    ? activo.imagenUrl
+                                                                    : encodeURI(`${FILES_BASE.replace(/\/+$/, "")}/${activo.imagenUrl.replace(/^\/+/, "")}`)
                                                             }
                                                             alt={activo.nombre}
                                                             width={300}

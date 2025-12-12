@@ -18,21 +18,20 @@ import {
 } from "@heroui/react";
 import { Bell, LogOut, UserRound, Mail } from "lucide-react";
 import { useAuth } from "../../modules/auth/hooks/useAuth";
-import { usePerfil } from "../../modules/usuarios/perfil/hooks/usePerfil";
+// import { usePerfil } from "../../modules/usuarios/perfil/hooks/usePerfil";
 import { useEffect, useMemo, useState } from "react";
 import { IoTApi } from "@/modules/iot/api/iot.api";
 import { connectSocket } from "@/shared/api/client";
 
 export default function AppLayout() {
   const navigate = useNavigate();
-  const { me, loading } = usePerfil();
-  const { logout } = useAuth();
+  const { user: authUser, loading, logout } = useAuth();
 
-  const user = me ? {
-    name: `${me.nombre} ${me.apellido}`,
-    email: me.correo,
-    role: me.rol?.nombre ?? "Sin rol",
-    avatarUrl: me.avatar ?? "",
+  const user = authUser ? {
+    name: `${authUser.nombre} ${authUser.apellido}`,
+    email: authUser.correo,
+    role: typeof authUser.rol === 'string' ? authUser.rol : (authUser.rol as any)?.nombre ?? "Sin rol",
+    avatarUrl: (authUser as any).avatar ?? "",
   } : null;
 
   type RawAlert = {
@@ -48,6 +47,10 @@ export default function AppLayout() {
     read?: boolean;
     visto?: boolean;
     createdAt?: string;
+    nivel?: string;     // Added
+    severidad?: string; // Added
+    body?: string;      // Added
+    fecha?: string;     // Added
   };
 
   const [iotAlerts, setIotAlerts] = useState<RawAlert[]>([]);

@@ -45,9 +45,9 @@ export function useCultivosList({
         limit,
         q: q?.trim() || undefined,
         loteId,
-        tipoCultivo: tipoCultivoNombre,
+        tipoCultivo: tipoCultivoNombre as any,
         estado,
-      }),
+      } as any),
     staleTime: 15_000,
   });
 }

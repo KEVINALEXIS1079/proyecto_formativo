@@ -1,0 +1,28 @@
+src/modules/actividad/ui/FinalizeActivityModal.tsx(39,5): error TS2322: Type 'Resolver<{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: unknown; }[]; produccion?: { cantidad: unknown; unidad?: string | undefined; } | undefined; }, any, { fechaReal: Date; insumosReales: { ...; }[]; produccion?: { ...; } | undefined; }>' is not assignable to type 'Resolver<{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: number; }[]; produccion?: { cantidad: number; unidad: string; } | undefined; }, any, { fechaReal: Date; insumosReales: { ...; }[]; produccion?: { ...; } | undefined; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: number; }[]; produccion?: { cantidad: number; unidad: string; } | undefined; }>' is not assignable to type 'ResolverOptions<{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: unknown; }[]; produccion?: { cantidad: unknown; unidad?: string | undefined; } | undefined; }>'.
+      Type '{ insumoId: number; cantidad: unknown; }[]' is not assignable to type '{ insumoId: number; cantidad: number; }[]'.
+        Type '{ insumoId: number; cantidad: unknown; }' is not assignable to type '{ insumoId: number; cantidad: number; }'.
+          Types of property 'cantidad' are incompatible.
+            Type 'unknown' is not assignable to type 'number'.
+src/modules/actividad/ui/FinalizeActivityModal.tsx(105,40): error TS2345: Argument of type '(data: FinalizarActividadData) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: number; }[]; produccion?: { cantidad: number; unidad: string; } | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ fechaReal: Date; insumosReales: { insumoId: number; cantidad: number; }[]; produccion?: { cantidad: number; unidad: string; } | undefined; }': fechaReal, insumosReales
+src/modules/actividad/widgets/CreateProductModal.tsx(81,23): error TS2322: Type '(string | undefined)[]' is not assignable to type '"all" | Iterable<Key> | undefined'.
+  Type '(string | undefined)[]' is not assignable to type 'Iterable<Key>'.
+    The types returned by '[Symbol.iterator]().next(...)' are incompatible between these types.
+      Type 'IteratorResult<string | undefined, undefined>' is not assignable to type 'IteratorResult<Key, any>'.
+        Type 'IteratorYieldResult<string | undefined>' is not assignable to type 'IteratorResult<Key, any>'.
+          Type 'IteratorYieldResult<string | undefined>' is not assignable to type 'IteratorYieldResult<Key>'.
+            Type 'string | undefined' is not assignable to type 'Key'.
+              Type 'undefined' is not assignable to type 'Key'.
+src/modules/auth/hooks/useChangePassword.ts(3,10): error TS2305: Module '"../api/auth.service"' has no exported member 'recoverChange'.
+src/modules/comercial/ui/SalesReceipt.tsx(197,20): error TS2322: Type '{ children: string; jsx: true; global: true; }' is not assignable to type 'DetailedHTMLProps<StyleHTMLAttributes<HTMLStyleElement>, HTMLStyleElement>'.
+  Property 'jsx' does not exist on type 'DetailedHTMLProps<StyleHTMLAttributes<HTMLStyleElement>, HTMLStyleElement>'.
+src/modules/cultivos/hooks/useCultivos.ts(48,9): error TS2561: Object literal may only specify known properties, but 'tipoCultivo' does not exist in type '{ page?: number | undefined; limit?: number | undefined; q?: string | undefined; loteId?: number | undefined; tipoCultivoId?: number | undefined; estado?: string | undefined; }'. Did you mean to write 'tipoCultivoId'?
+src/modules/cultivos/hooks/useCultivos.ts(89,46): error TS2353: Object literal may only specify known properties, and 'cultivoId' does not exist in type '{ limit?: number | undefined; }'.
+src/modules/cultivos/pages/CultivoCreatePage.tsx(6,8): error TS2739: Type '{}' is missing the following properties from type 'CultivoFormProps': onSubmit, onCancel
+src/modules/cultivos/pages/CultivoEditPage.tsx(21,20): error TS2322: Type '{ cultivo: Cultivo; }' is not assignable to type 'IntrinsicAttributes & CultivoFormProps'.
+  Property 'cultivo' does not exist on type 'IntrinsicAttributes & CultivoFormProps'.
+src/modules/fitosanitario/ui/EpaFilters.tsx(89,13): error TS2322: Type 'Element[]' is not assignable to type 'CollectionElement<object>'.

@@ -17,6 +17,7 @@ import {
   listUsuarios,
   listInsumos,
   listSubLotes,
+  listProductosAgro,
 } from "../api";
 import toast from "react-hot-toast";
 
@@ -35,6 +36,7 @@ export default function ActividadForm({
   submitLabel = "Guardar",
   onCancel,
 }: ActividadFormProps) {
+  console.log('ActividadForm initialData:', initialData);
   const processedDefaultValues: Partial<ActividadFormData> = useMemo(() => {
     if (!initialData) {
       return {
@@ -73,8 +75,9 @@ export default function ActividadForm({
       precioHoraActividad: initialData.precioHoraActividad ?? 0,
       cantidadPlantas: initialData.cantidadPlantas ?? undefined,
       kgRecolectados: initialData.kgRecolectados ?? undefined,
+      productoAgroId: initialData.productoAgroId ?? undefined,
       responsables: (initialData.responsables || []).map(r => ({
-        usuarioId: r.usuarioId,
+        usuarioId: r.usuarioId || (r as any).usuario?.id,
         horas: r.horas ?? 0,
         precioHora: r.precioHora ?? 0,
       })),
@@ -94,8 +97,8 @@ export default function ActividadForm({
         imagenes: e.imagenes,
       })),
       herramientas: (initialData.herramientas || []).map(h => ({
-        activoFijoId: h.activoFijoId,
-        horasUso: h.horasUso,
+        activoFijoId: h.activoFijoId || (h as any).activoFijo?.id,
+        horasUso: h.horasUso || (h as any).horasEstimadas || 0,
       })),
     }; // removed type assertion to let TS check compatibility
   }, [initialData]);
@@ -119,6 +122,7 @@ export default function ActividadForm({
       subLoteId: data.subLoteId, // Direct assignment now possible
       cantidadPlantas: data.cantidadPlantas,
       kgRecolectados: data.kgRecolectados,
+      productoAgroId: data.productoAgroId,
     };
     return onSubmit(payload);
   };
@@ -129,6 +133,7 @@ export default function ActividadForm({
   const [subLotes, setSubLotes] = useState<any[]>([]);
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [insumos, setInsumos] = useState<any[]>([]);
+  const [productosAgro, setProductosAgro] = useState<any[]>([]);
 
   useEffect(() => {
     listCultivos().then(setCultivos).catch(console.error);
@@ -136,6 +141,7 @@ export default function ActividadForm({
     listSubLotes().then(setSubLotes).catch(console.error);
     listUsuarios().then(setUsuarios).catch(console.error);
     listInsumos({ tipoInsumo: "CONSUMIBLE" }).then(setInsumos).catch(console.error);
+    listProductosAgro().then(setProductosAgro).catch(console.error);
   }, []);
 
   // Auto-select Lote and SubLote based on Cultivo to ensure consistency
@@ -209,6 +215,10 @@ export default function ActividadForm({
                 cultivos={cultivos}
                 lotes={lotes}
                 subLotes={subLotes}
+                productosAgro={productosAgro}
+                onProductCreated={(newProduct) => {
+                    setProductosAgro(prev => [...prev, newProduct]);
+                }}
               />
             </CardBody>
           </Card>

@@ -19,6 +19,16 @@ export const listSubLotes = async (): Promise<any[]> => {
   return data;
 };
 
+export const listProductosAgro = async (): Promise<any[]> => {
+  const { data } = await api.get("/production/productos");
+  return data;
+};
+
+export const createProductoAgro = async (payload: { nombre: string; unidadMedida: string; descripcion?: string }) => {
+  const { data } = await api.post("/production/productos", payload);
+  return data;
+};
+
 export const listUsuarios = async (): Promise<any[]> => {
   const { data } = await api.get("/users");
   return data;

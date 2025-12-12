@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useCreateVenta } from "../hooks";
 import VentaForm from "../widgets/VentaForm";
-import type { CreateVentaDTO } from "../model/types";
+import type { CreateVentaDto as CreateVentaDTO } from "../models/types/sales.types";
 
 export default function VentaCreateFeature() {
   const navigate = useNavigate();

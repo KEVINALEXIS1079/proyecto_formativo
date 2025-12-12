@@ -12,4 +12,8 @@ export class CreateProductoAgroDto {
   @IsString()
   @IsOptional()
   descripcion?: string;
+
+  @IsString()
+  @IsOptional()
+  imagen?: string;
 }

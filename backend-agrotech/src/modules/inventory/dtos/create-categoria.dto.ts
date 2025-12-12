@@ -15,4 +15,8 @@ export class CreateCategoriaDto {
   @IsString({ message: 'La descripción debe ser un texto válido' })
   @MaxLength(500, { message: 'La descripción no puede exceder 500 caracteres' })
   descripcion?: string;
+
+  @IsOptional()
+  @IsString()
+  tipoInsumo?: string;
 }

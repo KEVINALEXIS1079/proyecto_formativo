@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { ProductoAgro } from '../entities/producto-agro.entity';
 import { LoteProduccion } from '../entities/lote-produccion.entity';
 import { MovimientoProduccion } from '../entities/movimiento-produccion.entity';
+import { HistorialPrecioLote } from '../entities/historial-precio-lote.entity';
 import { Cliente } from '../entities/cliente.entity';
 import { Venta } from '../entities/venta.entity';
 import { VentaDetalle } from '../entities/venta-detalle.entity';
@@ -23,6 +24,7 @@ export class ProductionService {
     @InjectRepository(Venta) private ventaRepo: Repository<Venta>,
     @InjectRepository(VentaDetalle) private ventaDetalleRepo: Repository<VentaDetalle>,
     @InjectRepository(Pago) private pagoRepo: Repository<Pago>,
+    @InjectRepository(HistorialPrecioLote) private historialPrecioRepo: Repository<HistorialPrecioLote>,
     private dataSource: DataSource,
   ) { }
 
@@ -86,6 +88,8 @@ export class ProductionService {
     cantidadKg: number;
     fecha: Date;
     costoCultivo?: number; // Costo acumulado real del cultivo
+    usuarioId: number; // Required for MovimientoProduccion
+    productoAgroId?: number; // Added
   }, manager?: any) {
     const repoLote = manager ? manager.getRepository(LoteProduccion) : this.loteProduccionRepo;
     const repoMov = manager ? manager.getRepository(MovimientoProduccion) : this.movimientoRepo;
@@ -100,7 +104,7 @@ export class ProductionService {
     }
 
     const loteProduccion = repoLote.create({
-      productoAgroId: 1, // Default por ahora, idealmente vendría del cultivo
+      productoAgroId: data.productoAgroId || 1, // Use provided ID, fallback to 1 temporarily
       cultivoId: data.cultivoId,
       actividadCosechaId: data.actividadCosechaId,
       cantidadKg: data.cantidadKg,
@@ -121,7 +125,8 @@ export class ProductionService {
       costoUnitarioKg: costoUnitario,
       costoTotal: costoTotal,
       descripcion: `Ingreso por cosecha - Actividad ${data.actividadCosechaId}`,
-      fecha: data.fecha
+      fecha: data.fecha,
+      usuarioId: data.usuarioId,
     });
 
     await repoMov.save(movimiento);
@@ -138,10 +143,68 @@ export class ProductionService {
     return lote;
   }
 
-  async updateLoteProduccion(id: number, data: UpdateLoteProduccionDto) {
+
+
+  async updateLoteProduccion(id: number, data: UpdateLoteProduccionDto & { usuarioId: number }) {
     const lote = await this.findLoteProduccionById(id);
-    Object.assign(lote, data);
-    return this.loteProduccionRepo.save(lote);
+    const repoMov = this.movimientoRepo; // Use inject or manager if available, but assuming prop access
+
+    let hasChanges = false;
+    let changeDesc = "";
+
+    if (data.calidad && data.calidad !== lote.calidad) {
+      changeDesc += `Calidad: ${lote.calidad} -> ${data.calidad}. `;
+      lote.calidad = data.calidad;
+      hasChanges = true;
+    }
+
+    if (data.precioSugeridoKg !== undefined && data.precioSugeridoKg !== lote.precioSugeridoKg) {
+      changeDesc += `Precio: ${lote.precioSugeridoKg} -> ${data.precioSugeridoKg}. `;
+      
+      // Save Price History
+      if (data.usuarioId) {
+        await this.historialPrecioRepo.save({
+            loteProduccionId: lote.id,
+            precioAnterior: lote.precioSugeridoKg,
+            precioNuevo: data.precioSugeridoKg,
+            usuarioId: data.usuarioId,
+            fecha: new Date(),
+            razon: 'Actualización de Inventario'
+        });
+      }
+
+      lote.precioSugeridoKg = data.precioSugeridoKg;
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      const savedLote = await this.loteProduccionRepo.save(lote);
+
+      // Create Audit Entry
+      const movimiento = repoMov.create({
+        loteProduccionId: savedLote.id,
+        tipo: 'AJUSTE_NOVEDAD', // Using generic adjustment type
+        cantidadKg: 0, // No stock change
+        costoUnitarioKg: lote.costoUnitarioKg,
+        costoTotal: 0,
+        descripcion: `Actualización: ${changeDesc.trim()}`,
+        fecha: new Date(),
+        usuarioId: data.usuarioId || 1, // Fallback if no user passed (fix controller next)
+      });
+      await repoMov.save(movimiento);
+
+      return savedLote;
+    }
+
+    return lote;
+  }
+
+  async getHistorialPrecios(loteId: number) {
+    return this.historialPrecioRepo.find({
+        where: { loteProduccionId: loteId },
+        relations: ['usuario'],
+        order: { fecha: 'DESC' }
+    });
   }
 
   async removeLoteProduccion(id: number) {
@@ -189,12 +252,15 @@ export class ProductionService {
       }
 
       const iva = subtotal * 0.19; // 19% IVA
-      const total = subtotal + iva;
+      // Round to 2 decimals to avoid floating point issues
+      const total = Math.round((subtotal + iva) * 100) / 100;
 
       // Validar que los pagos cubran el total
       const totalPagos = data.pagos.reduce((sum, p) => sum + p.monto, 0);
-      if (totalPagos < total) {
-        throw new BadRequestException('Los pagos no cubren el total de la venta');
+      
+      // Allow small epsilon for floating point errors or just compare rounded
+      if (Math.round(totalPagos * 100) < Math.round(total * 100)) {
+        throw new BadRequestException(`Los pagos (${totalPagos}) no cubren el total de la venta (${total})`);
       }
 
       // Crear venta
@@ -232,9 +298,14 @@ export class ProductionService {
         await queryRunner.manager.save(VentaDetalle, {
           ventaId: savedVenta.id,
           loteProduccionId: detalle.loteProduccionId,
+          productoAgroId: loteProduccion.productoAgroId, // Required
+          cultivoId: loteProduccion.cultivoId,           // Optional but useful for revenue
           cantidadKg: detalle.cantidadKg,
           precioUnitarioKg: detalle.precioUnitarioKg,
-          subtotal: detalle.cantidadKg * detalle.precioUnitarioKg,
+          subtotal: detalle.cantidadKg * detalle.precioUnitarioKg, // Note: This subtotal is distinct from Venta.subtotal (check logic if needed)
+          precioTotal: detalle.cantidadKg * detalle.precioUnitarioKg, // Mapping correct field
+          costoUnitarioKg: loteProduccion.costoUnitarioKg,
+          costoTotal: detalle.cantidadKg * loteProduccion.costoUnitarioKg
         });
 
         // Descontar stock
@@ -250,6 +321,8 @@ export class ProductionService {
           costoTotal: -detalle.cantidadKg * loteProduccion.costoUnitarioKg,
           descripcion: `Venta ${savedVenta.id}`,
           ventaId: savedVenta.id,
+          usuarioId: data.usuarioId, // Required field
+          fecha: new Date(),
         });
       }
 
@@ -257,8 +330,9 @@ export class ProductionService {
       for (const pago of data.pagos) {
         await queryRunner.manager.save(Pago, {
           ventaId: savedVenta.id,
-          metodoPago: pago.metodoPago,
+          metodo: pago.metodoPago, // Corrected column name
           monto: pago.monto,
+          moneda: 'COP' // Required field
         });
       }
 
@@ -276,7 +350,7 @@ export class ProductionService {
   async findVentaById(id: number) {
     const venta = await this.ventaRepo.findOne({
       where: { id },
-      relations: ['cliente', 'detalles', 'detalles.loteProduccion', 'pagos'],
+      relations: ['cliente', 'detalles', 'detalles.loteProduccion', 'detalles.loteProduccion.productoAgro', 'pagos'],
     });
 
     if (!venta) throw new NotFoundException(`Venta ${id} not found`);
@@ -287,6 +361,9 @@ export class ProductionService {
     const queryBuilder = this.ventaRepo.createQueryBuilder('venta')
       .leftJoinAndSelect('venta.cliente', 'cliente')
       .leftJoinAndSelect('venta.detalles', 'detalles')
+      .leftJoinAndSelect('detalles.loteProduccion', 'loteProduccion')
+      .leftJoinAndSelect('loteProduccion.productoAgro', 'productoAgro')
+      .leftJoinAndSelect('loteProduccion.cultivo', 'cultivo')
       .leftJoinAndSelect('venta.pagos', 'pagos');
 
     if (filters?.clienteId) {

@@ -15,10 +15,14 @@ import { format } from "date-fns";
 // import { es } from "date-fns/locale";
 import { Eye, Undo2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useState } from "react";
+import PosReceiptModal from "./PosReceiptModal";
+import type { Venta } from "../api/production.service";
 
 export default function SalesHistory() {
     const { data: ventas = [], isLoading } = useVentas();
     const anularMutation = useAnularVenta();
+    const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null);
 
     const handleAnular = async (id: number) => {
         if (!confirm("¿Está seguro de anular esta venta? El stock será devuelto.")) return;
@@ -86,8 +90,18 @@ export default function SalesHistory() {
                             </TableCell>
                             <TableCell>
                                 <div className="flex gap-2">
-                                    <Tooltip content="Ver Detalle (Próximamente)">
-                                        <Button isIconOnly size="sm" variant="light"><Eye size={18} /></Button>
+                                    <Tooltip content="Ver Factura">
+                                        <Button 
+                                            isIconOnly 
+                                            size="sm" 
+                                            variant="light"
+                                            onPress={() => {
+                                                console.log("Opening modal for venta:", venta);
+                                                setSelectedVenta(venta);
+                                            }}
+                                        >
+                                            <Eye size={18} />
+                                        </Button>
                                     </Tooltip>
                                     {venta.estado === 'completada' && (
                                         <Tooltip color="danger" content="Anular Venta">
@@ -109,6 +123,12 @@ export default function SalesHistory() {
                     ))}
                 </TableBody>
             </Table>
+            
+            <PosReceiptModal 
+                isOpen={!!selectedVenta} 
+                onClose={() => setSelectedVenta(null)} 
+                venta={selectedVenta} 
+            />
         </div>
     );
 }
