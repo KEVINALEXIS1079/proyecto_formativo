@@ -36,8 +36,6 @@ export class ActivitiesController {
   constructor(
     private readonly activitiesService: ActivitiesService,
     private readonly imageUploadService: ImageUploadService,
-    @Inject(forwardRef(() => ActivitiesGateway))
-    private readonly activitiesGateway: ActivitiesGateway,
   ) { }
 
   private extractUserId(request: Request | any): number {
@@ -62,96 +60,22 @@ export class ActivitiesController {
     const userId = this.extractUserId(req);
     const result = await this.create(dto, userId);
 
-    // RF63: Emitir evento en tiempo real
-    this.activitiesGateway.broadcast('createActivity.result', result);
+
 
     return result;
   }
 
   @Get()
   @RequirePermissions('actividades.ver')
-  async findAllActivitiesHttp(@Query() filters?: { cultivoId?: number; loteId?: number; tipo?: string }) {
-    return this.findAll(filters);
-  }
-
-  @Post('upload')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-    const url = await this.imageUploadService.uploadImage(file);
-    return { url };
-  }
-
-  @Get(':id')
-  @RequirePermissions('actividades.ver')
-  async findOneActivityHttp(@Param('id', ParseIntPipe) id: number) {
-    return this.findOne(id);
-  }
-
-  @Patch(':id')
-  @RequirePermissions('actividades.editar')
-  @UsePipes(new ValidationPipe())
-  async updateActivityHttp(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateActivityDto,
-    @Req() req: Request,
+  async findAllActivitiesHttp(
+    @Query() filters: { cultivoId?: number; loteId?: number; tipo?: string },
+    @Req() req: Request
   ) {
     const userId = this.extractUserId(req);
-    return this.update(id, dto, userId);
+    // Optional: Extract role if needed, e.g., const userRole = (req.user as any)?.role;
+    return this.findAll(filters, userId);
   }
-
-  @Patch(':id/finalize')
-  @RequirePermissions('actividades.editar')
-  async finalizeActivityHttp(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: any,
-    @Req() req: Request,
-  ) {
-    const userId = this.extractUserId(req);
-    return this.activitiesService.finalizarActividad(id, data, userId);
-  }
-
-  @Delete(':id')
-  @RequirePermissions('actividades.eliminar')
-  async removeActivityHttp(@Param('id', ParseIntPipe) id: number) {
-    return this.remove(id);
-  }
-
-  @Post(':id/insumos')
-  @RequirePermissions('actividades.editar')
-  async addInsumoHttp(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: Request,
-    @Body()
-    data: { insumoId: number; cantidadUso: number; costoUnitarioUso: number },
-  ) {
-    const userId = this.extractUserId(req);
-    return this.activitiesService.consumirInsumo(id, data, userId);
-  }
-
-  @Post(':id/servicios')
-  @RequirePermissions('actividades.editar')
-  async addServicioHttp(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: { nombreServicio: string; horas: number; precioHora: number },
-  ) {
-    return this.activitiesService.addServicio(id, data);
-  }
-
-  @Post(':id/evidencias')
-  @RequirePermissions('actividades.editar')
-  async addEvidenciaHttp(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: { descripcion: string; imagenes: string[] },
-  ) {
-    return this.activitiesService.addEvidencia(id, data);
-  }
-
-  // ==================== INTERNAL METHODS ====================
-
+  // ...
   // Internal method for WebSocket: handles creating an activity by calling the service
   // Flow: Gateway calls this method -> calls activitiesService.create -> returns created activity
   @UsePipes(new ValidationPipe())
@@ -162,8 +86,11 @@ export class ActivitiesController {
 
   // Internal method for WebSocket: handles finding all activities by calling the service
   // Flow: Gateway calls this method -> calls activitiesService.findAll -> returns activities list
-  async findAll(filters?: { cultivoId?: number; loteId?: number; tipo?: string }) {
-    return this.activitiesService.findAll(filters);
+  async findAll(
+    filters?: { cultivoId?: number; loteId?: number; tipo?: string },
+    userId?: number // Added userId parameter
+  ) {
+    return this.activitiesService.findAll(filters, userId);
   }
 
   // Internal method for WebSocket: handles finding an activity by ID by calling the service

@@ -33,9 +33,13 @@ export class AuthService {
         { identificacion: registerDto.identificacion },
         { correo: registerDto.correo },
       ],
+      withDeleted: true,
     });
 
     if (existingUser) {
+      if (existingUser.deletedAt) {
+        throw new BadRequestException('Esta cuenta fue eliminada previamente. Contacte al administrador.');
+      }
       // Recuperación si está pendiente
       if (existingUser.estado === 'pendiente_verificacion') {
         // Re-enviar código para el existente
@@ -92,13 +96,21 @@ export class AuthService {
       emailVerifiedAt: new Date(),
     });
 
-    const saved = await this.usuarioRepo.save(newUser);
+    try {
+      const saved = await this.usuarioRepo.save(newUser);
+      // Limpiar Redis
+      await this.redisService.getClient().del(`pre-reg:${correo}`);
 
-    // Limpiar Redis
-    await this.redisService.getClient().del(`pre-reg:${correo}`);
-
-    const { passwordHash: _, ...result } = saved;
-    return { success: true, user: result, message: 'Registro completado' };
+      const { passwordHash: _, ...result } = saved;
+      // return { success: true, user: result, message: 'Registro completado' };
+      // User requested "verificar el usuario o el correo".
+      return { success: true, user: result, message: 'Cuenta creada. Esperando activación del administrador.' };
+    } catch (error) {
+      if (error.code === '23505') {
+        return { success: false, message: 'Error: El usuario ya existe (Identificación o Correo duplicado).' };
+      }
+      throw error;
+    }
   }
 
   // Deprecated direct register (kept for compatibility if needed, using startRegistration logic is preferred)
@@ -132,6 +144,18 @@ export class AuthService {
     // usuario.estado = 'activo'; 
     usuario.estado = 'pendiente_aprobacion';
     await this.usuarioRepo.save(usuario);
+
+    // Notificar a los administradores
+    const admins = await this.usuarioRepo.find({
+      where: { rolId: ROLES.ADMINISTRADOR, estado: 'activo' },
+    });
+
+    for (const admin of admins) {
+      await this.emailService.sendAdminNewUserNotification(admin.correo, {
+        nombre: `${usuario.nombre} ${usuario.apellido}`,
+        correo: usuario.correo,
+      });
+    }
 
     // Invalidar códigos anteriores no usados
     await this.emailCodeRepo.update(

@@ -57,7 +57,10 @@ Base path: `/geo`
 {
   "nombre": "Lote Principal",
   "descripcion": "Zona norte",
-  "geom": { "...": "GeoJSON Polygon" }
+  "geom": {
+    "type": "Polygon",
+    "coordinates": [[[-74.1, 4.7], [-74.09, 4.7], [-74.09, 4.71], [-74.1, 4.71], [-74.1, 4.7]]]
+  }
 }
 ```
 
@@ -73,13 +76,16 @@ Base path: `/geo`
   "id": 7,
   "nombre": "Lote Principal",
   "descripcion": "Zona norte",
-  "geom": { "...": "GeoJSON Polygon" },
+  "geom": {
+    "type": "Polygon",
+    "coordinates": [[[-74.1, 4.7], [-74.09, 4.7], [-74.09, 4.71], [-74.1, 4.71], [-74.1, 4.7]]]
+  },
   "areaM2": 12500.35,
   "areaHa": 1.25,
   "centroide": { "type": "Point", "coordinates": [-74.095, 4.705] },
   "estado": "activo",
-  "createdAt": "2024-12-04T10:00:00.000Z",
-  "updatedAt": "2024-12-04T10:00:00.000Z"
+  "createdAt": "2025-12-04T10:00:00.000Z",
+  "updatedAt": "2025-12-04T10:00:00.000Z"
 }
 ```
 
@@ -122,7 +128,10 @@ Base path: `/geo`
   "loteId": 7,
   "nombre": "Subparcela A",
   "descripcion": "Bloque de pruebas",
-  "geom": { "...": "GeoJSON Polygon" }
+  "geom": {
+    "type": "Polygon",
+    "coordinates": [[[-74.1, 4.7], [-74.09, 4.7], [-74.09, 4.71], [-74.1, 4.71], [-74.1, 4.7]]]
+  }
 }
 ```
 
@@ -140,13 +149,16 @@ Base path: `/geo`
   "loteId": 7,
   "nombre": "Subparcela A",
   "descripcion": "Bloque de pruebas",
-  "geom": { "...": "GeoJSON Polygon" },
+  "geom": {
+    "type": "Polygon",
+    "coordinates": [[[-74.095, 4.705], [-74.094, 4.705], [-74.094, 4.706], [-74.095, 4.706], [-74.095, 4.705]]]
+  },
   "areaM2": 3200.5,
   "areaHa": 0.32,
   "centroide": { "type": "Point", "coordinates": [-74.094, 4.704] },
   "lote": { "id": 7, "nombre": "Lote Principal" },
-  "createdAt": "2024-12-04T10:05:00.000Z",
-  "updatedAt": "2024-12-04T10:05:00.000Z"
+  "createdAt": "2025-12-04T10:05:00.000Z",
+  "updatedAt": "2025-12-04T10:05:00.000Z"
 }
 ```
 

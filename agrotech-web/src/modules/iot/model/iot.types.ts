@@ -23,26 +23,29 @@ export interface TipoSensor {
 }
 
 export interface Sensor {
-   id: number;
-   nombre: string;
-   tipoSensorId: number;
-   tipoSensor?: TipoSensor;
-   protocolo: 'HTTP' | 'MQTT' | 'WEBSOCKET';
-   cultivoId?: number;
-   loteId?: number;
-   subLoteId?: number;
-   umbralMin?: number;
-   umbralMax?: number;
+  id: number;
+  nombre: string;
+  tipoSensorId: number;
+  tipoSensor?: TipoSensor;
+  protocolo: 'HTTP' | 'MQTT' | 'WEBSOCKET';
+  cultivoId?: number;
+  loteId?: number;
+  subLoteId?: number;
+  umbralMin?: number;
+  umbralMax?: number;
 
-   // Config
-   globalConfigId?: number;
-   mqttTopic?: string;
-   endpointUrl?: string;
+  // Config
+  globalConfigId?: number;
+  mqttTopic?: string;
+  endpointUrl?: string;
 
-   activo: boolean;
-   ultimoValor?: number;
-   ultimaLectura?: string; // ISO date
-   estadoConexion?: 'CONECTADO' | 'DESCONECTADO' | 'ERROR';
+  activo: boolean;
+  ultimoValor?: number;
+  ultimaLectura?: string; // ISO date
+  estadoConexion?: 'CONECTADO' | 'DESCONECTADO' | 'ERROR';
+  estado?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SensorLectura {

@@ -60,7 +60,7 @@ export class CropReportsService {
 
     const dateFilter = buildDateFilter(fechaDesde, fechaHasta);
 
-    // 3. Obtener ACTIVIDADES con responsables
+    // 3. Obtener ACTIVIDADES con responsables y servicios
     let actividades: Actividad[] = [];
     try {
       actividades = await this.actividadRepo.find({
@@ -68,7 +68,7 @@ export class CropReportsService {
           cultivoId,
           ...(dateFilter && { fecha: dateFilter })
         },
-        relations: ['responsables', 'responsables.usuario'],
+        relations: ['responsables', 'responsables.usuario', 'servicios'],
         order: { fecha: 'ASC' }
       });
     } catch (e) {
@@ -128,9 +128,14 @@ export class CropReportsService {
       0
     );
 
-    // Costos adicionales de actividades (maquinaria, servicios, otros)
-    const costoMaquinaria = 0; // TODO: Agregar si hay servicios
-    const costoOtros = 0; // Agregar si hay otros costos
+    // Costos de servicios (Maquinaria alquilada, transporte, etc.)
+    const costoServicios = actividades.reduce(
+      (sum, a) => sum + (a.servicios?.reduce((s, serv) => s + (serv.costo || 0), 0) || 0),
+      0
+    );
+
+    const costoMaquinaria = 0; // Reservado para maquinaria propia si se implementa depreciación
+    const costoOtros = costoServicios; // Asignamos servicios a 'otros'
 
     const costos = {
       insumos: costoInsumos,

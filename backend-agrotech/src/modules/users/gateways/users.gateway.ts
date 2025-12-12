@@ -14,13 +14,19 @@ import { WsPermissionsGuard } from '../../../common/guards/ws-permissions.guard'
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { UserStatus } from '../dtos/user-management.dto';
 
+import { forwardRef, Inject } from '@nestjs/common';
+import { UsersService } from '../services/users.service';
+
 @WebSocketGateway({ namespace: 'users', cors: { origin: true, credentials: true } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
 export class UsersGateway {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly usersController: UsersController) {}
+  constructor(
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
+  ) { }
 
   private sanitizeUser(user: any) {
     const { passwordHash, ...rest } = user;
@@ -35,7 +41,7 @@ export class UsersGateway {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const users = await this.usersController.findAll({
+      const users = await this.usersService.findAll({
         ...filters,
         estado: filters.estado as UserStatus,
       });
@@ -56,7 +62,7 @@ export class UsersGateway {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const user = await this.usersController.findById(data.id);
+      const user = await this.usersService.findById(data.id);
       const sanitized = this.sanitizeUser(user);
       client.emit('users:detail', sanitized);
       return sanitized;
@@ -74,7 +80,7 @@ export class UsersGateway {
     @ConnectedSocket() client: Socket,
   ) {
     try {
-      const result = await this.usersController.removeUser(data.id);
+      const result = await this.usersService.remove(data.id);
       client.emit('users:removed', result);
       this.server.emit('users:updated'); // Notificar a todos
       return result;

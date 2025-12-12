@@ -21,7 +21,8 @@ export default function DetalleAlmacenPage() {
   const navigate = useNavigate();
   const almacenId = id ? parseInt(id) : 0;
 
-  const { data: almacen, isLoading, error } = useAlmacenById(almacenId);
+  const { data: almacenFull, isLoading, error } = useAlmacenById(almacenId);
+  const almacen = almacenFull as any || {};
   const removeMutation = useRemoveAlmacen();
   const { data: insumosData } = useInsumoList({ almacenId });
 

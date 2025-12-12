@@ -136,3 +136,35 @@ export function useFinalizeActividad() {
     },
   });
 }
+
+import { useEffect } from 'react';
+import { connectSocket } from '@/shared/api/client';
+
+export function useRealTimeActividades() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const socket = connectSocket('/activities');
+
+    const handleInvalidate = () => {
+      queryClient.invalidateQueries({ queryKey: KEYS.LIST });
+    };
+
+    const handleDetailInvalidate = (data: any) => {
+      queryClient.invalidateQueries({ queryKey: KEYS.LIST });
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: KEYS.DETAIL(data.id) });
+      }
+    };
+
+    socket.on('activities:created', handleInvalidate);
+    socket.on('activities:updated', handleDetailInvalidate);
+    socket.on('activities:removed', handleInvalidate);
+
+    return () => {
+      socket.off('activities:created', handleInvalidate);
+      socket.off('activities:updated', handleDetailInvalidate);
+      socket.off('activities:removed', handleInvalidate);
+    };
+  }, [queryClient]);
+}

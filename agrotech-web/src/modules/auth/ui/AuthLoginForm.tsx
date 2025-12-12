@@ -71,7 +71,9 @@ export default function AuthLoginForm({
         </Checkbox>
         {footerSlot}
       </div>
-      <Button type="submit" color="success" className="w-full rounded-full" isLoading={loading}>Entrar</Button>
+      <Button type="submit" color="success" className="w-full rounded-full" isLoading={loading}>
+        {loading ? "Entrando..." : "Entrar"}
+      </Button>
     </form>
   );
 }

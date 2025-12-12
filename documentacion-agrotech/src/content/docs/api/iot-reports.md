@@ -22,6 +22,21 @@ Obtiene un resumen de métricas en un rango de fechas.
 - `startDate`: Fecha inicio (ISO 8601)
 - `endDate`: Fecha fin (ISO 8601)
 
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "resumen": {
+    "temperaturaPromedio": 24.5,
+    "humedadPromedio": 60.2,
+    "totalAlertas": 3
+  },
+  "grafica": [
+    { "fecha": "2025-10-01", "valor": 24.0 },
+    { "fecha": "2025-10-02", "valor": 25.0 }
+  ]
+}
+```
+
 ### Comparativa de Lotes
 Compara el rendimiento o métricas entre diferentes lotes.
 
@@ -34,6 +49,22 @@ Compara el rendimiento o métricas entre diferentes lotes.
 - `tipoSensorId`: ID del tipo de sensor a comparar
 - `startDate`: Fecha inicio
 - `endDate`: Fecha fin
+
+**Respuesta Exitosa (200 OK):**
+```json
+[
+  {
+    "loteId": 1,
+    "loteNombre": "Lote Norte",
+    "promedio": 24.5
+  },
+  {
+    "loteId": 2,
+    "loteNombre": "Lote Sur",
+    "promedio": 26.1
+  }
+]
+```
 
 ---
 
@@ -53,6 +84,17 @@ Provee análisis estadístico (min, max, promedio) para un lote.
 - `startDate`: Fecha inicio
 - `endDate`: Fecha fin
 
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "loteId": 1,
+  "metricas": {
+    "temperatura": { "min": 18, "max": 30, "avg": 24 },
+    "humedad": { "min": 40, "max": 80, "avg": 60 }
+  }
+}
+```
+
 ---
 
 ## Alertas
@@ -69,6 +111,20 @@ Obtiene el historial de alertas generadas por sensores fuera de rango.
 - `loteId`
 - `from`
 - `to`
+
+**Respuesta Exitosa (200 OK):**
+```json
+[
+  {
+    "id": 10,
+    "sensorId": 5,
+    "tipo": "TEMPERATURA_ALTA",
+    "valor": 35.5,
+    "mensaje": "Temperatura crítica detectada",
+    "fecha": "2025-11-20T14:30:00Z"
+  }
+]
+```
 
 ### Contexto de Alerta
 Obtiene detalles del entorno cuando ocurrió una alerta.

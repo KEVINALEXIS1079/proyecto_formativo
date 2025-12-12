@@ -56,7 +56,8 @@ export const CreateReservaModal = ({
 
         // Validar cantidad
         const qty = parseFloat(cantidad);
-        const stockDisponible = insumo.stockUso - (insumo.stockReservado || 0);
+        const stockUso = insumo.stockUso || 0;
+        const stockDisponible = stockUso - (insumo.stockReservado || 0);
 
         // Para Activo Fijo (tipo NO_CONSUMIBLE), si es único, stockUso es 1.
         // Si es consumible, stockUso es N.
@@ -109,7 +110,7 @@ export const CreateReservaModal = ({
                                         <div className="space-y-2 text-sm text-gray-600">
                                             <div className="flex justify-between">
                                                 <span>Stock Físico:</span>
-                                                <span className="font-medium">{insumo.stockUso} {insumo.presentacionUnidad}</span>
+                                                <span className="font-medium">{insumo.stockUso || 0} {insumo.presentacionUnidad}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>Reservado:</span>
@@ -117,7 +118,7 @@ export const CreateReservaModal = ({
                                             </div>
                                             <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
                                                 <span>Disponible:</span>
-                                                <span className="font-bold text-green-700">{insumo.stockUso - (insumo.stockReservado || 0)} {insumo.presentacionUnidad}</span>
+                                                <span className="font-bold text-green-700">{(insumo.stockUso || 0) - (insumo.stockReservado || 0)} {insumo.presentacionUnidad}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -140,8 +141,8 @@ export const CreateReservaModal = ({
                                         onChange={(e) => setCantidad(e.target.value)}
                                         variant="bordered"
                                         min={1}
-                                        max={insumo.stockUso - (insumo.stockReservado || 0)}
-                                        description={isActivoFijo ? "Generalmente 1 unidad para activos específicos" : `Máximo disponible: ${insumo.stockUso - (insumo.stockReservado || 0)}`}
+                                        max={(insumo.stockUso || 0) - (insumo.stockReservado || 0)}
+                                        description={isActivoFijo ? "Generalmente 1 unidad para activos específicos" : `Máximo disponible: ${(insumo.stockUso || 0) - (insumo.stockReservado || 0)}`}
                                     />
 
                                     <Textarea

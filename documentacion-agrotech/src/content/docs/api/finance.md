@@ -23,6 +23,29 @@ Obtiene un listado de transacciones (ingresos/gastos) con filtros.
 - `fechaInicio`: Fecha inicial del rango (ISO 8601)
 - `fechaFin`: Fecha final del rango (ISO 8601)
 
+**Respuesta Exitosa (200 OK):**
+```json
+[
+  {
+    "id": 100,
+    "tipo": "GASTO",
+    "monto": 150000,
+    "descripcion": "Compra de semillas",
+    "fecha": "2025-10-15T10:00:00Z",
+    "categoria": "INSUMOS",
+    "responsable": { "nombre": "Juan Perez" }
+  },
+  {
+    "id": 101,
+    "tipo": "INGRESO",
+    "monto": 5000000,
+    "descripcion": "Venta Lote Maíz",
+    "fecha": "2025-10-20T14:00:00Z",
+    "categoria": "VENTA_COSECHA"
+  }
+]
+```
+
 ---
 
 ### Obtener Transacción
@@ -62,3 +85,16 @@ Obtiene las transacciones asociadas a una actividad específica.
 - **URL**: `/finance/by-activity/:id`
 - **Método**: `GET`
 - **Auth**: Requiere autenticación y permiso `finanzas.ver`
+
+**Respuesta Exitosa (200 OK):**
+```json
+[
+  {
+    "id": 50,
+    "tipo": "GASTO",
+    "monto": 25000,
+    "categoria": "MANO_DE_OBRA",
+    "descripcion": "Pago jornal riego"
+  }
+]
+```

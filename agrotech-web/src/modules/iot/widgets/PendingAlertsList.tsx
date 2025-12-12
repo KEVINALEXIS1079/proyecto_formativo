@@ -22,8 +22,8 @@ export const PendingAlertsList: React.FC<PendingAlertsListProps> = ({ loteId }) 
       // Default to last 7 days to ensure we see something if dev env is stale
       const from = new Date();
       from.setDate(from.getDate() - 7);
-      
-      const res = await IoTApi.getAlerts({ 
+
+      const res = await IoTApi.getAlerts({
         loteId: loteId ?? undefined,
         from: from.toISOString()
       });
@@ -58,9 +58,9 @@ export const PendingAlertsList: React.FC<PendingAlertsListProps> = ({ loteId }) 
 
           <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
             {loading && alerts.length === 0 ? (
-               <div className="p-8 flex justify-center">
-                 <Spinner size="sm" />
-               </div>
+              <div className="p-8 flex justify-center">
+                <Spinner size="sm" />
+              </div>
             ) : alerts.length === 0 ? (
               <div className="p-8 text-center text-gray-400">
                 <p className="text-sm">No hay alertas recientes.</p>
@@ -68,8 +68,8 @@ export const PendingAlertsList: React.FC<PendingAlertsListProps> = ({ loteId }) 
             ) : (
               <div className="divide-y divide-gray-100">
                 {alerts.map((alert) => (
-                  <div 
-                    key={alert.id} 
+                  <div
+                    key={alert.id}
                     className="p-3 hover:bg-gray-50 transition-colors cursor-pointer group flex items-center justify-between"
                     onClick={() => setSelectedAlertId(alert.id)}
                   >
@@ -80,17 +80,17 @@ export const PendingAlertsList: React.FC<PendingAlertsListProps> = ({ loteId }) 
                           {alert.sensor?.nombre || `Sensor ${alert.sensorId}`}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {format(new Date(alert.fechaAlerta), 'dd MMM HH:mm', { locale: es })}
+                          {format(new Date(alert.fechaAlerta), 'dd MMM HH:mm')}
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
-                       <div className="text-right">
-                          <p className="text-sm font-bold text-gray-700">{alert.valor}</p>
-                          <p className="text-[10px] text-gray-400">Umbral: {alert.umbral}</p>
-                       </div>
-                       <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-600 transition-colors" />
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-gray-700">{alert.valor}</p>
+                        <p className="text-[10px] text-gray-400">Umbral: {alert.umbral}</p>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-600 transition-colors" />
                     </div>
                   </div>
                 ))}
@@ -100,10 +100,10 @@ export const PendingAlertsList: React.FC<PendingAlertsListProps> = ({ loteId }) 
         </CardBody>
       </Card>
 
-      <AlertContextModal 
-        isOpen={!!selectedAlertId} 
+      <AlertContextModal
+        isOpen={!!selectedAlertId}
         onClose={() => setSelectedAlertId(null)}
-        alertId={selectedAlertId} 
+        alertId={selectedAlertId}
       />
     </>
   );

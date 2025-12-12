@@ -89,16 +89,16 @@ export function connectSocket(namespace = "/"): Socket {
   }
 
   const s = io(url, {
-    transports: ["websocket"],
+    transports: ["websocket"], // Forzar websocket para mejor rendimiento
     withCredentials: true,
-    auth: {}, // Usamos cookies para autenticación
-    path: "/socket.io", // ajusta si usas otro path
-    reconnectionAttempts: 3,
+    auth: {},
+    path: "/socket.io",
+    reconnection: true,
+    reconnectionAttempts: Infinity, // Reintentar siempre si se cae
     reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
+    reconnectionDelayMax: 10000,
     randomizationFactor: 0.5,
-    forceNew: false,
-    timeout: 5000,
+    timeout: 20000,
   });
 
   s.on("connect", () => {
@@ -106,7 +106,9 @@ export function connectSocket(namespace = "/"): Socket {
     startInactivityTimer(s);
   });
   s.on("disconnect", (r) => {
-    console.warn("⚠️ WS desconectado:", namespace, r);
+    if (r !== "io client disconnect") {
+      console.debug("⚠️ WS desconectado:", namespace, r);
+    }
     clearInactivityTimer(s);
   });
   s.on("connect_error", (e) => {

@@ -16,6 +16,16 @@ Obtiene datos clave (financieros, producción, tiempos).
 - **URL**: `/reports/crops/:id/summary`
 - **Método**: `GET`
 - **Auth**: Requiere permiso `cultivos.ver`
+```json
+{
+  "cultivoId": 10,
+  "nombre": "Maíz Lote Norte",
+  "areaHa": 1.5,
+  "rendimientoEstimado": 12000,
+  "inversionTotal": 5000000,
+  "estadoActual": "ACTIVO"
+}
+```
 
 ### Estadísticas de Actividades
 Métricas sobre actividades realizadas vs programadas.
@@ -31,6 +41,15 @@ Análisis de horas hombre y costos de personal.
 Análisis de consumo de materiales.
 - **URL**: `/reports/crops/:id/inputs`
 - **Método**: `GET`
+```json
+{
+  "totalInsumos": 1500000,
+  "desglose": [
+    { "categoria": "Fertilizantes", "costo": 1000000 },
+    { "categoria": "Semillas", "costo": 500000 }
+  ]
+}
+```
 
 ### Distribución Temporal (Gráficos)
 Para generar gráficas de horas o insumos por periodo.

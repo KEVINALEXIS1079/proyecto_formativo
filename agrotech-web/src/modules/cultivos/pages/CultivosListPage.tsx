@@ -15,7 +15,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import Surface from "../ui/Surface";
 import PillToggle, { type CultivosTab } from "../ui/PillToggle";
-import { Calendar, Plus, MapPin, Eye } from "lucide-react";
+import { Calendar, Plus, MapPin, Eye, Sprout, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCultivosList, useCultivoHistorial } from "../hooks/useCultivos";
 import { useLotesList, useSublotesList } from "../hooks/useLotes";
 import { useLotesRealtime } from "../hooks/useLotesRealtime";
@@ -36,7 +36,8 @@ const estadoColor: Record<Cultivo["estado"], "warning" | "primary" | "success" |
 };
 
 export default function CultivosListPage() {
-  const page = 1;
+  /* State */
+  const [page, setPage] = useState(1);
   const limit = 10;
 
   const [activeTab, setActiveTab] = useState<CultivosTab>("cultivos");
@@ -47,8 +48,6 @@ export default function CultivosListPage() {
 
   const [isTipoModalOpen, setIsTipoModalOpen] = useState(false);
   const [modalTipoName, setModalTipoName] = useState("");
-
-
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [selectedCultivo, setSelectedCultivo] = useState<Cultivo | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -64,6 +63,7 @@ export default function CultivosListPage() {
     setDetailId(cultivo.id);
   };
 
+  /* Query */
   const { data: cultivos = [], isLoading } = useCultivosList({
     page,
     limit,
@@ -73,7 +73,13 @@ export default function CultivosListPage() {
     estado: estado || undefined,
   });
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [q, loteId, tipoCultivoNombre, estado]);
+
   const { data: lotes = [] } = useLotesList();
+  /* ... hooks ... */
   const { data: sublotes = [] } = useSublotesList(loteId || 0);
   const { data: tiposCultivo = [] } = useTiposCultivoList();
   const createTipoMutation = useTipoCultivoCreate();
@@ -88,6 +94,15 @@ export default function CultivosListPage() {
 
   useLotesRealtime();
   useCultivosRealtime();
+
+  /* ... rest of logic ... */
+  // SKIP to return block modifications
+  /* NOTE: Since I am replacing a huge chunk by line numbers, I must be careful.
+     Lines 38 to 60 contain the Logic I want to change.
+     I also need to target the JSX down below.
+     I will split this tool call into 2 chunks if possible or use MultiReplace.
+     I'll use MultiReplace for safety.
+  */
 
 
   const filteredHistorial = useMemo(() => {
@@ -186,7 +201,7 @@ export default function CultivosListPage() {
                 <div className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <Card shadow="sm">
-                      <CardBody>
+                      <CardBody className="flex flex-col items-center justify-center text-center">
                         <p className="text-sm text-gray-500">Total cultivos</p>
                         <p className="text-2xl font-bold">{metrics.total}</p>
                       </CardBody>
@@ -240,79 +255,110 @@ export default function CultivosListPage() {
                       <CardBody>No se encontraron cultivos</CardBody>
                     </Card>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                      {cultivos.map((c) => {
-                        const color = estadoColor[c.estado] ?? "primary";
-                        const tipoNombre = typeof c.tipoCultivo === "string" ? c.tipoCultivo : c.tipoCultivo?.nombre;
-                        const loteNombre =
-                          c.lote?.nombre ||
-                          (c.idLote && lotes.find((l: any) => l.id === c.idLote)?.nombre) ||
-                          "N/A";
-                        const subloteNombre =
-                          c.sublote?.nombre ||
-                          (c.idSublote && sublotes?.find((s: any) => s.id === c.idSublote)?.nombre) ||
-                          "N/A";
-                        return (
-                          <Card key={c.id} className="shadow-md border border-gray-200 rounded-2xl">
-                            <CardBody className="p-0 space-y-3">
-                              {c.imagen && (
-                                <img
-                                  src={c.imagen}
-                                  alt={c.nombre}
-                                  className="w-full h-40 object-cover rounded-t-2xl border-b border-gray-100"
-                                />
-                              )}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                        {cultivos.map((c) => {
+                          const color = estadoColor[c.estado] ?? "primary";
+                          const tipoNombre = typeof c.tipoCultivo === "string" ? c.tipoCultivo : c.tipoCultivo?.nombre;
+                          const loteNombre =
+                            c.lote?.nombre ||
+                            (c.idLote && lotes.find((l: any) => l.id === c.idLote)?.nombre) ||
+                            "N/A";
+                          const subloteNombre =
+                            c.sublote?.nombre ||
+                            (c.idSublote && sublotes?.find((s: any) => s.id === c.idSublote)?.nombre) ||
+                            "N/A";
+                          return (
+                            <Card key={c.id} className="shadow-md border border-gray-200 rounded-2xl">
+                              <CardBody className="p-0 space-y-3">
+                                <div className="w-full h-40 bg-gray-100 rounded-t-2xl border-b border-gray-100 flex items-center justify-center overflow-hidden">
+                                  {c.imagen ? (
+                                    <img
+                                      src={c.imagen}
+                                      alt={c.nombre}
+                                      className="w-full h-full object-cover transition-transform hover:scale-105"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.parentElement?.classList.add('bg-gray-50');
+                                      }}
+                                    />
+                                  ) : (
+                                    <Sprout className="h-12 w-12 text-gray-300" />
+                                  )}
+                                </div>
 
-                              <div className="px-5 pt-5 space-y-3">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="space-y-1">
-                                    <h3 className="text-lg font-semibold text-gray-800">{c.nombre}</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                      <Chip size="sm" variant="flat" color="success">
-                                        {tipoNombre || "Tipo de cultivo"}
-                                      </Chip>
+                                <div className="px-5 pt-2 pb-5 space-y-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="space-y-1">
+                                      <h3 className="text-lg font-semibold text-gray-800">{c.nombre}</h3>
+                                      <div className="flex flex-wrap gap-2">
+                                        <Chip size="sm" variant="flat" color="success">
+                                          {tipoNombre || "Tipo de cultivo"}
+                                        </Chip>
+                                      </div>
                                     </div>
+                                    <Chip size="sm" color={color} variant="flat">
+                                      {c.estado}
+                                    </Chip>
                                   </div>
-                                  <Chip size="sm" color={color} variant="flat">
-                                    {c.estado}
-                                  </Chip>
-                                </div>
 
-                                <p className="text-sm text-gray-600 line-clamp-2">{c.descripcion || "Sin descripción"}</p>
+                                  <p className="text-sm text-gray-600 line-clamp-2 h-10">{c.descripcion || "Sin descripción"}</p>
 
-                                <div className="text-sm text-gray-700 space-y-1">
-                                  <p className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-blue-500" />
-                                    Lote: {loteNombre} · Sublote: {subloteNombre}
-                                  </p>
-                                  <p className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-indigo-500" />
-                                    Inicio: {fmt(c.fechaInicio)}
-                                  </p>
-                                  <p className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-green-500" />
-                                    Siembra: {fmt(c.fechaSiembra)}
-                                  </p>
-                                </div>
-
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                                  <div>
-                                    <p className="text-xs text-gray-500">Inversión Acumulada</p>
-                                    <p className="text-base font-semibold text-gray-800">
-                                      {c.costoTotal !== undefined && c.costoTotal !== null
-                                        ? c.costoTotal.toLocaleString("es-CO", { style: "currency", currency: "COP" })
-                                        : "$ 0"}
+                                  <div className="text-sm text-gray-700 space-y-1">
+                                    <p className="flex items-center gap-2">
+                                      <MapPin className="h-4 w-4 text-blue-500" />
+                                      {loteNombre} {subloteNombre !== "N/A" ? `· ${subloteNombre}` : ""}
+                                    </p>
+                                    <p className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 text-indigo-500" />
+                                      Inicio: {fmt(c.fechaInicio)}
+                                    </p>
+                                    <p className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 text-green-500" />
+                                      Siembra: {fmt(c.fechaSiembra)}
                                     </p>
                                   </div>
-                                  <Button size="sm" color="success" className="text-black" isIconOnly variant="solid" onPress={() => handleManage(c)}>
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
+
+                                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                                    <div>
+                                      <p className="text-xs text-gray-500">Inversión Acumulada</p>
+                                      <p className="text-base font-semibold text-gray-800">
+                                        {c.costoTotal !== undefined && c.costoTotal !== null
+                                          ? c.costoTotal.toLocaleString("es-CO", { style: "currency", currency: "COP" })
+                                          : "$ 0"}
+                                      </p>
+                                    </div>
+                                    <Button size="sm" color="success" className="text-black" isIconOnly variant="solid" onPress={() => handleManage(c)}>
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            </CardBody>
-                          </Card>
-                        );
-                      })}
+                              </CardBody>
+                            </Card>
+                          );
+                        })}
+                      </div>
+
+                      {/* Pagination Controls */}
+                      <div className="flex justify-center items-center gap-4 py-4">
+                        <Button
+                          isIconOnly
+                          variant="light"
+                          onPress={() => setPage(p => Math.max(1, p - 1))}
+                          isDisabled={page <= 1}
+                        >
+                          <ChevronLeft />
+                        </Button>
+                        <span className="text-sm font-medium text-gray-600">Página {page}</span>
+                        <Button
+                          isIconOnly
+                          variant="light"
+                          onPress={() => setPage(p => p + 1)}
+                          isDisabled={cultivos.length < limit}
+                        >
+                          <ChevronRight />
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>

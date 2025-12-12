@@ -37,7 +37,7 @@ export default function CrearAlmacenPage() {
           <ModalBody>
             <AlmacenForm
               onSubmit={async (data) => {
-                createMutation.mutate(data, {
+                createMutation.mutate(data as any, {
                   onSuccess: (result) => {
                     toast.success("Almacén creado correctamente");
                     navigate(`/inventario/almacenes/${result.id}`);

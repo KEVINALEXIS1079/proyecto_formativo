@@ -93,14 +93,14 @@ export function TraceabilityReport({ data }: TraceabilityReportProps) {
                             <TableColumn>RESPONSABLE</TableColumn>
                         </TableHeader>
                         <TableBody>
-                            {data.actividades.map((act, idx) => (
+                            {(data.actividades.map((act, idx) => (
                                 <TableRow key={idx}>
                                     <TableCell>{new Date(act.fecha).toLocaleDateString('es-CO')}</TableCell>
                                     <TableCell className="font-semibold">{act.nombre}</TableCell>
                                     <TableCell>{act.tipo}</TableCell>
                                     <TableCell>{act.responsable}</TableCell>
                                 </TableRow>
-                            ))}
+                            )) as any)}
                         </TableBody>
                     </Table>
                 </CardBody>
@@ -120,14 +120,14 @@ export function TraceabilityReport({ data }: TraceabilityReportProps) {
                             <TableColumn>TOTAL</TableColumn>
                         </TableHeader>
                         <TableBody>
-                            {data.insumos.map((ins, idx) => (
+                            {(data.insumos.map((ins, idx) => (
                                 <TableRow key={idx}>
                                     <TableCell className="font-semibold">{ins.nombre}</TableCell>
                                     <TableCell>{ins.cantidad} {ins.unidad}</TableCell>
                                     <TableCell>{formatCurrency(ins.precioUnitario)}</TableCell>
                                     <TableCell className="font-bold">{formatCurrency(ins.total)}</TableCell>
                                 </TableRow>
-                            ))}
+                            )) as any)}
                             <TableRow className="bg-gray-100">
                                 <TableCell colSpan={3} className="font-bold">TOTAL INSUMOS</TableCell>
                                 <TableCell className="font-bold text-lg text-danger-600">{formatCurrency(totalInsumos)}</TableCell>
@@ -150,13 +150,13 @@ export function TraceabilityReport({ data }: TraceabilityReportProps) {
                             <TableColumn>COSTO</TableColumn>
                         </TableHeader>
                         <TableBody>
-                            {data.horasTrabajadas.porActividad.map((h, idx) => (
+                            {(data.horasTrabajadas.porActividad.map((h, idx) => (
                                 <TableRow key={idx}>
                                     <TableCell className="font-semibold">{h.actividad}</TableCell>
                                     <TableCell>{h.horas}h</TableCell>
                                     <TableCell className="font-bold">{formatCurrency(h.costo)}</TableCell>
                                 </TableRow>
-                            ))}
+                            )) as any)}
                             <TableRow className="bg-gray-100">
                                 <TableCell className="font-bold">TOTAL</TableCell>
                                 <TableCell className="font-bold">{totalHoras}h</TableCell>
@@ -182,7 +182,7 @@ export function TraceabilityReport({ data }: TraceabilityReportProps) {
                             <TableColumn>TOTAL</TableColumn>
                         </TableHeader>
                         <TableBody>
-                            {data.ventas.map((v, idx) => (
+                            {(data.ventas.map((v, idx) => (
                                 <TableRow key={idx}>
                                     <TableCell>{new Date(v.fecha).toLocaleDateString('es-CO')}</TableCell>
                                     <TableCell className="font-semibold">{v.producto}</TableCell>
@@ -190,7 +190,7 @@ export function TraceabilityReport({ data }: TraceabilityReportProps) {
                                     <TableCell>{formatCurrency(v.precioUnitario)}</TableCell>
                                     <TableCell className="font-bold">{formatCurrency(v.total)}</TableCell>
                                 </TableRow>
-                            ))}
+                            )) as any)}
                             <TableRow className="bg-gray-100">
                                 <TableCell colSpan={4} className="font-bold">TOTAL VENTAS</TableCell>
                                 <TableCell className="font-bold text-lg text-success-600">{formatCurrency(totalVentas)}</TableCell>

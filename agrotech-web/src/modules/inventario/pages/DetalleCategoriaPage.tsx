@@ -169,7 +169,7 @@ export default function DetalleCategoriaPage() {
               {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
             </TableHeader>
             <TableBody items={insumos} emptyContent="No hay insumos en esta categoría">
-              {(item) => (
+              {(item: any) => (
                 <TableRow key={item.id}>
                   {(columnKey) => <TableCell>{renderCell(item, columnKey as string)}</TableCell>}
                 </TableRow>

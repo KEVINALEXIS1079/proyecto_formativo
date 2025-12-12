@@ -22,7 +22,7 @@ Crea una nueva actividad agrícola.
   "cultivoId": 1,              // ID del cultivo (opcional si es general)
   "loteId": 2,                 // ID del lote (requerido)
   "tipo": "FERTILIZACION",     // Tipo de actividad
-  "fechaProgramada": "2023-10-27T10:00:00Z",
+  "fechaProgramada": "2025-10-27T10:00:00Z",
   "descripcion": "Aplicación de fertilizante NPK",
   "responsableId": 5,          // ID del usuario responsable
   "estado": "PENDIENTE"        // PENDIENTE, EN_PROGRESO, COMPLETADA, CANCELADA
@@ -30,7 +30,20 @@ Crea una nueva actividad agrícola.
 ```
 
 **Respuesta Exitosa (201 Created):**
-Devuelve el objeto de la actividad creada.
+**Respuesta Exitosa (201 Created):**
+```json
+{
+  "id": 45,
+  "tipo": "FERTILIZACION",
+  "descripcion": "Aplicación de fertilizante NPK",
+  "fechaProgramada": "2025-10-27T10:00:00Z",
+  "estado": "PENDIENTE",
+  "loteId": 2,
+  "cultivoId": 1,
+  "responsableId": 5,
+  "createdAt": "2025-10-20T08:00:00Z"
+}
+```
 
 ---
 
@@ -46,6 +59,26 @@ Obtiene todas las actividades, opcionalmente filtradas.
 - `loteId`: Filtrar por ID de lote
 - `tipo`: Filtrar por tipo de actividad
 
+**Respuesta Exitosa (200 OK):**
+```json
+[
+  {
+    "id": 45,
+    "tipo": "FERTILIZACION",
+    "fechaProgramada": "2025-10-27T10:00:00Z",
+    "estado": "PENDIENTE",
+    "lote": { "id": 2, "nombre": "Lote Norte" }
+  },
+  {
+    "id": 42,
+    "tipo": "RIEGO",
+    "fechaProgramada": "2025-10-25T07:00:00Z",
+    "estado": "COMPLETADA",
+    "lote": { "id": 2, "nombre": "Lote Norte" }
+  }
+]
+```
+
 ---
 
 ### Obtener Actividad por ID
@@ -54,6 +87,24 @@ Obtiene los detalles de una actividad específica.
 - **URL**: `/activities/:id`
 - **Método**: `GET`
 - **Auth**: Requiere autenticación y permiso `actividades.ver`
+
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "id": 45,
+  "tipo": "FERTILIZACION",
+  "descripcion": "Aplicación de fertilizante NPK",
+  "fechaProgramada": "2025-10-27T10:00:00Z",
+  "fechaEjecucion": null,
+  "estado": "PENDIENTE",
+  "lote": { "id": 2, "nombre": "Lote Norte" },
+  "cultivo": { "id": 1, "nombre": "Maíz" },
+  "responsable": { "id": 5, "nombre": "Carlos Agrónomo" },
+  "insumos": [],
+  "servicios": [],
+  "evidencias": []
+}
+```
 
 ---
 
@@ -65,7 +116,12 @@ Actualiza los datos de una actividad existente.
 - **Auth**: Requiere autenticación y permiso `actividades.editar`
 
 **Body (JSON - UpdateActivityDto):**
-Campos opcionales de `CreateActivityDto`.
+```json
+{
+  "estado": "EN_PROGRESO",
+  "descripcion": "Iniciando aplicación..."
+}
+```
 
 ---
 
@@ -79,7 +135,7 @@ Marca una actividad como finalizada y registra datos de cierre.
 **Body (JSON):**
 ```json
 {
-  "fechaFin": "2023-10-27T12:00:00Z",
+  "fechaFin": "2025-10-27T12:00:00Z",
   "observaciones": "Finalizado sin novedades",
   "costoReal": 150000 // Opcional
 }
@@ -110,7 +166,7 @@ Sube una imagen para ser usada como evidencia.
 
 **Respuesta:**
 ```json
-{ "url": "https://..." }
+{ "url": "https://api.agrotech.com/uploads/evidencias/foto1.jpg" }
 ```
 
 ---
@@ -162,6 +218,6 @@ Adjunta descripción y fotos como evidencia de la actividad.
 ```json
 {
   "descripcion": "Foto del campo después de fertilizar",
-  "imagenes": ["https://url-imagen-1.jpg", "https://url-imagen-2.jpg"]
+  "imagenes": ["https://api.agrotech.com/uploads/evidencias/foto1.jpg", "https://api.agrotech.com/uploads/evidencias/foto2.jpg"]
 }
 ```

@@ -13,6 +13,16 @@ Gestiona la red de sensores, la telemetría y la configuración global de IoT.
 - **URL**: `/iot/config`
 - **Método**: `GET`
 - **Auth**: Requiere autenticación y permiso `iot.ver`
+```json
+[
+  {
+    "id": 1,
+    "clave": "MQTT_BROKER_URL",
+    "valor": "mqtt://localhost:1883",
+    "descripcion": "URL del broker MQTT"
+  }
+]
+```
 
 ### Crear Configuración Global
 - **URL**: `/iot/config`
@@ -67,6 +77,17 @@ Registra un nuevo sensor.
 }
 ```
 
+**Respuesta Exitosa (201 Created):**
+```json
+{
+  "id": 20,
+  "codigoDispositivo": "SENSOR-001",
+  "alias": "Sensor Humedad Norte",
+  "estado": "ACTIVO",
+  "ultimaLectura": null
+}
+```
+
 ### Actualizar Sensor
 - **URL**: `/iot/sensors/:id`
 - **Método**: `PATCH`
@@ -101,6 +122,23 @@ Registra un nuevo sensor.
 - **Auth**: Requiere autenticación y permiso `iot.ver`
 
 **Parámetros:** `sensorId`
+
+```json
+[
+  {
+    "fecha": "2025-11-15T10:00:00Z",
+    "valor": 45.5,
+    "unidad": "%",
+    "sensorId": 20
+  },
+  {
+    "fecha": "2025-11-15T10:01:00Z",
+    "valor": 45.2,
+    "unidad": "%",
+    "sensorId": 20
+  }
+]
+```
 
 ### Últimas Lecturas de un Sensor
 - **URL**: `/iot/sensors/:id/readings`

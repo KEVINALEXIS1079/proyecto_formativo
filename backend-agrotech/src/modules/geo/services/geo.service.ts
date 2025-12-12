@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lote } from '../entities/lote.entity';
@@ -9,12 +15,15 @@ import { UpdateLoteDto } from '../dtos/update-lote.dto';
 import { CreateSubLoteDto } from '../dtos/create-sublote.dto';
 import { UpdateSubLoteDto } from '../dtos/update-sublote.dto';
 
+import { GeoGateway } from '../gateways/geo.gateway';
 
 @Injectable()
 export class GeoService {
   constructor(
     @InjectRepository(Lote) private loteRepo: Repository<Lote>,
     @InjectRepository(SubLote) private subLoteRepo: Repository<SubLote>,
+    @Inject(forwardRef(() => GeoGateway))
+    private geoGateway: GeoGateway,
   ) { }
 
   // ==================== LOTES ====================
@@ -86,12 +95,16 @@ export class GeoService {
     }
 
     Object.assign(lote, data);
-    return this.loteRepo.save(lote);
+    const saved = await this.loteRepo.save(lote);
+    this.geoGateway.server.emit('lotes:updated', saved);
+    return saved;
   }
 
   async removeLote(id: number) {
     const lote = await this.findLoteById(id);
-    return this.loteRepo.softRemove(lote);
+    const removed = await this.loteRepo.softRemove(lote);
+    this.geoGateway.server.emit('lotes:removed', { id_lote_pk: id });
+    return removed;
   }
 
   // ==================== SUBLOTES ====================
@@ -141,7 +154,7 @@ export class GeoService {
 
 
     const savedSubLote = await this.subLoteRepo.save(subLote);
-
+    this.geoGateway.server.emit('sublotes:created', savedSubLote);
     return savedSubLote;
   }
 
@@ -190,12 +203,16 @@ export class GeoService {
     }
 
     Object.assign(subLote, data);
-    return this.subLoteRepo.save(subLote);
+    const saved = await this.subLoteRepo.save(subLote);
+    this.geoGateway.server.emit('sublotes:updated', saved);
+    return saved;
   }
 
   async removeSubLote(id: number) {
     const subLote = await this.findSubLoteById(id);
-    return this.subLoteRepo.softRemove(subLote);
+    const removed = await this.subLoteRepo.softRemove(subLote);
+    this.geoGateway.server.emit('sublotes:removed', { id_sublote_pk: id });
+    return removed;
   }
 
 

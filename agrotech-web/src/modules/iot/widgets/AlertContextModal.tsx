@@ -38,14 +38,14 @@ export const AlertContextModal: React.FC<AlertContextModalProps> = ({ isOpen, on
 
   const chartData = data?.context.map(c => ({
     ...c,
-    time: format(new Date(c.fechaLectura), 'HH:mm:ss', { locale: es }),
-    fullDate: format(new Date(c.fechaLectura), 'dd MMM HH:mm:ss', { locale: es }),
+    time: format(new Date(c.fechaLectura), 'HH:mm:ss'),
+    fullDate: format(new Date(c.fechaLectura), 'dd MMM HH:mm:ss'),
     val: c.valor
   }));
 
   const alertPoint = data ? {
-     x: format(new Date(data.alert.fechaAlerta), 'HH:mm:ss', { locale: es }),
-     y: data.alert.valor
+    x: format(new Date(data.alert.fechaAlerta), 'HH:mm:ss'),
+    y: data.alert.valor
   } : null;
 
   return (
@@ -72,8 +72,8 @@ export const AlertContextModal: React.FC<AlertContextModalProps> = ({ isOpen, on
                       <p className="text-default-500">{data.alert.tipo} | Umbral: {data.alert.umbral}</p>
                     </div>
                     <div className="text-right">
-                       <p className="font-bold text-danger">{data.alert.valor}</p>
-                       <p className="text-xs text-default-400">{format(new Date(data.alert.fechaAlerta), 'dd MMM yyyy HH:mm:ss')}</p>
+                      <p className="font-bold text-danger">{data.alert.valor}</p>
+                      <p className="text-xs text-default-400">{format(new Date(data.alert.fechaAlerta), 'dd MMM yyyy HH:mm:ss')}</p>
                     </div>
                   </div>
 
@@ -83,22 +83,22 @@ export const AlertContextModal: React.FC<AlertContextModalProps> = ({ isOpen, on
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                         <XAxis dataKey="time" tick={{ fontSize: 10 }} />
                         <YAxis domain={['auto', 'auto']} />
-                        <Tooltip 
-                           contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                           labelStyle={{ color: '#666' }}
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          labelStyle={{ color: '#666' }}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="val" 
-                          stroke="#0ea5e9" 
-                          strokeWidth={2} 
+                        <Line
+                          type="monotone"
+                          dataKey="val"
+                          stroke="#0ea5e9"
+                          strokeWidth={2}
                           dot={{ r: 3 }}
                           activeDot={{ r: 5 }}
                         />
                         {/* Highlight the Alert Point */}
-                         {alertPoint && (
-                            <ReferenceDot x={alertPoint.x} y={alertPoint.y} r={6} fill="red" stroke="white" />
-                         )}
+                        {alertPoint && (
+                          <ReferenceDot x={alertPoint.x} y={alertPoint.y} r={6} fill="red" stroke="white" />
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -108,7 +108,7 @@ export const AlertContextModal: React.FC<AlertContextModalProps> = ({ isOpen, on
                 </div>
               ) : (
                 <div className="text-center text-default-500 py-10">
-                   No se encontró información del contexto.
+                  No se encontró información del contexto.
                 </div>
               )}
             </ModalBody>

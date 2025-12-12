@@ -55,6 +55,7 @@ export interface Insumo {
   fechaUltimoMantenimiento?: string;
   stockReservado?: number;
   stockMinimo?: number;
+  stockUso?: number;
 }
 
 export type ReservaEstado = 'ACTIVA' | 'LIBERADA' | 'UTILIZADA';

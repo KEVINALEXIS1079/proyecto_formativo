@@ -25,7 +25,7 @@ export type SidebarProps = {
 export default function Sidebar({
   className = "",
 }: SidebarProps) {
-  const { } = useAuth();
+  const { can } = useAuth();
   return (
     <aside
       className={`peer group/sidebar fixed top-0 left-0 bottom-0 z-40
@@ -36,68 +36,85 @@ export default function Sidebar({
         <HoverItem to="/home" icon={<HomeIcon className="h-5 w-5" />} label="Inicio" />
 
         {/* USUARIOS */}
-        <HoverItem
-          to="/usuarios"
-          icon={<Users className="h-5 w-5" />}
-          label="Gestión Usuarios"
-        />
+        {can('usuarios.ver') && (
+          <HoverItem
+            to="/usuarios"
+            icon={<Users className="h-5 w-5" />}
+            label="Gestión Usuarios"
+          />
+        )}
 
         {/* GEO */}
-        <HoverItem
-          to="/geo"
-          icon={<Map className="h-5 w-5" />}
-          label="Georreferenciación"
-        />
+        {can('lotes.ver') && (
+          <HoverItem
+            to="/geo"
+            icon={<Map className="h-5 w-5" />}
+            label="Georreferenciación"
+          />
+        )}
 
         {/* INVENTARIO */}
-        <HoverItem
-          to="/inventario"
-          icon={<Boxes className="h-5 w-5" />}
-          label="Gestión de Inventario"
-        />
+        {can('inventario.ver') && (
+          <HoverItem
+            to="/inventario"
+            icon={<Boxes className="h-5 w-5" />}
+            label="Gestión de Inventario"
+          />
+        )}
 
         {/* ACTIVIDADES */}
-        <HoverItem
-          to="/actividades"
-          icon={<ListChecks className="h-5 w-5" />}
-          label="Gestión de Actividades"
-        />
+        {can('actividades.ver') && (
+          <HoverItem
+            to="/actividades"
+            icon={<ListChecks className="h-5 w-5" />}
+            label="Gestión de Actividades"
+          />
+        )}
 
         {/* CULTIVOS */}
-        <HoverItem
-          to="/cultivos"
-          icon={<Sprout className="h-5 w-5" />}
-          label="Gestión de Cultivos"
-        />
+        {can('cultivos.ver') && (
+          <HoverItem
+            to="/cultivos"
+            icon={<Sprout className="h-5 w-5" />}
+            label="Gestión de Cultivos"
+          />
+        )}
 
         {/* FITOSANITARIO */}
-        <HoverItem
-          to="/fitosanitario"
-          icon={<Leaf className="h-5 w-5" />}
-          label="Fitosanitario"
-        />
+        {can('wiki.ver') && (
+          <HoverItem
+            to="/fitosanitario"
+            icon={<Leaf className="h-5 w-5" />}
+            label="Fitosanitario"
+          />
+        )}
 
         {/* IOT (Monitoreo) - Debajo de Cultivos */}
-        <HoverItem
-          to="/iot"
-          icon={<Cpu className="h-5 w-5" />}
-          label="Monitoreo de cultivos"
-        />
+        {can('iot.ver') && (
+          <HoverItem
+            to="/iot"
+            icon={<Cpu className="h-5 w-5" />}
+            label="Monitoreo de cultivos"
+          />
+        )}
 
         {/* PRODUCCIÓN Y VENTAS (POS) */}
-        <HoverItem
-          to="/production"
-          icon={<Wallet className="h-5 w-5" />}
-          label="Producción y Ventas"
-        />
+        {can('ventas.ver') && (
+          <HoverItem
+            to="/production"
+            icon={<Wallet className="h-5 w-5" />}
+            label="Producción y Ventas"
+          />
+        )}
 
         {/* REPORTES */}
-        <HoverItem
-          to="/reportes"
-          icon={<FileBarChart className="h-5 w-5" />}
-          label="Analítica y Reportes"
-        />
-
+        {can('reportes.ver') && (
+          <HoverItem
+            to="/reportes"
+            icon={<FileBarChart className="h-5 w-5" />}
+            label="Analítica y Reportes"
+          />
+        )}
 
       </nav>
     </aside>

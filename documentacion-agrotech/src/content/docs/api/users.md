@@ -16,6 +16,20 @@ Obtiene los datos del usuario autenticado.
 - **Método**: `GET`
 - **Auth**: Requiere autenticación
 
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "id": 1,
+  "nombre": "Juan",
+  "apellido": "Perez",
+  "correo": "juan.perez@gmail.com",
+  "telefono": "3001234567",
+  "roles": ["admin", "gestor"],
+  "avatarUrl": "https://api.agrotech.com/uploads/avatars/1.jpg",
+  "estado": "ACTIVO"
+}
+```
+
 ### Actualizar Mi Perfil
 Actualiza datos permitidos (nombre, teléfono, etc).
 
@@ -57,6 +71,29 @@ Obtiene lista de usuarios con filtros.
 - `q`: Búsqueda de texto
 - `rolId`: Filtrar por rol
 - `estado`: Filtrar por estado (`ACTIVO`, `INACTIVO`, `SUSPENDIDO`)
+- `page`: Número de página
+- `limit`: Resultados por página
+
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "nombre": "Juan",
+      "apellido": "Perez",
+      "correo": "juan.perez@gmail.com",
+      "roles": ["admin"],
+      "estado": "ACTIVO"
+    }
+  ],
+  "meta": {
+    "total": 50,
+    "page": 1,
+    "lastPage": 5
+  }
+}
+```
 
 ### Crear Usuario (Admin)
 Crea un usuario administrativamente.
@@ -70,9 +107,22 @@ Crea un usuario administrativamente.
 {
   "nombre": "Pedro",
   "apellido": "Gomez",
-  "correo": "pedro@example.com",
+  "correo": "pedro.gomez@gmail.com",
   "password": "Password123",
   "roleIds": [2]
+}
+```
+
+**Respuesta Exitosa (201 Created):**
+```json
+{
+  "id": 15,
+  "nombre": "Pedro",
+  "apellido": "Gomez",
+  "correo": "pedro.gomez@gmail.com",
+  "estado": "ACTIVO",
+  "roles": [{ "id": 2, "nombre": "agronomo" }],
+  "createdAt": "2025-11-01T10:00:00Z"
 }
 ```
 

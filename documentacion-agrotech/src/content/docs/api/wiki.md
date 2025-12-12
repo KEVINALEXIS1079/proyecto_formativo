@@ -16,10 +16,20 @@ Obtiene artículos de la wiki con filtros.
 - **Método**: `GET`
 - **Auth**: Requiere autenticación y permiso `wiki.ver`
 
-**Parámetros:**
-- `q`: Búsqueda de texto
-- `tipoId`: ID del tipo de EPA (Enfermedad, Plaga, etc.)
 - `tipoCultivoEpaId`: Filtrar por cultivo afectado
+
+**Respuesta (200 OK):**
+```json
+[
+  {
+    "id": 5,
+    "nombre": "Roya del Café",
+    "nombreCientifico": "Hemileia vastatrix",
+    "tipo": "ENFERMEDAD",
+    "cultivosAfectados": ["Cafe"]
+  }
+]
+```
 
 ### Crear EPA
 Registra un nuevo artículo.
@@ -43,6 +53,17 @@ Registra un nuevo artículo.
 - **URL**: `/epas/:id`
 - **Método**: `GET`
 - **Auth**: Requiere autenticación y permiso `wiki.ver`
+
+**Respuesta (200 OK):**
+```json
+{
+  "id": 5,
+  "nombre": "Roya del Café",
+  "descripcion": "Hongo que afecta las hojas causando manchas amarillas y caída prematura.",
+  "tratamiento": "Aplicación de fungicidas cúpricos y manejo de sombra.",
+  "imagenes": ["https://api.agrotech.com/uploads/roya1.jpg", "https://api.agrotech.com/uploads/roya2.jpg"]
+}
+```
 
 ### Actualizar EPA
 - **URL**: `/epas/:id`

@@ -1,71 +1,25 @@
 ---
-title: Introducción
-description: Guía de inicio rápido para el ecosistema Agrotech
+title: Introducción a Agrotech
+description: Bienvenido a la documentación oficial de Agrotech.
 ---
 
-# Introducción a Agrotech
+Agrotech es una plataforma integral diseñada para optimizar la gestión agrícola a través de tecnología moderna.
 
-Agrotech es una plataforma integral para la gestión agrícola que combina administración de cultivos, inventario, finanzas y monitoreo IoT en tiempo real.
+## ¿Qué es Agrotech?
 
-## Componentes del Sistema
+Agrotech combina la gestión tradicional de fincas con el poder del **Internet de las Cosas (IoT)** y el análisis de datos. Permite a los agricultores:
 
-El ecosistema está compuesto por tres aplicaciones principales:
+-   **Mapear** sus lotes y visualizar cultivos.
+-   **Registrar** actividades diarias desde el móvil o la web.
+-   **Monitorear** el estado del clima y suelo con sensores.
+-   **Analizar** costos y rendimiento de producción.
 
-1.  **Backend (NestJS)**: API RESTful y Gateway WebSocket que centraliza la lógica de negocio y comunicación con dispositivos.
-2.  **Web (React)**: Panel de administración completo para gestores y administradores.
-3.  **Móvil (React Native)**: Aplicación para operarios de campo, permitiendo registro offline-first y monitoreo in-situ.
+## Estructura de la Documentación
 
-## Requisitos Previos
+-   **Guías**: Tutoriales paso a paso para usar la plataforma.
+-   **API**: Documentación técnica para desarrolladores e integración.
+-   **Referencia**: Glosario de términos y conceptos clave.
 
-Para ejecutar el proyecto necesitas:
+## Primeros Pasos
 
--   Node.js v22.x
--   MySQL 8.x
--   Broker MQTT (Mosquitto o similar) para IoT
--   NPM v10.x
-
-## Instalación Rápida
-
-1.  Clona el repositorio:
-    ```bash
-    git clone https://github.com/KEVINALEXIS1079/proyecto_formativo.git
-    ```
-
-2.  Configura las variables de entorno.
-    
-    **Backend (`backend-agrotech/.env`):**
-    ```env
-    # Copia estos valores reales para desarrollo
-    PORT=4000
-    DB_HOST=localhost
-    DB_PORT=5432
-    DB_USERNAME=agrotech
-    DB_PASSWORD=123
-    DB_NAME=agrotech
-    
-    JWT_SECRET=mi_super_clave_secreta_muy_segura
-    EMAIL_USER=agrotechsena2025@gmail.com
-    EMAIL_PASSWORD=pqkm mruj rocz lphf
-    ADMIN_EMAIL=agrotechsena2025@gmail.com
-    ADMIN_PASSWORD=Agrotech2025
-    ```
-
-3.  Inicia los servicios:
-    ```bash
-    # Backend
-    cd backend-agrotech && npm install && npm run start:dev
-
-    # Web
-    cd agrotech-web && npm install && npm run dev
-    ```
-
-## Credenciales de Acceso
-
-Para ingresar al sistema como administrador:
-- **Usuario**: `agrotechsena2025@gmail.com`
-- **Contraseña**: `Agrotech2025`
-
-## Suguientes Pasos
-
--   Revisa la [Guía de Despliegue](/guides/deployment) para puesta en producción.
--   Explora la [Documentación de API](/api/auth) para integración.
+Si eres nuevo, te recomendamos comenzar leyendo el [Manual de Usuario](/guides/example).

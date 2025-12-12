@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Usuario } from '../entities/usuario.entity';
@@ -26,6 +26,7 @@ export class UsersService {
     private redisService: RedisService,
     private emailService: EmailService,
     private imageUploadService: ImageUploadService,
+    @Inject(forwardRef(() => UsersGateway))
     private usersGateway: UsersGateway,
   ) { }
 

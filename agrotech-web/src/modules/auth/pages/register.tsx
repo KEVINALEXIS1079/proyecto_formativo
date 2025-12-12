@@ -67,7 +67,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (open) {
-      const t = setTimeout(() => setOpen(false), 3500);
+      const t = setTimeout(() => setOpen(false), 2000);
       return () => clearTimeout(t);
     }
   }, [open]);

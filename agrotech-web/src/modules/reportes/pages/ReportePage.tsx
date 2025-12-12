@@ -25,21 +25,12 @@ import {
     BarChart as BarChartIcon,
 } from 'lucide-react';
 import { IoTApi } from '../../iot/api/iot.api';
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer
-} from 'recharts';
 import { useCultivosList } from '../../cultivos/hooks/useCultivos';
 import { useReporteCompleto } from '../hooks/useReportes';
 import { exportToXLSX } from '@/shared/utils/exportUtils';
 import { FormatPreview } from '../ui/components/FormatPreview';
 import { convertChartToImageFallback } from '../utils/chartToImage';
+import { ReporteChart } from '../ui/widgets/ReporteChart';
 
 export default function ReportePage() {
     const [cultivoId, setCultivoId] = useState<number | undefined>();
@@ -96,10 +87,10 @@ export default function ReportePage() {
         if (selectedSections.includes('monitoreo') && cultivoId) {
             const selectedCultivo = cultivos.find(c => c.id === cultivoId);
             // Robust lookup for loteId
-            const loteId = selectedCultivo?.idLote 
-                        || (selectedCultivo as any)?.loteId 
-                        || selectedCultivo?.lote?.id
-                        || selectedCultivo?.sublote?.idLote;
+            const loteId = selectedCultivo?.idLote
+                || (selectedCultivo as any)?.loteId
+                || selectedCultivo?.lote?.id
+                || selectedCultivo?.sublote?.idLote;
 
             console.log("Report Preview - Selected Cultivo:", selectedCultivo);
             console.log("Report Preview - Resolved Lote ID:", loteId);
@@ -545,10 +536,10 @@ export default function ReportePage() {
 
                 // Lot Name (if available)
                 const selectedCultivo = cultivos.find((c) => c.id === cultivoId);
-                const loteNombre = (selectedCultivo as any)?.lote?.nombre || 
-                                  (selectedCultivo as any)?.sublote?.lote?.nombre || 
-                                  'N/A';
-                
+                const loteNombre = (selectedCultivo as any)?.lote?.nombre ||
+                    (selectedCultivo as any)?.sublote?.lote?.nombre ||
+                    'N/A';
+
                 doc.setFontSize(11);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(0, 0, 0);
@@ -677,7 +668,7 @@ export default function ReportePage() {
                         s.nombre,
                         s.protocolo,
                         `${s.estadisticas.promedio.toFixed(2)} ${s.unidad}`,
-                        s.estadisticas.minimo.fecha ? 
+                        s.estadisticas.minimo.fecha ?
                             `${s.estadisticas.minimo.valor.toFixed(2)} (${new Date(s.estadisticas.minimo.fecha).toLocaleDateString('es-CO')})` :
                             'N/A',
                         s.estadisticas.maximo.fecha ?
@@ -736,7 +727,7 @@ export default function ReportePage() {
 
                             try {
                                 console.log(`Llamando a convertChartToImageFallback para ${sensor.nombre}...`);
-                                
+
                                 const chartImage = await convertChartToImageFallback(sensor.tendencia, {
                                     title: sensor.nombre,
                                     unit: sensor.unidad,
@@ -920,28 +911,31 @@ export default function ReportePage() {
 
                     <Divider className="my-4" />
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-start">
                         <Button
-                            color="success"
+                            color="danger"
                             startContent={<Download className="h-4 w-4" />}
                             onPress={() => handleExportPreview('pdf')}
                             isDisabled={!hasData}
+                            className="font-semibold text-white"
                         >
                             Exportar PDF
                         </Button>
                         <Button
-                            color="primary"
+                            color="success"
                             startContent={<Download className="h-4 w-4" />}
                             onPress={() => handleExportPreview('excel')}
                             isDisabled={!hasData}
+                            className="font-semibold text-white"
                         >
                             Exportar Excel
                         </Button>
                         <Button
-                            color="secondary"
-                            startContent={<Download className="h-4 w-4" />}
+                            color="primary"
+                            startContent={<Package className="h-4 w-4" />}
                             onPress={() => handleExportPreview('csv')}
                             isDisabled={!hasData}
+                            className="font-semibold"
                         >
                             Exportar CSV
                         </Button>
@@ -1066,44 +1060,20 @@ export default function ReportePage() {
 
             {/* Chart */}
             {hasData && (
-                <Card>
-                    <CardHeader>
-                        <h3 className="text-lg font-semibold">Análisis Financiero</h3>
-                    </CardHeader>
-                    <CardBody>
-                        <div className="h-80">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart
-                                    data={[
-                                        {
-                                            name: 'Financiero',
-                                            Ingresos: reporteCompleto.resumen.ingresoTotal,
-                                            Costos: reporteCompleto.resumen.costoTotal,
-                                            Utilidad: reporteCompleto.resumen.utilidadNeta,
-                                        }
-                                    ]}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis
-                                        tickFormatter={(value: number) =>
-                                            new Intl.NumberFormat('es-CO', {
-                                                style: 'currency',
-                                                currency: 'COP',
-                                                minimumFractionDigits: 0
-                                            }).format(value)
-                                        }
-                                    />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Bar dataKey="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="Costos" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="Utilidad" fill="#eab308" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </CardBody>
-                </Card>
+                <div className="mt-6">
+                    <ReporteChart
+                        reporte={{
+                            costo_insumos: reporteCompleto.costos.insumos || 0,
+                            costo_mano_obra: reporteCompleto.costos.manoObra || 0,
+                            costo_maquinaria: reporteCompleto.costos.maquinaria || 0,
+                            ingresos_ventas: reporteCompleto.resumen.ingresoTotal || 0,
+                            utilidad: reporteCompleto.resumen.utilidadNeta || 0,
+                            id_cultivo: cultivoId,
+                            fecha_desde: fechaDesde,
+                            fecha_hasta: fechaHasta
+                        }}
+                    />
+                </div>
             )}
 
             {/* Preview Modal */}

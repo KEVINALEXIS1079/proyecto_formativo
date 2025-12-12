@@ -21,7 +21,8 @@ export default function DetalleProveedorPage() {
   const navigate = useNavigate();
   const proveedorId = id ? parseInt(id) : 0;
 
-  const { data: proveedor, isLoading, error } = useProveedorById(proveedorId);
+  const { data: proveedorFull, isLoading, error } = useProveedorById(proveedorId);
+  const proveedor = proveedorFull as any || {};
   const removeMutation = useRemoveProveedor();
   const { data: insumosData } = useInsumoList({ proveedorId });
 

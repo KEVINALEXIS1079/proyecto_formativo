@@ -31,6 +31,15 @@ Define un nuevo tipo de producto (ej: "Saco de Maíz 50kg").
 }
 ```
 
+**Respuesta Exitosa (201 Created):**
+```json
+{
+  "id": 1,
+  "nombre": "Saco Maíz Premium",
+  "unidadMedida": "kg"
+}
+```
+
 ---
 
 ## Lotes de Producción
@@ -52,12 +61,23 @@ Registra la cosecha o transformación.
 **Body (JSON):**
 ```json
 {
-  "codigoLote": "LOTE-MZ-2023-01",
+  "codigoLote": "LOTE-MZ-2025-01",
   "cultivoId": 1,
   "productoAgroId": 1,
-  "cantidad": 100, // Número de unidades (ej: 100 sacos)
-  "fechaProduccion": "2023-11-01",
-  "fechaVencimiento": "2024-11-01"
+  "cantidad": 100,
+  "fechaProduccion": "2025-11-01",
+  "fechaVencimiento": "2026-11-01"
+}
+```
+
+**Respuesta Exitosa (201 Created):**
+```json
+{
+  "id": 10,
+  "codigoLote": "LOTE-MZ-2025-01",
+  "cantidadInicial": 100,
+  "cantidadDisponible": 100,
+  "producto": { "id": 1, "nombre": "Saco Maíz Premium" }
 }
 ```
 
@@ -100,6 +120,18 @@ Registra una venta de productos.
   "pagos": [
     { "metodoPago": "EFECTIVO", "monto": 1000000 }
   ]
+}
+```
+
+**Respuesta Exitosa (201 Created):**
+```json
+{
+  "id": 500,
+  "folio": "V-000500",
+  "totalVenta": 1000000,
+  "fechaVenta": "2025-11-10T14:30:00Z",
+  "cliente": { "id": 5, "nombre": "Distribuidora SAS" },
+  "estado": "COMPLETADA"
 }
 ```
 

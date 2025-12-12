@@ -8,7 +8,7 @@ import {
 import { Plus, FileText, FileSpreadsheet } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { useActividades } from "../hooks/useActividades";
+import { useActividades, useRealTimeActividades } from "../hooks/useActividades";
 import ActividadCard from "../widgets/ActividadCard";
 import CreateActivityModal from "../ui/CreateActivityModal";
 import EditActivityModal from "../ui/EditActivityModal";
@@ -45,6 +45,7 @@ export default function ListaPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   // Hooks
+  useRealTimeActividades();
   const { data: list = [], isLoading } = useActividades();
 
   // Metrics

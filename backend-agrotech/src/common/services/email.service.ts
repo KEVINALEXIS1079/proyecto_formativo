@@ -18,6 +18,25 @@ export class EmailService {
     });
   }
 
+  async sendAdminNewUserNotification(to: string, data: { nombre: string; correo: string }) {
+    const mailOptions = {
+      from: this.configService.get('EMAIL_USER'),
+      to,
+      subject: 'Nuevo Usuario Registrado - Requiere Aprobación',
+      html: `
+        <h1>Nuevo Usuario Registrado</h1>
+        <p>Un nuevo usuario se ha registrado y requiere tu aprobación para acceder al sistema.</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Nombre:</strong> ${data.nombre}</p>
+          <p><strong>Correo:</strong> ${data.correo}</p>
+        </div>
+        <p>Por favor, ingresa al sistema para aprobar o rechazar esta solicitud.</p>
+      `,
+    };
+
+    return this.transporter.sendMail(mailOptions);
+  }
+
   async sendVerificationEmail(to: string, code: string) {
     const mailOptions = {
       from: this.configService.get('EMAIL_USER'),

@@ -24,7 +24,7 @@ Inicia el proceso de registro enviando los datos del usuario.
   "identificacion": "123456789", // String, Max 20
   "idFicha": "12345 (opcional)", // String, Max 20
   "telefono": "3001234567",      // String, 10 dígitos (opcional)
-  "correo": "juan@example.com",  // Email válido, Max 100
+  "correo": "juan.perez@gmail.com",  // Email válido, Max 100
   "password": "Password123"      // Min 8 chars, 1 Mayúscula, 1 minúscula, 1 número
 }
 ```
@@ -33,7 +33,7 @@ Inicia el proceso de registro enviando los datos del usuario.
 ```json
 {
   "message": "Registro iniciado. Se ha enviado un código de verificación a su correo.",
-  "correo": "juan@example.com"
+  "correo": "juan.perez@gmail.com"
 }
 ```
 
@@ -49,7 +49,7 @@ Verifica el código enviado al correo para finalizar el registro.
 **Body (JSON):**
 ```json
 {
-  "correo": "juan@example.com",
+  "correo": "juan.perez@gmail.com",
   "code": "123456"
 }
 ```
@@ -58,7 +58,15 @@ Verifica el código enviado al correo para finalizar el registro.
 ```json
 {
   "message": "Registro completado exitosamente",
-  "user": { ...datos_usuario }
+  "user": {
+    "id": 1,
+    "nombre": "Juan",
+    "apellido": "Perez",
+    "correo": "juan.perez@gmail.com",
+    "roles": ["user"],
+    "estado": "ACTIVO",
+    "createdAt": "2025-10-27T10:00:00Z"
+  }
 }
 ```
 
@@ -74,8 +82,16 @@ Verifica el correo electrónico (si se requiere en otro flujo).
 **Body (JSON):**
 ```json
 {
-  "correo": "juan@example.com",
+  "correo": "juan.perez@gmail.com",
   "code": "123456"
+}
+```
+
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "message": "Email verificado correctamente",
+  "verified": true
 }
 ```
 
@@ -91,7 +107,7 @@ Autentica al usuario y establece la cookie de sesión (`auth_token`).
 **Body (JSON):**
 ```json
 {
-  "correo": "juan@example.com",
+  "correo": "juan.perez@gmail.com",
   "password": "Password123"
 }
 ```
@@ -102,7 +118,7 @@ Autentica al usuario y establece la cookie de sesión (`auth_token`).
   "success": true,
   "user": {
     "id": 1,
-    "email": "juan@example.com",
+    "email": "juan.perez@gmail.com",
     "roles": ["admin"]
   }
 }
@@ -137,7 +153,14 @@ Envía un código de recuperación al correo.
 
 **Body (JSON):**
 ```json
-{ "correo": "juan@example.com" }
+{ "correo": "juan.perez@gmail.com" }
+```
+
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "message": "Código de recuperación enviado al correo"
+}
 ```
 
 #### 2. Verificar Código
@@ -148,7 +171,15 @@ Verifica si el código de recuperación es válido.
 
 **Body (JSON):**
 ```json
-{ "correo": "juan@example.com", "code": "123456" }
+{ "correo": "juan.perez@gmail.com", "code": "123456" }
+```
+
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "valid": true,
+  "message": "Código válido"
+}
 ```
 
 #### 3. Resetear Contraseña
@@ -160,9 +191,16 @@ Establece una nueva contraseña.
 **Body (JSON):**
 ```json
 {
-  "correo": "juan@example.com",
+  "correo": "juan.perez@gmail.com",
   "code": "123456",
   "newPassword": "NewPassword123"
+}
+```
+
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "message": "Contraseña actualizada exitosamente"
 }
 ```
 

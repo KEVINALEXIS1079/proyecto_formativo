@@ -23,6 +23,24 @@ Obtiene la lista de insumos (consumibles), con filtros.
 - `proveedorId`: Filtrar por proveedor
 - `almacenId`: Filtrar por almacén
 - `tipoInsumo`: 'CONSUMIBLE' (default)
+- `page`: Página actual
+- `limit`: Items por página
+
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "nombre": "Fertilizante NPK",
+      "stockActual": 150,
+      "unidadMedida": "kg",
+      "categoria": { "id": 1, "nombre": "Fertilizantes" }
+    }
+  ],
+  "meta": { "total": 100, "page": 1, "lastPage": 10 }
+}
+```
 
 ### Crear Insumo
 Registra un nuevo insumo.
@@ -39,6 +57,16 @@ Registra un nuevo insumo.
   "categoriaId": 1,
   "unidadMedida": "kg",
   "stockMinimo": 10
+}
+```
+
+**Respuesta Exitosa (201 Created):**
+```json
+{
+  "id": 5,
+  "nombre": "Fertilizante NPK",
+  "stockActual": 0,
+  "createdAt": "2025-11-01T10:00:00Z"
 }
 ```
 
@@ -94,6 +122,18 @@ Registra entradas, salidas, mermas o ajustes.
   "cantidad": 50,
   "costoUnitario": 2000,
   "detalle": "Compra factura #123"
+}
+```
+
+**Respuesta Exitosa (201 Created):**
+```json
+{
+  "id": 100,
+  "tipo": "ENTRADA",
+  "cantidad": 50,
+  "costoTotal": 100000,
+  "nuevoStock": 200,
+  "fecha": "2025-11-02T15:00:00Z"
 }
 ```
 

@@ -25,7 +25,7 @@ import { CultivosModule } from '../cultivos/cultivos.module';
     forwardRef(() => CultivosModule),
   ],
   controllers: [GeoController],
-  providers: [GeoService, GeoGateway, GeoController],
+  providers: [GeoService, GeoGateway],
   exports: [GeoService],
 })
-export class GeoModule {}
+export class GeoModule { }

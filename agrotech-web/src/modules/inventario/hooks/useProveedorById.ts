@@ -13,8 +13,5 @@ export function useProveedorById(id: number) {
     },
     enabled: !!id,
     staleTime: 15_000,
-    onError: (error) => {
-      console.error('DEBUG: Error fetching proveedor with id:', id, error);
-    },
   });
 }

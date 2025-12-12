@@ -52,7 +52,6 @@ import { AuthModule } from '../auth/auth.module';
   providers: [
     ActivitiesService,
     ActivitiesGateway,
-    ActivitiesController,
     ImageUploadService,
   ],
 })

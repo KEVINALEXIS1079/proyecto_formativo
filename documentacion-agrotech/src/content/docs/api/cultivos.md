@@ -28,7 +28,18 @@ Registra un nuevo cultivo en el sistema. Soporta la carga de una imagen opcional
 - `img`: File (imagen del cultivo, opcional)
 
 **Respuesta Exitosa (201 Created):**
-Objeto JSON con los datos del cultivo creado.
+```json
+{
+  "id": 10,
+  "nombre": "Maíz Lote Norte",
+  "tipoCultivo": "MAIZ",
+  "fechaSiembra": "2025-11-15T00:00:00Z",
+  "fechaCosechaEstimada": "2026-04-15T00:00:00Z",
+  "estado": "ACTIVO",
+  "loteId": 2,
+  "imgUrl": "https://api.agrotech.com/uploads/cultivos/maiz.jpg"
+}
+```
 
 ---
 
@@ -46,6 +57,28 @@ Obtiene una lista de cultivos con opciones de filtrado.
 - `estado`: Filtrar por estado (ej: 'ACTIVO', 'COSECHADO', 'FINALIZADO')
 - `tipoCultivo`: Filtrar por tipo
 
+**Respuesta Exitosa (200 OK):**
+```json
+[
+  {
+    "id": 10,
+    "nombre": "Maíz Lote Norte",
+    "tipoCultivo": "MAIZ",
+    "fechaSiembra": "2025-11-15T00:00:00Z",
+    "estado": "ACTIVO",
+    "lote": { "id": 2, "nombre": "Lote Norte" }
+  },
+  {
+    "id": 8,
+    "nombre": "Tomate Invernadero",
+    "tipoCultivo": "TOMATE",
+    "fechaSiembra": "2025-10-01T00:00:00Z",
+    "estado": "COSECHADO",
+    "lote": { "id": 3, "nombre": "Invernadero 1" }
+  }
+]
+```
+
 ---
 
 ### Ver Detalles de Cultivo
@@ -54,6 +87,30 @@ Obtiene la información completa de un cultivo específico.
 - **URL**: `/cultivos/:id`
 - **Método**: `GET`
 - **Auth**: Requiere autenticación y permiso `cultivos.ver`
+
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "id": 10,
+  "nombre": "Maíz Lote Norte",
+  "tipoCultivo": "MAIZ",
+  "descripcion": "Siembra experimental variedad híbrida",
+  "fechaSiembra": "2025-11-15T00:00:00Z",
+  "fechaCosechaEstimada": "2026-04-15T00:00:00Z",
+  "densidadPlantas": 60000,
+  "estado": "ACTIVO",
+  "lote": {
+    "id": 2,
+    "nombre": "Lote Norte",
+    "areaM2": 10000
+  },
+  "actividades": [
+    { "id": 5, "tipo": "SIEMBRA", "estado": "COMPLETADA" }
+  ],
+  "imgUrl": "https://api.agrotech.com/uploads/cultivos/maiz.jpg",
+  "createdAt": "2025-11-15T10:00:00Z"
+}
+```
 
 ---
 
@@ -69,8 +126,15 @@ Actualiza la información de un cultivo. Soporta actualización de imagen.
 - Campos opcionales de creación (nombre, fechas, etc.)
 - `img`: Nuevo archivo de imagen (si se desea actualizar)
 
-**Respuesta:**
-Objeto actualizado del cultivo.
+**Respuesta Exitosa (200 OK):**
+```json
+{
+  "id": 10,
+  "nombre": "Maíz Lote Norte - Actualizado",
+  "fechaCosechaEstimada": "2026-05-01T00:00:00Z",
+  "imgUrl": "https://api.agrotech.com/uploads/cultivos/new-image.jpg"
+}
+```
 
 ---
 

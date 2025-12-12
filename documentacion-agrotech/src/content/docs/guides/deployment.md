@@ -1,63 +1,33 @@
 ---
-title: Despliegue
-description: Guía de configuración y despliegue para producción
+title: Guía de Despliegue
+description: Cómo desplegar y configurar Agrotech en tu propio servidor.
 ---
 
-# Guía de Despliegue
+## Requisitos Previos
 
-Instrucciones para desplegar Agrotech en un entorno de producción (VPS, AWS, DigitalOcean).
+-   Node.js v18+
+-   PostgreSQL 14+
+-   Broker MQTT (ej. Mosquitto) para IoT.
 
-## Backend (Docker)
+## Instalación
 
-El backend está contenerizado para facilitar su despliegue.
-
-1.  **Construir imagen**:
+1.  **Clonar el repositorio**:
     ```bash
-    docker build -t agrotech-backend ./backend-agrotech
+    git clone https://github.com/KEVINALEXIS1079/proyecto_formativo.git
     ```
 
-2.  **Ejecutar contenedor**:
-    ```bash
-    docker run -d -p 4000:4000 --env-file .env agrotech-backend
-    ```
+2.  **Configurar Backend**:
+    -   Navegar a `backend-agrotech`.
+    -   Copiar `.env.example` a `.env` y configurar base de datos.
+    -   Ejecutar `npm install` y `npm run start:dev`.
 
-### Variables de Entorno (.env)
+3.  **Configurar Frontend Web**:
+    -   Navegar a `agrotech-web`.
+    -   Ejecutar `npm install` y `npm run dev`.
 
-Asegúrate de configurar:
--   `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
--   `JWT_SECRET`
--   `MQTT_BROKER_URL`
+4.  **Configurar IoT**:
+    -   Flashear los dispositivos ESP32 con el código en `archivos-extras/configuracion-IoT`.
 
-## Web App (Vercel / Netlify / Nginx)
+## Producción
 
-La aplicación web es estática (SPA).
-
-1.  **Build**:
-    ```bash
-    npm run build
-    ```
-
-2.  **Servir**:
-    Sube la carpeta `dist` a tu hosting preferido o sírvela con Nginx:
-
-    ```nginx
-    server {
-        listen 80;
-        server_name agrotech.tudominio.com;
-        root /var/www/agrotech/dist;
-        index index.html;
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
-    }
-    ```
-
-## Móvil (APK/IPA)
-
-Para generar los ejecutables móviles:
-
-```bash
-cd agrotech-movil
-npm install -g eas-cli
-eas build --platform android --profile production
-```
+Para producción, recomendamos usar Docker. Consulta el archivo `docker-compose.yml` en la raíz del proyecto (si está disponible) o construye las imágenes manualmente.

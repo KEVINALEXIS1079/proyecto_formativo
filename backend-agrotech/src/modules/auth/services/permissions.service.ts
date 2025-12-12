@@ -7,6 +7,8 @@ import { RolPermiso } from '../entities/rol-permiso.entity';
 import { UsuarioPermiso } from '../../users/entities/usuario-permiso.entity';
 import { Usuario } from '../../users/entities/usuario.entity';
 import { RedisService } from '../../../common/services/redis.service';
+import { UsersGateway } from '../../users/gateways/users.gateway';
+import { Inject, forwardRef } from '@nestjs/common';
 
 @Injectable()
 export class PermissionsService {
@@ -17,6 +19,8 @@ export class PermissionsService {
     @InjectRepository(UsuarioPermiso) private usuarioPermisoRepo: Repository<UsuarioPermiso>,
     @InjectRepository(Usuario) private usuarioRepo: Repository<Usuario>,
     private redisService: RedisService,
+    @Inject(forwardRef(() => UsersGateway))
+    private usersGateway: UsersGateway,
   ) { }
 
   // ==================== GESTIÓN DE PERMISOS ====================
@@ -173,6 +177,9 @@ export class PermissionsService {
     // Invalidar caché de permisos para usuarios con este rol
     await this.redisService.invalidateRolePermissions(rolId);
 
+    // Emitir evento
+    this.usersGateway.server.emit('permissions:role-updated', { rolId });
+
     return { message: `Permiso ${permiso.clave} asignado al rol ${rol.nombre}` };
   }
 
@@ -190,6 +197,9 @@ export class PermissionsService {
 
     // Invalidar caché de permisos para usuarios con este rol
     await this.redisService.invalidateRolePermissions(rolId);
+
+    // Emitir evento
+    this.usersGateway.server.emit('permissions:role-updated', { rolId });
 
     return { message: 'Permiso removido del rol' };
   }
@@ -230,6 +240,9 @@ export class PermissionsService {
     // Invalidar caché de permisos para este usuario
     await this.redisService.invalidateUserPermissions(usuarioId);
 
+    // Emitir evento
+    this.usersGateway.server.emit('permissions:user-updated', { userId: usuarioId });
+
     return { message: `Permiso ${permiso.clave} asignado al usuario` };
   }
 
@@ -247,6 +260,8 @@ export class PermissionsService {
 
     // Invalidar caché de permisos para este usuario
     await this.redisService.invalidateUserPermissions(usuarioId);
+
+    this.usersGateway.server.emit('permissions:user-updated', { userId: usuarioId });
 
     return { message: 'Permiso removido del usuario' };
   }

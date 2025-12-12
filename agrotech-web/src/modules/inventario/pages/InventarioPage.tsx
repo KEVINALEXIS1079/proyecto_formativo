@@ -4,7 +4,7 @@ import { Button } from '@heroui/react';
 import { Plus } from 'lucide-react';
 import Surface from '../../users/ui/Surface';
 import InventarioPillToggle from '../ui/InventarioPillToggle';
-import { StockAlertBell } from '../ui/StockAlertBell';
+// import { StockAlertBell } from '../ui/StockAlertBell';
 import { InsumoListFeature } from '../features/InsumoListFeature';
 import { MovimientoListFeature } from '../features/MovimientoListFeature';
 import { ActivosFijosListFeature } from '../features/ActivosFijosListFeature';
@@ -51,7 +51,7 @@ export default function InventarioPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <InventarioPillToggle value={activeTab} onChange={setActiveTab} />
         <div className="flex items-center gap-2">
-          <StockAlertBell />
+          {/* <StockAlertBell /> Removed as it is now in main header */}
           {(activeTab === 'insumos' || activeTab === 'movimientos' || activeTab === 'activos-fijos') && (
             <Button
               color="success"

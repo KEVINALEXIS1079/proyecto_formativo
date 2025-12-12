@@ -12,7 +12,15 @@ import {
 import { UserRound, LogOut, Mail } from "lucide-react";
 import HeaderNotifications from "./HeaderNotifications";
 
-type Notification = { id: string; title: string; body?: string; unread?: boolean; time?: string };
+type Notification = {
+  id: string;
+  title: string;
+  body?: string;
+  unread?: boolean;
+  time?: string;
+  source?: 'monitoreo' | 'inventario' | 'usuarios' | 'actividades';
+  type?: string;
+};
 type UserInfo = { name: string; email: string; avatarUrl?: string; role?: string };
 
 export default function ProtectedHeader({

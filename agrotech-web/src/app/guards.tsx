@@ -5,7 +5,7 @@ import { useAuth } from "@/modules/auth/hooks/useAuth";
 
 const LS_KEYS = { email: "recoveryEmail", code: "recoveryCode" } as const;
 const getRecoveryEmail = () => localStorage.getItem(LS_KEYS.email) || "";
-const getRecoveryCode  = () => localStorage.getItem(LS_KEYS.code)  || "";
+const getRecoveryCode = () => localStorage.getItem(LS_KEYS.code) || "";
 
 /* PRIVADAS */
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -32,10 +32,12 @@ export function RequireRecoveryEmail({ children }: { children: React.ReactNode }
   const type = state.type || "recover";
 
   useEffect(() => {
-    if (stateEmail && type === "recover") localStorage.setItem(LS_KEYS.email, stateEmail);
+    if (stateEmail && (type === "recover" || type === "registration")) {
+      localStorage.setItem(LS_KEYS.email, stateEmail);
+    }
   }, [stateEmail, type]);
 
-  const email = type === "verify" ? stateEmail : getRecoveryEmail();
+  const email = stateEmail || getRecoveryEmail();
   if (!email) return <Navigate to="/recover" replace state={{ from: location }} />;
   return <>{children}</>;
 }
@@ -45,17 +47,17 @@ export function RequireRecoveryCode({ children }: { children: React.ReactNode })
   const location = useLocation();
   const fromState = (location.state as { email?: string; codigo?: string } | null) || {};
   const stateEmail = fromState.email || "";
-  const stateCode  = fromState.codigo || "";
+  const stateCode = fromState.codigo || "";
 
   useEffect(() => {
     if (stateEmail) localStorage.setItem(LS_KEYS.email, stateEmail);
-    if (stateCode)  localStorage.setItem(LS_KEYS.code,  stateCode);
+    if (stateCode) localStorage.setItem(LS_KEYS.code, stateCode);
   }, [stateEmail, stateCode]);
 
   const email = getRecoveryEmail();
-  const code  = getRecoveryCode();
+  const code = getRecoveryCode();
 
   if (!email) return <Navigate to="/recover" replace state={{ from: location }} />;
-  if (!code)  return <Navigate to="/code"    replace state={{ from: location, email }} />;
+  if (!code) return <Navigate to="/code" replace state={{ from: location, email }} />;
   return <>{children}</>;
 }

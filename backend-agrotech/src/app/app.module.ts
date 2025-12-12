@@ -20,9 +20,11 @@ import { SeedsModule } from '../database/seeds/seeds.module';
 import { ReportsModule } from '../modules/reports/reports.module';
 import { FinanceModule } from '../modules/finance/finance.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -54,7 +56,6 @@ import { ScheduleModule } from '@nestjs/schedule';
     IotModule,
     SeedsModule,
     ReportsModule,
-    ReportsModule,
     FinanceModule,
     ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
@@ -65,4 +66,4 @@ import { ScheduleModule } from '@nestjs/schedule';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

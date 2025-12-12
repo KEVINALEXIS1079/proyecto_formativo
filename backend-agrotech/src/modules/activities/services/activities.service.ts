@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  forwardRef,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager } from 'typeorm';
+import { Repository, DataSource, EntityManager, Brackets } from 'typeorm';
 
 import { Actividad } from '../entities/actividad.entity';
 import { ActividadResponsable } from '../entities/actividad-responsable.entity';
@@ -25,6 +27,7 @@ import { InventoryService } from '../../inventory/services/inventory.service';
 
 import { ProductionService } from '../../production/services/production.service';
 import { FinanceService } from '../../finance/services/finance.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class ActivitiesService {
@@ -56,6 +59,7 @@ export class ActivitiesService {
     private readonly cultivosService: CultivosService,
     private readonly productionService: ProductionService,
     private dataSource: DataSource,
+    private eventEmitter: EventEmitter2,
   ) { }
 
   async create(data: CreateActivityDto, usuarioId: number) {
@@ -270,14 +274,33 @@ export class ActivitiesService {
       });
     }
 
-    return this.findOne(saved.id); // Return full object with relations
+    const finalResult = await this.findOne(saved.id);
+
+    // Notify Responsibles
+    if (finalResult.responsables && finalResult.responsables.length > 0) {
+      finalResult.responsables.forEach(resp => {
+        // Skip creator if they are the responsible (optional, but good UX to verify)
+        // if (resp.usuarioId === usuarioId) return; 
+
+        this.eventEmitter.emit('activity.notification', {
+          targetUserId: resp.usuarioId,
+          title: 'Nueva Actividad Asignada',
+          body: `Se te ha asignado la actividad: ${finalResult.nombre} (${finalResult.tipo})`,
+          activityId: finalResult.id,
+          type: 'info'
+        });
+      });
+    }
+
+    this.eventEmitter.emit('activity.created', finalResult);
+    return finalResult;
   }
 
   async findAll(filters?: {
     cultivoId?: number;
     loteId?: number;
     tipo?: string;
-  }) {
+  }, userId?: number) {
     const qb = this.actividadRepo
       .createQueryBuilder('actividad')
       .leftJoinAndSelect('actividad.cultivo', 'cultivo')
@@ -303,6 +326,18 @@ export class ActivitiesService {
       qb.andWhere('actividad.loteId = :l', { l: filters.loteId });
 
     if (filters?.tipo) qb.andWhere('actividad.tipo = :t', { t: filters.tipo });
+
+    // --- VISIBILITY FILTER ---
+    if (userId) {
+      // Join to check if user is responsible (without affecting main selection)
+      qb.leftJoin('actividad.responsables', 'filterResp', 'filterResp.usuarioId = :userId', { userId });
+
+      qb.andWhere(new Brackets(sub => {
+        sub.where("actividad.estado != 'PENDIENTE'") // Completed/Finalized visible to all? Or same rule? User said "actividades pendientes creadas solo las puedan ver..."
+          .orWhere("actividad.creadoPorUsuarioId = :userId", { userId })
+          .orWhere("filterResp.id IS NOT NULL");
+      }));
+    }
 
     return qb.orderBy('actividad.fecha', 'DESC').getMany();
   }
@@ -335,7 +370,7 @@ export class ActivitiesService {
   }
 
   async update(id: number, data: UpdateActivityDto, usuarioId = 0) {
-    console.log(`[ActivitiesService.update] START id=${id} user=${usuarioId}`);
+
 
     return this.dataSource.transaction(async (manager) => {
       // 1. Fetch activity within transaction to ensure lock/fresh data
@@ -356,7 +391,7 @@ export class ActivitiesService {
         throw new BadRequestException('No se puede editar una actividad FINALIZADA. Debe revertirla primero o crear una nueva.');
       }
 
-      console.log(`[ActivitiesService.update] Found actividad ${id}`);
+
 
       const trackKeys: (keyof Actividad)[] = [
         'nombre',
@@ -422,28 +457,28 @@ export class ActivitiesService {
 
       Object.assign(actividad, data);
       const saved = await manager.save(actividad);
-      console.log(`[ActivitiesService.update] Actividad basics saved`);
+
 
       // --- Manejo de Insumos (Reservas) en Edición ---
       if (data.insumos && actividad.estado === 'PENDIENTE') {
-        console.log(`[ActivitiesService.update] Updating reservations...`);
+
         // 1. Liberar todas las reservas existentes
         // Use injected service but pass manager if supported, OR use standard logic carefully.
         // InventoryService methods now support manager!
         const reservasPrevias = await manager.find(ActividadInsumoReserva, { where: { actividadId: saved.id } });
 
         for (const res of reservasPrevias) {
-          console.log(`[ActivitiesService.update] Releasing insumo ${res.insumoId}, qty ${res.cantidadReservada}`);
+
           await this.inventoryService.liberarStock(res.insumoId, res.cantidadReservada, saved.id, usuarioId, manager);
           await manager.remove(res);
         }
 
         // 2. Crear nuevas reservas
-        console.log(`[ActivitiesService.update] Creating ${data.insumos.length} new reservations`);
+
         for (const insumo of data.insumos) {
           if (insumo.cantidadUso <= 0) throw new BadRequestException(`La cantidad reservada para insumo ${insumo.insumoId} debe ser mayor a 0`);
 
-          console.log(`[ActivitiesService.update] Reserving insumo ${insumo.insumoId}, qty ${insumo.cantidadUso}`);
+
           // Reservar en inventario (Transactional)
           await this.inventoryService.reservarStock(insumo.insumoId, insumo.cantidadUso, saved.id, usuarioId, manager);
 
@@ -502,7 +537,8 @@ export class ActivitiesService {
         cambios: Object.keys(cambios).length ? cambios : null,
       }));
 
-      console.log(`[ActivitiesService.update] Completed successfully`);
+
+      this.eventEmitter.emit('activity.updated', saved);
       return saved;
     });
   }
@@ -516,7 +552,7 @@ export class ActivitiesService {
 
     // Si está pendiente, liberar reservas de insumos
     if (actividad.insumosReserva && actividad.insumosReserva.length > 0) {
-      console.log(`[ActivitiesService.remove] Releasing ${actividad.insumosReserva.length} reservations for actividad ${id}`);
+
       for (const reserva of actividad.insumosReserva) {
         await this.inventoryService.liberarStock(
           reserva.insumoId,
@@ -530,7 +566,9 @@ export class ActivitiesService {
       }
     }
 
-    return this.actividadRepo.softRemove(actividad);
+    const result = await this.actividadRepo.softRemove(actividad);
+    this.eventEmitter.emit('activity.removed', { id });
+    return result;
   }
 
   async addServicio(
@@ -669,13 +707,13 @@ export class ActivitiesService {
     },
     usuarioId: number
   ) {
-    console.log(`[finalizarActividad] START id=${id} user=${usuarioId}`);
+
 
     return this.dataSource.transaction(async (manager) => {
       // 1. Fetch activity within transaction
       const actividad = await manager.findOne(Actividad, {
         where: { id },
-        relations: ['insumosReserva', 'cultivo']
+        relations: ['insumosReserva', 'cultivo', 'responsables']
       });
 
       if (!actividad) throw new NotFoundException(`Actividad ${id} no encontrada`);
@@ -817,6 +855,20 @@ export class ActivitiesService {
       actividad.estado = 'FINALIZADA';
       await manager.save(actividad);
 
+      // Notify Responsibles of Finalization
+      if (actividad.responsables && actividad.responsables.length > 0) {
+        actividad.responsables.forEach(resp => {
+          this.eventEmitter.emit('activity.notification', {
+            targetUserId: resp.usuarioId,
+            title: 'Actividad Finalizada',
+            body: `La actividad ${actividad.nombre} ha sido marcada como REALIZADA.`,
+            activityId: actividad.id,
+            type: 'success'
+          });
+        });
+      }
+
+      this.eventEmitter.emit('activity.updated', actividad);
       console.log(`[finalizarActividad] SUCCESS`);
       return actividad;
     });

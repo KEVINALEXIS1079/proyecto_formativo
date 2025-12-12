@@ -18,15 +18,13 @@ export const SensorCard: React.FC<SensorCardProps> = ({ sensor, onToggle, onEdit
   const connectionState = realTimeData?.estadoConexion || liveSensor.estadoConexion;
   const isConnected = connectionState === 'CONECTADO';
   const isPump = liveSensor.tipoSensor?.nombre?.toLowerCase().includes('bomba') ||
-                  liveSensor.nombre?.toLowerCase().includes('bomba');
+    liveSensor.nombre?.toLowerCase().includes('bomba');
   const currentValue = realTimeData?.value ?? (liveSensor.ultimoValor !== undefined ? Number(liveSensor.ultimoValor) : undefined);
   const isDeactivated = (realTimeData?.estado || liveSensor.estado)?.toLowerCase() === 'desactivado';
   const displayValue = !isConnected ? 'Desconectado' :
     isDeactivated ? 'Desactivado' :
-    (isPump && currentValue !== undefined ? (Number(currentValue) === 1 ? 'Prendido' : 'Apagado') :
-     (currentValue !== undefined ? currentValue :
-      connectionState === 'DESCONECTADO' ? 'Desconectado' :
-      connectionState === 'ERROR' ? 'Error' : '--'));
+      (isPump && currentValue !== undefined ? (Number(currentValue) === 1 ? 'Prendido' : 'Apagado') :
+        (currentValue !== undefined ? currentValue : '--'));
   const unit = isPump ? '' : (liveSensor.tipoSensor?.unidad || '');
 
   return (

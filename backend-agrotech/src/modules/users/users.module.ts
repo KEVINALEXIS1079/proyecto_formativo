@@ -26,7 +26,7 @@ import { ImageUploadService } from '../../common/services/image-upload.service';
     }),
   ],
   controllers: [UsersController],
-  providers: [UsersService, UsersGateway, UsersController, RedisService, EmailService, ImageUploadService],
-  exports: [UsersService],
+  providers: [UsersService, UsersGateway, RedisService, EmailService, ImageUploadService],
+  exports: [UsersService, UsersGateway],
 })
-export class UsersModule {}
+export class UsersModule { }

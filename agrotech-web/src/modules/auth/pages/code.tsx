@@ -111,8 +111,8 @@ export default function CodePage() {
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.25 } }}>
         <AuthLayout
-          title={<motion.span variants={fadeInUp} initial="initial" animate="animate">{type === "verify" ? "Verifica tu email" : "Actualiza tu contraseña"}</motion.span>}
-          subtitle={<motion.span variants={fadeInUp} initial="initial" animate="animate">{type === "verify" ? "Ingresa el código enviado a tu email para verificar tu cuenta." : "Ingresa y confirma tu nueva contraseña para continuar gestionando tus cultivos de manera segura."}</motion.span>}
+          title={<motion.span variants={fadeInUp} initial="initial" animate="animate">{(type === "verify" || type === "registration") ? "Verifica tu cuenta" : "Actualiza tu contraseña"}</motion.span>}
+          subtitle={<motion.span variants={fadeInUp} initial="initial" animate="animate">{(type === "verify" || type === "registration") ? "Ingresa el código enviado a tu email para activar tu cuenta." : "Ingresa y confirma tu nueva contraseña para continuar gestionando tus cultivos de manera segura."}</motion.span>}
           logoSlot={
             <motion.div variants={fadeInUp} initial="initial" animate="animate" whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 260, damping: 18 }}>
               <AuthLogo />
@@ -130,7 +130,7 @@ export default function CodePage() {
               <AuthCodeForm onSubmit={handleSubmit} loading={isVerifying || isCompleting} />
             </motion.div>
 
-            {type === "verify" && (
+            {(type === "verify" || type === "registration") && (
               <motion.div variants={fadeInUp} className="mt-4 text-center">
                 <button
                   type="button"
