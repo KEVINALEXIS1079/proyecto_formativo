@@ -41,29 +41,32 @@ export class AuthController {
   // RF03: Login
   // @UseGuards(LocalAuthGuard) <-- Removed to handle error manually
   @Post('login')
-  @HttpCode(HttpStatus.OK)
-  async login(@Body() body: any, @Res({ passthrough: true }) res: Response) {
-    const user = await this.authService.validateUser(body.correo, body.password);
+@HttpCode(HttpStatus.OK)
+async login(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+  const user = await this.authService.validateUser(body.correo, body.password);
 
-    if (!user) {
-      // Return 200 with error flag to avoid browser console red error
-      // return res.status(200).json({ success: false, message: 'Correo o contraseña incorrectos' });
-      // NestJS way: just return the object, @HttpCode(200) handles status
-      return { success: false, message: 'Correo o contraseña incorrectos' };
-    }
-
-    const result = await this.authService.login(user);
-
-    // Set HTTP-only cookie
-    res.cookie('auth_token', result.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    });
-
-    return { success: true, user: result.user };
+  if (!user) {
+    return { success: false, message: 'Correo o contraseña incorrectos' };
   }
+
+  // result.access_token y result.user vienen del AuthService
+  const result = await this.authService.login(user);
+
+  // ---- COOKIE PARA NAVEGADOR WEB ----
+  res.cookie('auth_token', result.access_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000,
+  });
+
+  // ---- RESPUESTA PARA APP MOVIL ----
+  return {
+    success: true,
+    user: result.user,
+    token: result.access_token,   // <<--- CLAVE
+  };
+}
 
   // RF04: Logout
   @Post('logout')

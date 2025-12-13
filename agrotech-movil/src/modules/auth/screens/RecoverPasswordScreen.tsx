@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Platform, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AxiosError } from 'axios';
@@ -12,23 +12,10 @@ const RecoverPasswordScreen: React.FC = () => {
   const navigation = useNavigation<RecoverPasswordScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const recoverMutation = useRequestPasswordReset();
-
-  useEffect(() => {
-    if (recoverMutation.data) {
-      Alert.alert('Correo enviado', recoverMutation.data.message || 'Revisa tu bandeja de entrada para restablecer tu contraseña', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') }
-      ]);
-    }
-  }, [recoverMutation.data, navigation]);
-
-  useEffect(() => {
-    if (recoverMutation.error) {
-      const message = ((recoverMutation.error as AxiosError)?.response?.data as { message?: string })?.message || recoverMutation.error.message || 'Error al enviar el correo de recuperación';
-      Alert.alert('Error', message);
-    }
-  }, [recoverMutation.error]);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -44,19 +31,57 @@ const RecoverPasswordScreen: React.FC = () => {
       return;
     }
 
-    recoverMutation.mutate({ correo: email });
+    recoverMutation.mutate({ correo: email }, {
+      onSuccess: (data) => {
+        setSuccessMessage(data.message || 'Correo enviado con éxito');
+        setShowSuccess(true);
+
+        // Auto-redirect after 2 seconds
+        setTimeout(() => {
+          setShowSuccess(false);
+          navigation.navigate('VerifyCode', { email: email, type: 'reset' });
+        }, 2000);
+      },
+      onError: (error) => {
+        const message = ((error as AxiosError)?.response?.data as { message?: string })?.message || error.message || 'Error al enviar el correo de recuperación';
+        Alert.alert('Error', message);
+      }
+    });
   };
 
   return (
     <View style={styles.container}>
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccess}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => { }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.successIcon}>✓</Text>
+            </View>
+            <Text style={styles.modalTitle}>¡Correo Enviado!</Text>
+            <Text style={styles.modalText}>
+              {successMessage}
+            </Text>
+            <Text style={styles.modalSubText}>
+              Redirigiendo...
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Text style={styles.backButtonText}>← Volver</Text>
       </TouchableOpacity>
-      
+
       <View style={styles.headerImageContainer}>
-        <Image 
-          source={require('../../../assets/images/FondoLogin.jpeg')} 
-          style={styles.headerImage} 
+        <Image
+          source={require('../../../assets/images/FondoLogin.jpeg')}
+          style={styles.headerImage}
           resizeMode="cover"
         />
         <View style={styles.headerOverlay} />
@@ -67,7 +92,7 @@ const RecoverPasswordScreen: React.FC = () => {
         <Text style={styles.description}>
           Ingresa tu correo electrónico y te enviaremos las instrucciones para restablecer tu contraseña.
         </Text>
-        
+
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Correo electrónico</Text>
           <TextInput
@@ -106,8 +131,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
-    elevation: 4,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+      },
+    }),
   },
   description: {
     fontSize: 14,
@@ -183,6 +220,58 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  successIcon: {
+    fontSize: 30,
+    color: '#2E7D32',
+    fontWeight: 'bold',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 10,
+  },
+  modalSubText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+  }
 });
 
 export default RecoverPasswordScreen;

@@ -13,82 +13,53 @@ import type {
 type RecoverErr = Error;
 
 // -------- Solicitar reset de contraseña
-export function useRequestPasswordReset() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<RecoverErr | null>(null);
-  const [data, setData] = useState<RequestResetResponse | null>(null);
+import { useMutation } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 
-  const mutate = async (request: RequestResetRequest) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await requestPasswordReset(request);
-      setData(result);
-    } catch (err) {
-      setError(err as RecoverErr);
-    } finally {
-      setLoading(false);
-    }
-  };
+export function useRequestPasswordReset() {
+  const mutation = useMutation<RequestResetResponse, AxiosError, RequestResetRequest>({
+    mutationFn: requestPasswordReset,
+  });
 
   return {
-    mutate,
-    isLoading: loading,
-    error,
-    data,
+    mutate: mutation.mutate,
+    isLoading: mutation.isLoading,
+    error: mutation.error,
+    data: mutation.data,
+    isSuccess: mutation.isSuccess,
+    isError: mutation.isError
   };
 }
 
 // -------- Resetear contraseña
+// -------- Resetear contraseña
 export function useResetPassword() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<RecoverErr | null>(null);
-  const [data, setData] = useState<ResetPasswordResponse | null>(null);
-
-  const mutate = async (request: ResetPasswordRequest) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await resetPassword(request);
-      setData(result);
-    } catch (err) {
-      setError(err as RecoverErr);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const mutation = useMutation<ResetPasswordResponse, AxiosError, ResetPasswordRequest>({
+    mutationFn: resetPassword,
+  });
 
   return {
-    mutate,
-    isLoading: loading,
-    error,
-    data,
+    mutate: mutation.mutate,
+    isLoading: mutation.isLoading,
+    error: mutation.error,
+    data: mutation.data,
+    isSuccess: mutation.isSuccess,
+    isError: mutation.isError
   };
 }
 
 // -------- Verificar email
 export function useVerifyEmail() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<RecoverErr | null>(null);
-  const [data, setData] = useState<VerifyEmailResponse | null>(null);
-
-  const mutate = async (request: VerifyEmailRequest) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await verifyEmail(request);
-      setData(result);
-    } catch (err) {
-      setError(err as RecoverErr);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const mutation = useMutation<VerifyEmailResponse, AxiosError, VerifyEmailRequest>({
+    mutationFn: verifyEmail,
+  });
 
   return {
-    mutate,
-    isLoading: loading,
-    error,
-    data,
+    mutate: mutation.mutate,
+    isLoading: mutation.isLoading,
+    error: mutation.error,
+    data: mutation.data,
+    isSuccess: mutation.isSuccess,
+    isError: mutation.isError
   };
 }

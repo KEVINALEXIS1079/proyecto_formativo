@@ -3,7 +3,7 @@ import { View, Image, TouchableOpacity, StyleSheet, Alert, Text, Modal, Pressabl
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Bell, User, LogOut, Home, ListChecks, Map, Sprout, Leaf, Cpu, Wallet, Box, FileBarChart, Users } from 'lucide-react-native';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../modules/auth/context/AuthContext';
 import HomeScreen from '../../modules/home/screens/HomeScreen';
 import ActivitiesListScreen from '../../modules/activities/screens/ActivitiesListScreen';
@@ -12,6 +12,10 @@ import ProfileScreen from '../../modules/profile/screens/ProfileScreen';
 import GeoListScreen from '../../modules/geo/screens/GeoListScreen';
 import CropsListScreen from '../../modules/crops/screens/CropsListScreen';
 import InventoryListScreen from '../../modules/inventory/screens/InventoryListScreen';
+import FitosanitarioListScreen from '../../modules/fitosanitario/screens/FitosanitarioListScreen';
+import { IoTDashboardScreen } from '../../modules/iot/screens/IoTDashboardScreen';
+import SalesHistoryScreen from '../../modules/production/screens/SalesHistoryScreen';
+import ReportsScreen from '../../modules/reports/screens/ReportsScreen';
 import Sidebar from '../components/Sidebar';
 
 // Define the parameter list for the drawer
@@ -20,7 +24,7 @@ export type MainDrawerParamList = {
   Activities: undefined;
   Geo: undefined;
   Crops: undefined;
-  Wiki: undefined;
+  Fitosanitario: undefined;
   IoT: undefined;
   Finanzas: undefined;
   Inventory: undefined;
@@ -31,23 +35,24 @@ export type MainDrawerParamList = {
 const Drawer = createDrawerNavigator<MainDrawerParamList>();
 
 // Placeholder component for missing modules
-const PlaceholderScreen = ({ name }: { name: string }) => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Image source={require('../../assets/images/LogoTic.png')} style={{ width: 100, height: 100, marginBottom: 20 }} resizeMode="contain" />
-    <View style={{ padding: 20 }}>
-      <View style={{ marginBottom: 10 }}><Bell size={40} color="#166534" /></View>
+const PlaceholderScreen = ({ route }: any) => {
+  const name = route?.params?.name || 'Modulo';
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Image source={require('../../assets/images/LogoTic.png')} style={{ width: 100, height: 100, marginBottom: 20 }} resizeMode="contain" />
+      <View style={{ padding: 20 }}>
+        <View style={{ marginBottom: 10 }}><Bell size={40} color="#166534" /></View>
+      </View>
+      <View><Image source={require('../../assets/images/LogoTic.png')} style={{ width: 200, height: 50 }} resizeMode="contain" /></View>
+      <Text style={{ marginTop: 20, fontSize: 18, color: '#666' }}>{name}</Text>
     </View>
-    <View><Image source={require('../../assets/images/LogoTic.png')} style={{ width: 200, height: 50 }} resizeMode="contain" /></View>
-  </View>
-);
-
-const ReportsScreen = () => <PlaceholderScreen name="Reportes" />;
+  );
+};
 
 const MainNavigator: React.FC = () => {
   const navigation = useNavigation<any>();
   const auth = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
-
   const handleLogout = async () => {
     setModalVisible(false);
     Alert.alert(
@@ -60,11 +65,14 @@ const MainNavigator: React.FC = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              await auth.logout();
+              // Reset navigation immediately
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'Login' }],
+                routes: [{ name: 'Landing' }],
               });
+
+              // Then perform logout
+              await auth.logout();
             } catch (error) {
               console.error('Error logging out:', error);
             }
@@ -98,78 +106,78 @@ const MainNavigator: React.FC = () => {
                 <View style={styles.badge} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.profileButton} onPress={() => setModalVisible(true)}>
-                <Image 
-                  source={require('../../assets/images/SeñoraLogin.jpeg')} 
-                  style={styles.headerAvatar} 
+                <Image
+                  source={require('../../assets/images/SeñoraLogin.jpeg')}
+                  style={styles.headerAvatar}
                 />
               </TouchableOpacity>
             </View>
           ),
         })}
       >
-        <Drawer.Screen 
-          name="Home" 
-          component={HomeScreen} 
-          options={{ 
+        <Drawer.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{
             title: 'Inicio',
             drawerIcon: ({ color, size }) => <Home size={size} color={color} />
-          }} 
+          }}
         />
-        <Drawer.Screen 
-          name="Activities" 
-          component={ActivitiesListScreen} 
-          options={{ 
+        <Drawer.Screen
+          name="Activities"
+          component={ActivitiesListScreen}
+          options={{
             title: 'Actividades',
             drawerIcon: ({ color, size }) => <ListChecks size={size} color={color} />
-          }} 
+          }}
         />
-        <Drawer.Screen 
-          name="Geo" 
-          component={GeoListScreen} 
-          options={{ 
+        <Drawer.Screen
+          name="Geo"
+          component={GeoListScreen}
+          options={{
             title: 'Georreferenciación',
             drawerIcon: ({ color, size }) => <Map size={size} color={color} />
-          }} 
+          }}
         />
-        <Drawer.Screen 
-          name="Crops" 
-          component={CropsListScreen} 
-          options={{ 
+        <Drawer.Screen
+          name="Crops"
+          component={CropsListScreen}
+          options={{
             title: 'Cultivos',
             drawerIcon: ({ color, size }) => <Sprout size={size} color={color} />
-          }} 
+          }}
         />
-        <Drawer.Screen 
-          name="Wiki" 
-          component={() => <PlaceholderScreen name="Wiki Fitosanitaria" />} 
-          options={{ 
+        <Drawer.Screen
+          name="Fitosanitario"
+          component={FitosanitarioListScreen}
+          options={{
             title: 'Fitosanitario',
             drawerIcon: ({ color, size }) => <Leaf size={size} color={color} />
-          }} 
+          }}
         />
-        <Drawer.Screen 
-          name="IoT" 
-          component={() => <PlaceholderScreen name="IoT" />} 
-          options={{ 
+        <Drawer.Screen
+          name="IoT"
+          component={IoTDashboardScreen}
+          options={{
             title: 'IoT',
             drawerIcon: ({ color, size }) => <Cpu size={size} color={color} />
-          }} 
+          }}
         />
-        <Drawer.Screen 
-          name="Finanzas" 
-          component={() => <PlaceholderScreen name="Finanzas" />} 
-          options={{ 
-            title: 'Finanzas',
+        <Drawer.Screen
+          name="Finanzas"
+          component={SalesHistoryScreen}
+          options={{
+            title: 'Ventas',
             drawerIcon: ({ color, size }) => <Wallet size={size} color={color} />
-          }} 
+          }}
         />
-        <Drawer.Screen 
-          name="Inventory" 
-          component={InventoryListScreen} 
-          options={{ 
+        <Drawer.Screen
+          name="Inventory"
+          component={InventoryListScreen}
+          options={{
             title: 'Inventario',
             drawerIcon: ({ color, size }) => <Box size={size} color={color} />
-          }} 
+          }}
         />
         <Drawer.Screen
           name="Reports"
@@ -179,13 +187,13 @@ const MainNavigator: React.FC = () => {
             drawerIcon: ({ color, size }) => <FileBarChart size={size} color={color} />
           }}
         />
-        <Drawer.Screen 
-          name="Users" 
-          component={UsersListScreen} 
-          options={{ 
+        <Drawer.Screen
+          name="Users"
+          component={UsersListScreen}
+          options={{
             title: 'Usuarios',
             drawerIcon: ({ color, size }) => <Users size={size} color={color} />
-          }} 
+          }}
         />
       </Drawer.Navigator>
 

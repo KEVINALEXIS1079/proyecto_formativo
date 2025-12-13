@@ -5,15 +5,24 @@ import { AuthProvider } from './src/modules/auth/context/AuthContext';
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-export default function App() {
+// IMPORTANTE:
+import { Provider as PaperProvider } from 'react-native-paper';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+const queryClient = new QueryClient();
+
+export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
-      </SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <PaperProvider>
+          <SafeAreaProvider>
+            <AuthProvider>
+              <AppNavigator />
+            </AuthProvider>
+          </SafeAreaProvider>
+        </PaperProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }

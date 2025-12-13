@@ -14,6 +14,15 @@ export interface RegisterResponse {
   message: string;
 }
 
+export interface CompleteRegisterRequest {
+  correo: string;
+  code: string;
+}
+
+export interface CompleteRegisterResponse {
+  message: string;
+}
+
 export interface VerifyEmailRequest {
   correo: string;
   code: string;

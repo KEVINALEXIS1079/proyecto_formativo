@@ -1,32 +1,19 @@
-// agrotech-movil/src/modules/auth/hooks/useRegister.ts
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { register } from "../api/auth.service";
 import type { RegisterRequest, RegisterResponse } from "../model/types";
-
-type RegisterErr = Error;
+import { AxiosError } from "axios";
 
 export function useRegister() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<RegisterErr | null>(null);
-  const [data, setData] = useState<RegisterResponse | null>(null);
-
-  const mutate = async (request: RegisterRequest) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await register(request);
-      setData(result);
-    } catch (err) {
-      setError(err as RegisterErr);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const mutation = useMutation<RegisterResponse, AxiosError, RegisterRequest>({
+    mutationFn: register,
+  });
 
   return {
-    mutate,
-    isLoading: loading,
-    error,
-    data,
+    mutate: mutation.mutate,
+    isLoading: mutation.isLoading,
+    error: mutation.error,
+    data: mutation.data,
+    isSuccess: mutation.isSuccess,
+    isError: mutation.isError
   };
 }

@@ -5,6 +5,8 @@ import type {
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
+  CompleteRegisterRequest,
+  CompleteRegisterResponse,
   VerifyEmailRequest,
   VerifyEmailResponse,
   ResendVerificationRequest,
@@ -37,6 +39,11 @@ export async function register(request: RegisterRequest): Promise<RegisterRespon
   return data;
 }
 
+export async function completeRegister(request: CompleteRegisterRequest): Promise<CompleteRegisterResponse> {
+  const { data } = await api.post('/auth/complete-register', request);
+  return data;
+}
+
 /* ===========================
  * VERIFY EMAIL
  * =========================== */
@@ -63,6 +70,16 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
   };
 
   const { data } = await api.post('/auth/login', body);
+
+  if (data.success === false || !data.user) {
+    const error: any = new Error(data.message || 'Credenciales incorrectas');
+    // Mocking axios error structure for compatibility with LoginScreen error handling
+    error.response = {
+      status: 401,
+      data: data
+    };
+    throw error;
+  }
 
   const user = mapUserFromBackend(data.user);
 

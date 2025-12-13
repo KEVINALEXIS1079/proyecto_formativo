@@ -61,14 +61,24 @@ export interface CreateSubLoteDto {
 
 export interface Cultivo {
   id: number;
-  nombre: string;
-  variedad: string;
+  nombreCultivo: string;
+  nombre?: string; // Legacy/Fallback
+  tipoCultivo: string | { id: number; nombre: string }; // Can be string or object from relations
+  variedad?: string;
   fechaSiembra: string;
   fechaCosechaEstimada?: string;
-  area: number;
-  estado: 'ACTIVO' | 'COSECHADO' | 'FINALIZADO';
+  area?: number;
+  estado: 'ACTIVO' | 'COSECHADO' | 'FINALIZADO' | 'activo' | 'inactivo' | 'finalizado';
   loteId?: number;
   subloteId?: number;
+  subLoteId?: number;
+  imgCultivo?: string;
+  imagen?: string;
+  descripcion?: string;
+  costoTotal?: number;
+  lote?: { id: number; nombre: string };
+  sublote?: { id: number; nombre: string };
+  subLote?: { id: number; nombre: string };
 }
 
 export interface CreateCultivoDto {

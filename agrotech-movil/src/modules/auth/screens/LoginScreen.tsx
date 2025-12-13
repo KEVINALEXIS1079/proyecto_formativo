@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../shared/navigation/AppNavigator';
@@ -15,6 +15,38 @@ const LoginScreen: React.FC = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Snackbar state
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarType, setSnackbarType] = useState<'success' | 'error'>('success');
+  const [snackbarFadeAnim] = useState(new Animated.Value(0));
+
+  const showSnackbar = (message: string, type: 'success' | 'error') => {
+    setSnackbarMessage(message);
+    setSnackbarType(type);
+    setSnackbarVisible(true);
+
+    Animated.timing(snackbarFadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    setTimeout(() => {
+      hideSnackbar();
+    }, 4000);
+  };
+
+  const hideSnackbar = () => {
+    Animated.timing(snackbarFadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setSnackbarVisible(false);
+    });
+  };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -45,18 +77,15 @@ const LoginScreen: React.FC = () => {
       navigation.replace('Main');
     } catch (error: any) {
       console.error('Login error:', error);
-      
+
       // Handle 401 Unauthorized
       if (error?.response?.status === 401) {
-        Alert.alert(
-          'Credenciales Inválidas', 
-          'El correo o la contraseña son incorrectos. Por favor verifica tus datos.'
-        );
-      } 
+        showSnackbar('Credenciales incorrectas. Verifica tu correo y contraseña.', 'error');
+      }
       // Handle other errors
       else {
         const message = error?.response?.data?.message || error?.message || 'Error al iniciar sesión';
-        Alert.alert('Error', message);
+        showSnackbar(message, 'error');
       }
     } finally {
       setLoading(false);
@@ -68,11 +97,11 @@ const LoginScreen: React.FC = () => {
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Text style={styles.backButtonText}>← Volver</Text>
       </TouchableOpacity>
-      
+
       <View style={styles.headerImageContainer}>
-        <Image 
-          source={require('../../../assets/images/SeñoraLogin.jpeg')} 
-          style={styles.headerImage} 
+        <Image
+          source={require('../../../assets/images/SeñoraLogin.jpeg')}
+          style={styles.headerImage}
           resizeMode="cover"
         />
         <View style={styles.headerOverlay} />
@@ -81,7 +110,7 @@ const LoginScreen: React.FC = () => {
 
       <View style={styles.card}>
         <Text style={styles.title}>Iniciar Sesión</Text>
-        
+
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Correo electrónico</Text>
           <TextInput
@@ -129,6 +158,37 @@ const LoginScreen: React.FC = () => {
           <Text style={styles.linkText}>¿No tienes cuenta? Regístrate</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Snackbar */}
+      {snackbarVisible && (
+        <Animated.View
+          style={[
+            styles.snackbar,
+            snackbarType === 'success' ? styles.snackbarSuccess : styles.snackbarError,
+            {
+              opacity: snackbarFadeAnim,
+              transform: [{
+                translateY: snackbarFadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0]
+                })
+              }]
+            }
+          ]}
+        >
+          <View style={styles.snackbarContent}>
+            <Text style={[
+              styles.snackbarText,
+              snackbarType === 'success' ? styles.snackbarTextSuccess : styles.snackbarTextError
+            ]}>
+              {snackbarMessage}
+            </Text>
+            <TouchableOpacity onPress={hideSnackbar} style={styles.snackbarClose}>
+              <Text style={styles.snackbarCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -236,6 +296,56 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     fontWeight: 'bold',
+  },
+  // Snackbar styles
+  snackbar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    borderRadius: 8,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  snackbarSuccess: {
+    backgroundColor: '#d1fae5',
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+  },
+  snackbarError: {
+    backgroundColor: '#fee2e2',
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  snackbarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  snackbarText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    paddingRight: 8,
+  },
+  snackbarTextSuccess: {
+    color: '#065f46',
+  },
+  snackbarTextError: {
+    color: '#7f1d1d',
+  },
+  snackbarClose: {
+    padding: 4,
+  },
+  snackbarCloseText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
   },
 });
 

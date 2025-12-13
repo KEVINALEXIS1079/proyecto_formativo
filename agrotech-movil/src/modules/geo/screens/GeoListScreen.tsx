@@ -8,21 +8,23 @@ import { geoAPI } from '../../../shared/services/api';
 import { Lote, SubLote } from '../../../shared/types';
 
 const GeoListScreen: React.FC = () => {
-   const [activeTab, setActiveTab] = useState<'lotes' | 'sublotes'>('lotes');
-   const [lotes, setLotes] = useState<Lote[]>([]);
-   const [sublotes, setSublotes] = useState<SubLote[]>([]);
-   const [loading, setLoading] = useState(false);
-   const [modalVisible, setModalVisible] = useState(false);
-   const [selectedLote, setSelectedLote] = useState<Lote | undefined>(undefined);
-   const [selectedSublote, setSelectedSublote] = useState<SubLote | undefined>(undefined);
-   const [searchQuery, setSearchQuery] = useState('');
-   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [activeTab, setActiveTab] = useState<'lotes' | 'sublotes'>('lotes');
+  const [lotes, setLotes] = useState<Lote[]>([]);
+  const [sublotes, setSublotes] = useState<SubLote[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedLote, setSelectedLote] = useState<Lote | undefined>(undefined);
+  const [selectedSublote, setSelectedSublote] = useState<SubLote | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   const fetchLotes = async () => {
     setLoading(true);
     try {
       const response = await geoAPI.getLotes();
-      setLotes(response.data);
+      const rawData = response.data;
+      const data = Array.isArray(rawData) ? rawData : (rawData?.data || rawData?.items || []);
+      setLotes(data);
     } catch (error) {
       console.error('Error fetching lotes:', error);
       Alert.alert('Error', 'No se pudieron cargar los lotes');
@@ -35,7 +37,9 @@ const GeoListScreen: React.FC = () => {
     setLoading(true);
     try {
       const response = await geoAPI.getSubLotes();
-      setSublotes(response.data);
+      const rawData = response.data;
+      const data = Array.isArray(rawData) ? rawData : (rawData?.data || rawData?.items || []);
+      setSublotes(data);
     } catch (error) {
       console.error('Error fetching sublotes:', error);
       Alert.alert('Error', 'No se pudieron cargar los sublotes');
@@ -282,225 +286,225 @@ const GeoListScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-   container: {
-     flex: 1,
-     backgroundColor: '#f5f5f5',
-   },
-   header: {
-     padding: 20,
-     flexDirection: 'row',
-     justifyContent: 'space-between',
-     alignItems: 'center',
-   },
-   title: {
-     fontSize: 20,
-     fontWeight: 'bold',
-     color: '#333',
-   },
-   addButton: {
-     backgroundColor: '#166534',
-     flexDirection: 'row',
-     alignItems: 'center',
-     paddingHorizontal: 16,
-     paddingVertical: 8,
-     borderRadius: 20,
-     gap: 8,
-   },
-   addButtonText: {
-     color: '#fff',
-     fontWeight: 'bold',
-   },
-   tabsContainer: {
-     flexDirection: 'row',
-     marginHorizontal: 20,
-     marginBottom: 16,
-     backgroundColor: '#e5e7eb',
-     borderRadius: 8,
-     padding: 4,
-   },
-   tab: {
-     flex: 1,
-     paddingVertical: 8,
-     alignItems: 'center',
-     borderRadius: 6,
-   },
-   activeTab: {
-     backgroundColor: '#166534',
-   },
-   tabText: {
-     fontSize: 16,
-     fontWeight: '500',
-     color: '#666',
-   },
-   activeTabText: {
-     color: '#fff',
-   },
-   metricsContainer: {
-     flexDirection: 'row',
-     justifyContent: 'space-around',
-     marginHorizontal: 20,
-     marginBottom: 16,
-   },
-   metric: {
-     alignItems: 'center',
-     backgroundColor: '#fff',
-     padding: 16,
-     borderRadius: 12,
-     elevation: 2,
-     shadowColor: '#000',
-     shadowOffset: { width: 0, height: 1 },
-     shadowOpacity: 0.05,
-     shadowRadius: 2,
-     minWidth: 100,
-   },
-   metricValue: {
-     fontSize: 24,
-     fontWeight: 'bold',
-     color: '#166534',
-     marginTop: 4,
-   },
-   metricLabel: {
-     fontSize: 12,
-     color: '#666',
-     marginTop: 2,
-   },
-   searchContainer: {
-     marginHorizontal: 20,
-     marginBottom: 16,
-   },
-   searchInputContainer: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     backgroundColor: '#fff',
-     borderRadius: 12,
-     paddingHorizontal: 12,
-     elevation: 2,
-     shadowColor: '#000',
-     shadowOffset: { width: 0, height: 1 },
-     shadowOpacity: 0.05,
-     shadowRadius: 2,
-   },
-   searchIcon: {
-     marginRight: 8,
-   },
-   searchInput: {
-     flex: 1,
-     paddingVertical: 12,
-     fontSize: 16,
-     color: '#333',
-   },
-   viewToggle: {
-     flexDirection: 'row',
-     marginHorizontal: 20,
-     marginBottom: 16,
-     backgroundColor: '#e5e7eb',
-     borderRadius: 8,
-     padding: 4,
-   },
-   viewButton: {
-     flex: 1,
-     paddingVertical: 8,
-     alignItems: 'center',
-     borderRadius: 6,
-   },
-   activeViewButton: {
-     backgroundColor: '#166534',
-   },
-   listContent: {
-     padding: 16,
-   },
-   card: {
-     backgroundColor: '#fff',
-     borderRadius: 12,
-     padding: 16,
-     marginBottom: 12,
-     flexDirection: 'row',
-     alignItems: 'center',
-     elevation: 2,
-     shadowColor: '#000',
-     shadowOffset: { width: 0, height: 1 },
-     shadowOpacity: 0.05,
-     shadowRadius: 2,
-   },
-   iconContainer: {
-     width: 48,
-     height: 48,
-     borderRadius: 24,
-     backgroundColor: '#dcfce7',
-     justifyContent: 'center',
-     alignItems: 'center',
-     marginRight: 12,
-   },
-   info: {
-     flex: 1,
-   },
-   name: {
-     fontSize: 16,
-     fontWeight: 'bold',
-     color: '#333',
-     marginBottom: 2,
-   },
-   description: {
-     fontSize: 14,
-     color: '#666',
-     marginBottom: 6,
-   },
-   details: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     gap: 4,
-   },
-   detailText: {
-     fontSize: 14,
-     color: '#666',
-     fontWeight: '500',
-   },
-   separator: {
-     color: '#ccc',
-     marginHorizontal: 4,
-   },
-   actionButtons: {
-     flexDirection: 'row',
-     gap: 8,
-   },
-   editButton: {
-     backgroundColor: '#166534',
-     paddingHorizontal: 12,
-     paddingVertical: 6,
-     borderRadius: 6,
-   },
-   editButtonText: {
-     color: '#fff',
-     fontSize: 14,
-     fontWeight: '500',
-   },
-   deleteButton: {
-     padding: 8,
-   },
-   mapContainer: {
-     flex: 1,
-     margin: 20,
-     backgroundColor: '#fff',
-     borderRadius: 12,
-     elevation: 2,
-     shadowColor: '#000',
-     shadowOffset: { width: 0, height: 1 },
-     shadowOpacity: 0.05,
-     shadowRadius: 2,
-     overflow: 'hidden',
-   },
-   map: {
-     flex: 1,
-   },
-   modalOverlay: {
-     flex: 1,
-     backgroundColor: 'rgba(0,0,0,0.5)',
-     justifyContent: 'center',
-     padding: 20,
-   },
-   modalContent: {
-     backgroundColor: 'transparent',
-   },
- });
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  addButton: {
+    backgroundColor: '#166534',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  activeTab: {
+    backgroundColor: '#166534',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  metricsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  metric: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    minWidth: 100,
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#166534',
+    marginTop: 4,
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  searchContainer: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 4,
+  },
+  viewButton: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  activeViewButton: {
+    backgroundColor: '#166534',
+  },
+  listContent: {
+    padding: 16,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  info: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  description: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 6,
+  },
+  details: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  detailText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  separator: {
+    color: '#ccc',
+    marginHorizontal: 4,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    backgroundColor: '#166534',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  mapContainer: {
+    flex: 1,
+    margin: 20,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    overflow: 'hidden',
+  },
+  map: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'transparent',
+  },
+});
 
 export default GeoListScreen;
