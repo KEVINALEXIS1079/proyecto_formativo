@@ -11,14 +11,20 @@ export class FinanceService {
   ) {}
 
   // Registrar gasto de mano de obra en actividad
-  async registrarGastoManoObra(data: {
-    actividadId: number;
-    monto: number;
-    descripcion: string;
-    fecha: Date;
-    usuarioId: number;
-  }) {
-    const transaccion = this.transaccionRepo.create({
+  async registrarGastoManoObra(
+    data: {
+      actividadId: number;
+      monto: number;
+      descripcion: string;
+      fecha: Date;
+      usuarioId: number;
+    },
+    manager?: any,
+  ) {
+    const repo = manager
+      ? manager.getRepository(TransaccionFinanciera)
+      : this.transaccionRepo;
+    const transaccion = repo.create({
       tipo: 'GASTO_ACTIVIDAD',
       categoria: 'MANO_OBRA',
       monto: data.monto,
@@ -28,19 +34,25 @@ export class FinanceService {
       usuarioId: data.usuarioId,
     });
 
-    return this.transaccionRepo.save(transaccion);
+    return repo.save(transaccion);
   }
 
   // Registrar gasto de insumo consumido en actividad
-  async registrarGastoInsumo(data: {
-    actividadId: number;
-    insumoId: number;
-    monto: number;
-    descripcion: string;
-    fecha: Date;
-    usuarioId: number;
-  }) {
-    const transaccion = this.transaccionRepo.create({
+  async registrarGastoInsumo(
+    data: {
+      actividadId: number;
+      insumoId: number;
+      monto: number;
+      descripcion: string;
+      fecha: Date;
+      usuarioId: number;
+    },
+    manager?: any,
+  ) {
+    const repo = manager
+      ? manager.getRepository(TransaccionFinanciera)
+      : this.transaccionRepo;
+    const transaccion = repo.create({
       tipo: 'GASTO_ACTIVIDAD',
       categoria: 'INSUMO',
       monto: data.monto,
@@ -51,18 +63,24 @@ export class FinanceService {
       usuarioId: data.usuarioId,
     });
 
-    return this.transaccionRepo.save(transaccion);
+    return repo.save(transaccion);
   }
 
   // Registrar gasto de servicio en actividad
-  async registrarGastoServicio(data: {
-    actividadId: number;
-    monto: number;
-    descripcion: string;
-    fecha: Date;
-    usuarioId: number;
-  }) {
-    const transaccion = this.transaccionRepo.create({
+  async registrarGastoServicio(
+    data: {
+      actividadId: number;
+      monto: number;
+      descripcion: string;
+      fecha: Date;
+      usuarioId: number;
+    },
+    manager?: any,
+  ) {
+    const repo = manager
+      ? manager.getRepository(TransaccionFinanciera)
+      : this.transaccionRepo;
+    const transaccion = repo.create({
       tipo: 'GASTO_ACTIVIDAD',
       categoria: 'SERVICIO',
       monto: data.monto,
@@ -72,7 +90,7 @@ export class FinanceService {
       usuarioId: data.usuarioId,
     });
 
-    return this.transaccionRepo.save(transaccion);
+    return repo.save(transaccion);
   }
 
   // Registrar ingreso por venta
