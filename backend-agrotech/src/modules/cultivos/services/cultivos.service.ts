@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, IsNull } from 'typeorm';
 import { Cultivo } from '../entities/cultivo.entity';
@@ -12,9 +18,10 @@ import { Usuario } from '../../users/entities/usuario.entity';
 export class CultivosService {
   constructor(
     @InjectRepository(Cultivo) private cultivoRepo: Repository<Cultivo>,
-    @InjectRepository(CultivoHistorial) private historialRepo: Repository<CultivoHistorial>,
+    @InjectRepository(CultivoHistorial)
+    private historialRepo: Repository<CultivoHistorial>,
     @Inject(forwardRef(() => GeoService)) private geoService: GeoService,
-  ) { }
+  ) {}
 
   async createCultivo(data: CreateCultivoDto) {
     // RF12: Validar XOR - exactamente uno debe estar presente
@@ -23,7 +30,9 @@ export class CultivosService {
     }
 
     if (data.loteId && data.subLoteId) {
-      throw new BadRequestException('Solo puede especificar loteId O subLoteId, no ambos');
+      throw new BadRequestException(
+        'Solo puede especificar loteId O subLoteId, no ambos',
+      );
     }
 
     // Validar que la ubicación exista y que el lote no tenga sublotes si se crea a nivel lote
@@ -33,7 +42,9 @@ export class CultivosService {
       const lote = await this.geoService.findLoteById(data.loteId);
       const subLotes = await this.geoService.findAllSubLotes(data.loteId);
       if (subLotes.length > 0) {
-        throw new BadRequestException('El lote tiene sublotes, seleccione un sublote');
+        throw new BadRequestException(
+          'El lote tiene sublotes, seleccione un sublote',
+        );
       }
       loteIdDestino = lote.id;
     }
@@ -56,7 +67,9 @@ export class CultivosService {
     const existingCultivo = await this.cultivoRepo.findOne({ where });
 
     if (existingCultivo) {
-      throw new BadRequestException('Ya existe un cultivo activo en esta ubicación');
+      throw new BadRequestException(
+        'Ya existe un cultivo activo en esta ubicación',
+      );
     }
 
     const cultivo = this.cultivoRepo.create({
@@ -75,39 +88,57 @@ export class CultivosService {
       .leftJoinAndSelect('cultivo.lote', 'lote')
       .leftJoinAndSelect('cultivo.subLote', 'subLote')
       .leftJoinAndSelect('hist.usuario', 'usuario')
-      .where(cultivoId ? 'hist.cultivoId = :cultivoId' : '1=1', cultivoId ? { cultivoId } : {})
+      .where(
+        cultivoId ? 'hist.cultivoId = :cultivoId' : '1=1',
+        cultivoId ? { cultivoId } : {},
+      )
       .orderBy('hist.createdAt', 'DESC')
       .limit(limit)
       .getMany();
   }
 
-  async findAllCultivos(filters?: { loteId?: number; subLoteId?: number; estado?: string; q?: string; tipoCultivo?: string }) {
-    const queryBuilder = this.cultivoRepo.createQueryBuilder('cultivo')
+  async findAllCultivos(filters?: {
+    loteId?: number;
+    subLoteId?: number;
+    estado?: string;
+    q?: string;
+    tipoCultivo?: string;
+  }) {
+    const queryBuilder = this.cultivoRepo
+      .createQueryBuilder('cultivo')
       .leftJoinAndSelect('cultivo.lote', 'lote')
       .leftJoinAndSelect('cultivo.subLote', 'subLote')
       .where('cultivo.deletedAt IS NULL');
 
     // RF14: Filtros
     if (filters?.loteId) {
-      queryBuilder.andWhere('cultivo.loteId = :loteId', { loteId: filters.loteId });
+      queryBuilder.andWhere('cultivo.loteId = :loteId', {
+        loteId: filters.loteId,
+      });
     }
 
     if (filters?.subLoteId) {
-      queryBuilder.andWhere('cultivo.subLoteId = :subLoteId', { subLoteId: filters.subLoteId });
+      queryBuilder.andWhere('cultivo.subLoteId = :subLoteId', {
+        subLoteId: filters.subLoteId,
+      });
     }
 
     if (filters?.estado) {
-      queryBuilder.andWhere('cultivo.estado = :estado', { estado: filters.estado });
+      queryBuilder.andWhere('cultivo.estado = :estado', {
+        estado: filters.estado,
+      });
     }
     if (filters?.tipoCultivo) {
-      queryBuilder.andWhere('cultivo.tipoCultivo ILIKE :tipoCultivo', { tipoCultivo: `%${filters.tipoCultivo}%` });
+      queryBuilder.andWhere('cultivo.tipoCultivo ILIKE :tipoCultivo', {
+        tipoCultivo: `%${filters.tipoCultivo}%`,
+      });
     }
 
     // RF14: Búsqueda de texto
     if (filters?.q) {
       queryBuilder.andWhere(
         '(cultivo.nombreCultivo ILIKE :q OR cultivo.tipoCultivo ILIKE :q OR cultivo.descripcion ILIKE :q)',
-        { q: `%${filters.q}%` }
+        { q: `%${filters.q}%` },
       );
     }
 
@@ -132,14 +163,22 @@ export class CultivosService {
     }
 
     if (payload.loteId && payload.subLoteId) {
-      throw new BadRequestException('Solo puede especificar loteId O subLoteId, no ambos');
+      throw new BadRequestException(
+        'Solo puede especificar loteId O subLoteId, no ambos',
+      );
     }
 
     // Determinar destino final de ubicación (permite limpiar sublote)
     let targetLoteId =
-      payload.loteId ?? cultivo.loteId ?? cultivo.lote?.id ?? cultivo.subLote?.loteId ?? null;
+      payload.loteId ??
+      cultivo.loteId ??
+      cultivo.lote?.id ??
+      cultivo.subLote?.loteId ??
+      null;
     let targetSubLoteId =
-      payload.subLoteId !== undefined ? payload.subLoteId : cultivo.subLoteId ?? cultivo.subLote?.id ?? null;
+      payload.subLoteId !== undefined
+        ? payload.subLoteId
+        : (cultivo.subLoteId ?? cultivo.subLote?.id ?? null);
 
     if (targetSubLoteId) {
       const sub = await this.geoService.findSubLoteById(targetSubLoteId);
@@ -148,13 +187,17 @@ export class CultivosService {
       const lote = await this.geoService.findLoteById(payload.loteId);
       const subLotes = await this.geoService.findAllSubLotes(lote.id);
       if (subLotes.length > 0) {
-        throw new BadRequestException('El lote tiene sublotes, seleccione un sublote');
+        throw new BadRequestException(
+          'El lote tiene sublotes, seleccione un sublote',
+        );
       }
       targetLoteId = lote.id;
     } else if (targetLoteId) {
       const subLotes = await this.geoService.findAllSubLotes(targetLoteId);
       if (subLotes.length > 0 && targetSubLoteId === null) {
-        throw new BadRequestException('El lote tiene sublotes, seleccione un sublote');
+        throw new BadRequestException(
+          'El lote tiene sublotes, seleccione un sublote',
+        );
       }
     }
 
@@ -170,22 +213,25 @@ export class CultivosService {
       whereDestino.loteId = targetLoteId;
       whereDestino.subLoteId = IsNull();
     }
-    
+
     // DEBUG: Ver por qué falla la validación
     console.log('DEBUG updateCultivo request:', {
-       idParam: id,
-       idType: typeof id,
-       targetLoteId,
-       targetSubLoteId
+      idParam: id,
+      idType: typeof id,
+      targetLoteId,
+      targetSubLoteId,
     });
 
     const whereQuery = {
-        ...whereDestino,
-        id: Not(Number(id)), 
-        deletedAt: IsNull()
+      ...whereDestino,
+      id: Not(Number(id)),
+      deletedAt: IsNull(),
     };
-    
-    console.log('DEBUG updateCultivo validation query:', JSON.stringify(whereQuery));
+
+    console.log(
+      'DEBUG updateCultivo validation query:',
+      JSON.stringify(whereQuery),
+    );
 
     const cultivoEnDestino = await this.cultivoRepo.findOne({
       where: whereQuery,
@@ -193,13 +239,15 @@ export class CultivosService {
 
     if (cultivoEnDestino) {
       console.log('DEBUG Conflict found with record:', {
-          id: cultivoEnDestino.id,
-          nombre: cultivoEnDestino.nombreCultivo,
-          estado: cultivoEnDestino.estado,
-          loteId: cultivoEnDestino.loteId,
-          subLoteId: cultivoEnDestino.subLoteId
+        id: cultivoEnDestino.id,
+        nombre: cultivoEnDestino.nombreCultivo,
+        estado: cultivoEnDestino.estado,
+        loteId: cultivoEnDestino.loteId,
+        subLoteId: cultivoEnDestino.subLoteId,
       });
-      throw new BadRequestException(`Ya existe un cultivo activo en esta ubicación (ID Conflicto: ${cultivoEnDestino.id}, Nombre: ${cultivoEnDestino.nombreCultivo})`);
+      throw new BadRequestException(
+        `Ya existe un cultivo activo en esta ubicación (ID Conflicto: ${cultivoEnDestino.id}, Nombre: ${cultivoEnDestino.nombreCultivo})`,
+      );
     }
 
     const payloadWithLocation = {
@@ -243,29 +291,48 @@ export class CultivosService {
 
   async removeCultivo(id: number) {
     // Bloquear borrado duro: forzar uso de estado
-    throw new BadRequestException('No se permite eliminar cultivos; cambie el estado a inactivo/finalizado');
+    throw new BadRequestException(
+      'No se permite eliminar cultivos; cambie el estado a inactivo/finalizado',
+    );
   }
 
   // RF13: Actualizar fechas clave del cultivo (llamado desde ActivitiesService)
-  async updateCultivoFechaSiembra(cultivoId: number, fecha: Date) {
-    const cultivo = await this.findCultivoById(cultivoId);
+  // RF13: Actualizar fechas clave del cultivo (llamado desde ActivitiesService)
+  async updateCultivoFechaSiembra(
+    cultivoId: number,
+    fecha: Date,
+    manager?: any,
+  ) {
+    const repo = manager ? manager.getRepository(Cultivo) : this.cultivoRepo;
+    const cultivo = await repo.findOne({ where: { id: cultivoId } });
+
+    if (!cultivo) throw new NotFoundException(`Cultivo ${cultivoId} not found`);
 
     if (!cultivo.fechaSiembra) {
       cultivo.fechaSiembra = fecha;
       cultivo.estado = 'activo'; // Ensure crop is marked as active
-      await this.cultivoRepo.save(cultivo);
+      await repo.save(cultivo);
     }
   }
 
-  async updateCultivoFechaFinalizacion(cultivoId: number, fecha: Date) {
-    const cultivo = await this.findCultivoById(cultivoId);
+  async updateCultivoFechaFinalizacion(
+    cultivoId: number,
+    fecha: Date,
+    manager?: any,
+  ) {
+    const repo = manager ? manager.getRepository(Cultivo) : this.cultivoRepo;
+    const cultivo = await repo.findOne({ where: { id: cultivoId } });
+
+    if (!cultivo) throw new NotFoundException(`Cultivo ${cultivoId} not found`);
+
     cultivo.fechaFinalizacion = fecha;
     cultivo.estado = 'finalizado';
-    await this.cultivoRepo.save(cultivo);
+    await repo.save(cultivo);
   }
 
   // RF_INT: Acumular costos al cultivo (Transaccional)
-  async addCost(cultivoId: number, amount: number, manager?: any) { // Type as any or EntityManager if imported
+  async addCost(cultivoId: number, amount: number, manager?: any) {
+    // Type as any or EntityManager if imported
     // We use a query builder or direct update to increment safely
     // Or if inside a transaction manager, we lock and update.
 
@@ -277,14 +344,14 @@ export class CultivosService {
         .createQueryBuilder()
         .update(Cultivo)
         .set({ costoTotal: () => `COALESCE("costoTotal", 0) + ${amount}` })
-        .where("id = :id", { id: cultivoId })
+        .where('id = :id', { id: cultivoId })
         .execute();
     } else {
       await this.cultivoRepo
         .createQueryBuilder()
         .update(Cultivo)
         .set({ costoTotal: () => `COALESCE("costoTotal", 0) + ${amount}` })
-        .where("id = :id", { id: cultivoId })
+        .where('id = :id', { id: cultivoId })
         .execute();
     }
   }
