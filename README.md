@@ -13,6 +13,7 @@ El proyecto está dividido en varios micro-componentes:
 | **Móvil** | `./agrotech-movil` | React Native | Aplicación móvil para trabajo en campo. |
 | **Documentación** | `./documentacion-agrotech` | Astro Starlight | Guías de usuario y Referencia de API. |
 | **IoT** | `./archivos-extras` | C++, ESP32 | Código para sensores y dispositivos de campo. |
+| **Automatización** | `./archivos-extras` | n8n | Automatización de tareas del modulo de gestión de actividades. |
 
 ## Requisitos Globales
 

@@ -53,6 +53,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
+    "exceljs": "^4.4.0",
     "ioredis": "^5.8.2",
     "joi": "^18.0.2",
     "mqtt": "^5.14.1",

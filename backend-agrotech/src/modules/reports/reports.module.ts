@@ -6,6 +6,8 @@ import { CropReportsService } from './services/crop-reports.service';
 import { CropReportsController } from './controllers/crop-reports.controller';
 import { IotReportsService } from './services/iot-reports.service';
 import { IotReportsController } from './controllers/iot-reports.controller';
+import { N8nReportsService } from './services/n8n-reports.service';
+import { N8nReportsController } from './controllers/n8n-reports.controller';
 import { CsvExportService } from './services/csv-export.service';
 import { Venta } from '../production/entities/venta.entity';
 import { VentaDetalle } from '../production/entities/venta-detalle.entity';
@@ -21,10 +23,12 @@ import { SensorAlerta } from '../iot/entities/sensor-alert.entity';
 import { IotGlobalConfig } from '../iot/entities/iot-global-config.entity';
 import { AuthModule } from '../auth/auth.module';
 import { LoteProduccion } from '../production/entities/lote-produccion.entity';
+import { ActivitiesModule } from '../activities/activities.module';
 
 @Module({
   imports: [
     AuthModule,
+    ActivitiesModule,
     TypeOrmModule.forFeature([
       Venta,
       VentaDetalle,
@@ -39,10 +43,27 @@ import { LoteProduccion } from '../production/entities/lote-produccion.entity';
       SensorAlerta,
       IotGlobalConfig,
       LoteProduccion,
-    ])
+    ]),
   ],
-  controllers: [FinancialReportsController, CropReportsController, IotReportsController],
-  providers: [FinancialReportsService, CropReportsService, IotReportsService, CsvExportService],
-  exports: [FinancialReportsService, CropReportsService, IotReportsService, CsvExportService]
+  controllers: [
+    FinancialReportsController,
+    CropReportsController,
+    IotReportsController,
+    N8nReportsController,
+  ],
+  providers: [
+    FinancialReportsService,
+    CropReportsService,
+    IotReportsService,
+    N8nReportsService,
+    CsvExportService,
+  ],
+  exports: [
+    FinancialReportsService,
+    CropReportsService,
+    IotReportsService,
+    N8nReportsService,
+    CsvExportService,
+  ],
 })
-export class ReportsModule { }
+export class ReportsModule {}

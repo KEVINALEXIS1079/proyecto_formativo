@@ -49,10 +49,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [ActivitiesController],
-  providers: [
-    ActivitiesService,
-    ActivitiesGateway,
-    ImageUploadService,
-  ],
+  providers: [ActivitiesService, ActivitiesGateway, ImageUploadService],
+  exports: [ActivitiesService],
 })
-export class ActivitiesModule { }
+export class ActivitiesModule {}

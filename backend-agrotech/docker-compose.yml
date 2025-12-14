@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgis/postgis:13-3.1
@@ -10,6 +12,7 @@ services:
       POSTGRES_DB: agrotech
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - agrotech_network
     deploy:
@@ -61,10 +64,41 @@ services:
           cpus: '0.40'
           memory: '300M'
 
+  n8n:
+    image: n8nio/n8n:1.80.2
+    container_name: agrotech_n8n
+    ports:
+      - '5678:5678'
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: 'true'
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: admin
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      NODE_ENV: production
+      WEBHOOK_URL: https://transitively-unfleshly-sanora.ngrok-free.dev/
+      GENERIC_TIMEZONE: America/Bogota
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - agrotech_network
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: '500M'
+        reservations:
+          cpus: '0.20'
+          memory: '250M'
+
 volumes:
   pgdata:
   redis_data:
   pgadmin_data:
+  n8n_data:
 
 networks:
   agrotech_network:
