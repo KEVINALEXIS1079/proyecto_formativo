@@ -47,6 +47,10 @@ export class CreateGlobalConfigDto {
   @IsString()
   @IsOptional()
   password?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  autoDiscover?: boolean;
 }
 
 export class UpdateGlobalConfigDto {
@@ -99,4 +103,8 @@ export class UpdateGlobalConfigDto {
   @IsBoolean()
   @IsOptional()
   activo?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  autoDiscover?: boolean;
 }

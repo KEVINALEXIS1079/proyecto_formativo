@@ -181,9 +181,7 @@ export class IotService implements OnModuleInit {
       where: { globalConfigId: id, protocolo: ProtocoloSensor.MQTT },
     });
 
-    console.log(
-      `[IoT] Reconnecting ${linkedSensors.length} sensors linked to Config ${id}...`,
-    );
+
     for (const sensor of linkedSensors) {
       await this.connectToMqttSensor(sensor);
     }
@@ -432,7 +430,7 @@ export class IotService implements OnModuleInit {
       sensor = currentSensor;
 
       const payload = message.toString();
-      // console.log(`[MQTT] Sensor ${sensor.id} (${sensor.nombre}) received:`, payload);
+
 
       let valor: any = payload;
       let estadoConexion = 'CONECTADO';
@@ -486,7 +484,7 @@ export class IotService implements OnModuleInit {
         }
       } catch (e) {
         // Not JSON, keep as string/raw value
-        // console.log('[MQTT] Payload is not JSON, using raw value');
+
       }
 
       // Convert to string for storage
@@ -587,6 +585,17 @@ export class IotService implements OnModuleInit {
         ...(subLoteId !== null && { subLoteId }),
       },
     );
+  }
+
+  async setSensorsActiveStatusByGlobalConfigId(globalConfigId: number, activo: boolean) {
+    if (!activo) {
+       // Disconnect active clients if deactivating
+       const sensors = await this.sensorRepo.find({ where: { globalConfigId } });
+       for (const sensor of sensors) {
+         this.disconnectSensorClient(sensor.id);
+       }
+    }
+    await this.sensorRepo.update({ globalConfigId }, { activo });
   }
 
   async getGeneralReport(params: {
@@ -701,7 +710,7 @@ export class IotService implements OnModuleInit {
 
       const lastReading = await qbLast.getOne();
 
-      console.log(`[IoT Report] Sensor "${sensor.nombre}": Stats=${!!stats}, Min=${!!minReading}, Max=${!!maxReading}, Last=${!!lastReading}`);
+
 
       // Obtener datos de tendencia (últimas 48 horas o rango especificado, agregado por hora)
       const qbTrend = this.lecturaRepo
@@ -734,12 +743,12 @@ export class IotService implements OnModuleInit {
         .limit(48) // Limitar a 48 puntos máximo
         .getRawMany();
 
-      console.log(`[IoT Report] Sensor "${sensor.nombre}": ${trendData.length} puntos de tendencia encontrados en rango especificado`);
+
 
       // FALLBACK: Si no hay datos en el rango, buscar en los últimos 30 días
       let finalTrendData = trendData;
       if (finalTrendData.length === 0) {
-        console.log(`[IoT Report] Sensor "${sensor.nombre}" (ID: ${sensor.id}): Buscando en últimos 30 días...`);
+
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
@@ -755,12 +764,12 @@ export class IotService implements OnModuleInit {
           .limit(48)
           .getRawMany();
         
-        console.log(`[IoT Report] Sensor "${sensor.nombre}": ${finalTrendData.length} puntos encontrados en últimos 30 días`);
+
       }
 
       // FALLBACK 2: Si aún no hay datos, buscar CUALQUIER dato sin restricción de fechas
       if (finalTrendData.length === 0) {
-        console.log(`[IoT Report] Sensor "${sensor.nombre}" (ID: ${sensor.id}): Buscando CUALQUIER dato disponible...`);
+
         
         finalTrendData = await this.lecturaRepo
           .createQueryBuilder('lectura')
@@ -773,7 +782,7 @@ export class IotService implements OnModuleInit {
           .limit(48)
           .getRawMany();
         
-        console.log(`[IoT Report] Sensor "${sensor.nombre}": ${finalTrendData.length} puntos encontrados SIN restricción de fechas`);
+
         
         // Verificar si hay ALGUNA lectura para este sensor
         const totalCount = await this.lecturaRepo
@@ -781,7 +790,7 @@ export class IotService implements OnModuleInit {
           .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
           .getCount();
         
-        console.log(`[IoT Report] Sensor "${sensor.nombre}" (ID: ${sensor.id}): Total lecturas en BD: ${totalCount}`);
+
       }
 
       const tendencia = finalTrendData.map((t) => ({
@@ -1066,6 +1075,12 @@ export class IotService implements OnModuleInit {
 
   async updateSensor(id: number, data: UpdateSensorDto) {
     const sensor = await this.findSensorById(id);
+    
+    // Store old values to check for connection-critical changes
+    const oldConfigId = sensor.globalConfigId;
+    const oldTopic = sensor.mqttTopic;
+    const oldActivo = sensor.activo;
+    const oldProtocolo = sensor.protocolo;
 
     if (data.globalConfigId) {
       const cfg = await this.configRepo.findOne({
@@ -1085,11 +1100,29 @@ export class IotService implements OnModuleInit {
     if (data.umbralMin !== undefined) sensor.umbralMin = data.umbralMin as any;
     if (data.umbralMax !== undefined) sensor.umbralMax = data.umbralMax as any;
     // Update other fields as needed from DTO...
+    if (data.loteId !== undefined) sensor.loteId = data.loteId;
+    if (data.subLoteId !== undefined) sensor.subLoteId = data.subLoteId;
+    if (data.tipoSensorId !== undefined) sensor.tipoSensorId = data.tipoSensorId;
 
     const savedSensor = await this.sensorRepo.save(sensor);
 
-    if (savedSensor.protocolo === ProtocoloSensor.MQTT) {
-      this.connectToMqttSensor(savedSensor);
+    // Only reconnect if connection details changed or if re-activated
+    const needsReconnection = 
+        (savedSensor.protocolo === ProtocoloSensor.MQTT) &&
+        (
+            savedSensor.globalConfigId !== oldConfigId ||
+            savedSensor.mqttTopic !== oldTopic ||
+            (savedSensor.activo && !oldActivo) || // Reactivated
+            (savedSensor.activo && savedSensor.protocolo !== oldProtocolo) // Protocol changed to MQTT
+        );
+
+    // If deactivated, disconnect
+    if (oldActivo && !savedSensor.activo) {
+        this.disconnectSensorClient(savedSensor.id);
+    } 
+    else if (needsReconnection && savedSensor.activo) {
+        console.log(`[IoT] Reconnecting Sensor ${savedSensor.id} due to config changes`);
+        this.connectToMqttSensor(savedSensor);
     }
 
     return savedSensor;

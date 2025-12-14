@@ -244,10 +244,11 @@ export class ActivitiesService {
             'El cultivo es requerido para actividades de SIEMBRA',
           );
         }
-        await this.cultivosService.updateCultivoFechaSiembra(
-          data.cultivoId,
-          new Date(data.fecha),
-          manager, // Pass manager if supported, or manually handle? CultivoService likely supports it or uses simple saves.
+          await this.cultivosService.updateCultivoFechaSiembra(
+            data.cultivoId,
+            new Date(data.fecha),
+            usuarioId, // Pass usuarioId
+            manager, // Pass manager if supported, or manually handle? CultivoService likely supports it or uses simple saves.
           // Assuming existing service methods might NOT simple support manager?
           // If NOT supported, transaction propagation breaks!
           // BUT, I can't rewire ALL services now.
@@ -264,10 +265,11 @@ export class ActivitiesService {
             'El cultivo es requerido para actividades de FINALIZACION',
           );
         }
-        await this.cultivosService.updateCultivoFechaFinalizacion(
-          data.cultivoId,
-          new Date(data.fecha),
-          manager, // Same assumption
+          await this.cultivosService.updateCultivoFechaFinalizacion(
+            data.cultivoId,
+            new Date(data.fecha),
+            usuarioId, // Pass usuarioId
+            manager, // Same assumption
         );
       }
 
@@ -424,10 +426,13 @@ export class ActivitiesService {
 
     // Patch: Load reservations from centralized service and map to legacy property
     // This ensures frontend receives "insumosReserva" even though we save to "Reserva" table
-    const realReservas = await this.reservasService.findByActividad(
+    const allReservas = await this.reservasService.findByActividad(
       id,
       manager,
     );
+    // Filtrar solo las activas para evitar confusiones en el frontend
+    const realReservas = allReservas ? allReservas.filter((r: Reserva) => r.estado === 'ACTIVA') : [];
+    
     if (realReservas && realReservas.length > 0) {
       actividad.insumosReserva = realReservas.map((r: Reserva) => ({
         id: r.id,
@@ -523,31 +528,106 @@ export class ActivitiesService {
         actividad.fecha = newDate;
       }
 
-      // Calculate costs for services if present (Fix for cascade Insert error)
+      // --- MANUAL UPDATE OF RELATIONS TO AVOID NULL FK ERROR ---
+
+      // 1. SERVICES
       if (data.servicios) {
-        data.servicios = data.servicios.map((s) => ({
-          ...s,
-          costo: (s.horas || 0) * (s.precioHora || 0),
-        }));
+        // IDs to keep (updated or existing)
+        const incomingIds = data.servicios.map((s) => (s as any).id).filter(Boolean);
+        // Find IDs to delete
+        const toDelete = actividad.servicios.filter(
+          (s) => !incomingIds.includes(s.id),
+        );
+        if (toDelete.length > 0) {
+          await manager.delete(
+            ActividadServicio,
+            toDelete.map((d) => d.id),
+          );
+        }
+        // Prepare new list (TypeORM will update existing ones and create new ones)
+        // We MUST set the parent 'actividad' or 'actividadId' explicitly
+        actividad.servicios = data.servicios.map((s) => {
+          const entity = new ActividadServicio(); // or use plain object if repository.save handles it
+          Object.assign(entity, s);
+          entity.actividadId = actividad.id; // Explicit FK
+          entity.costo = (s.horas || 0) * (s.precioHora || 0);
+          return entity;
+        });
       }
 
-      // Calculate costs for responsibles if present (Fix for cascade Insert error)
+      // 2. RESPONSABLES
       if (data.responsables) {
-        data.responsables = data.responsables.map((r) => ({
-          ...r,
-          costo: (r.horas || 0) * (r.precioHora || 0),
-        }));
+        const incomingIds = data.responsables.map((r) => (r as any).id).filter(Boolean);
+        const toDelete = actividad.responsables.filter(
+          (r) => !incomingIds.includes(r.id),
+        );
+        if (toDelete.length > 0) {
+          await manager.delete(
+            ActividadResponsable,
+            toDelete.map((d) => d.id),
+          );
+        }
+
+        actividad.responsables = data.responsables.map((r) => {
+          const entity = new ActividadResponsable();
+          Object.assign(entity, r);
+          entity.actividadId = actividad.id;
+          entity.costo = (r.horas || 0) * (r.precioHora || 0);
+          return entity;
+        });
       }
 
-      // Calculate/Map fields for herramientas if present (Fix for cascade Insert error)
+      // 3. HERRAMIENTAS
       if (data.herramientas) {
-        data.herramientas = data.herramientas.map((h) => ({
-          ...h,
-          horasEstimadas: h.horasUso, // Map DTO property to Entity property
-        }));
+        const incomingIds = data.herramientas.map((h) => (h as any).id).filter(Boolean);
+        const toDelete = actividad.herramientas.filter(
+          (h) => !incomingIds.includes(h.id),
+        );
+        if (toDelete.length > 0) {
+          await manager.delete(
+            ActividadHerramienta,
+            toDelete.map((d) => d.id),
+          );
+        }
+
+        actividad.herramientas = data.herramientas.map((h) => {
+          const entity = new ActividadHerramienta();
+          Object.assign(entity, h);
+          entity.actividadId = actividad.id;
+          entity.horasEstimadas = h.horasUso;
+          return entity;
+        });
       }
 
-      Object.assign(actividad, data);
+      // 4. EVIDENCIAS
+      if (data.evidencias) {
+        const incomingIds = data.evidencias.map((e) => (e as any).id).filter(Boolean);
+        const toDelete = actividad.evidencias.filter(
+          (e) => !incomingIds.includes(e.id),
+        );
+        if (toDelete.length > 0) {
+          await manager.delete(
+            ActividadEvidencia,
+            toDelete.map((d) => d.id),
+          );
+        }
+        actividad.evidencias = data.evidencias.map((e) => {
+          const entity = new ActividadEvidencia();
+          Object.assign(entity, e);
+          entity.actividadId = actividad.id;
+          return entity;
+        });
+      }
+
+      // Apply other fields
+      // Remove relations from 'data' to avoid Object.assign overwriting with raw DTOs again?
+      // Actually Object.assign below might overwrite our hard work if 'data' still has them.
+      // So we should exclude them from Object.assign or ensure 'actividad' properties take precedence.
+      // Safer: explicitly assign simple props or delete relation props from 'data' copy.
+      
+      const { responsables, servicios, herramientas, evidencias, ...basicData } = data;
+      Object.assign(actividad, basicData);
+      
       const saved = await manager.save(actividad);
 
       // --- Manejo de Insumos (Reservas) en Edición ---
@@ -565,7 +645,8 @@ export class ActivitiesService {
           // si estamos editando la actividad y mandamos TODO el array de insumos nuevo.
           // Pero cuidado con borrar reservas de herramientas si data.herramientas no vino.
 
-          if (res.insumo?.tipoInsumo === 'CONSUMIBLE') {
+          // FIX: Solo liberar si está ACTIVA
+          if (res.estado === 'ACTIVA' && res.insumo?.tipoInsumo === 'CONSUMIBLE') {
             await this.reservasService.liberarReserva(res.id, manager);
             // Opcional: Si queremos limpiar el historial de "Liberadas", podríamos borrarlas, pero mejor dejar rastro.
           }
@@ -895,7 +976,9 @@ export class ActivitiesService {
 
       // 2. Procesar Insumos (Reservados vs Reales)
       // Usamos el servicio de reservas para buscar TODAS (Insumos y Herramientas)
-      const reservas = await this.reservasService.findByActividad(id, manager);
+      const allReservas = await this.reservasService.findByActividad(id, manager);
+      // FILTRO CLAVE: Solo procesar las que estén ACTIVAS. Las LIBERADAS o UTILIZADAS se ignoran.
+      const reservas = allReservas.filter((r: Reserva) => r.estado === 'ACTIVA');
       const insumosRealesMap = new Map(
         (data.insumosReales || []).map((i) => [i.insumoId, i.cantidad]),
       );

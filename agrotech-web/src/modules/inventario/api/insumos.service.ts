@@ -12,7 +12,7 @@ function mapCreateDtoToApi(dto: CreateInsumoInput) {
     presentacionUnidad: dto.presentacionUnidad,
     unidadBase: dto.unidadBase,
     factorConversion: dto.factorConversion,
-    stockPresentacion: dto.stockPresentaciones,
+    stockPresentacion: dto.stockPresentacion,
     precioUnitarioPresentacion: dto.precioUnitario,
     fechaRegistro: dto.fechaIngreso, // Mapear fechaIngreso a fechaRegistro
     almacenId: dto.idAlmacen,
@@ -37,7 +37,7 @@ function mapUpdateDtoToApi(dto: UpdateInsumoInput) {
   if (dto.presentacionUnidad !== undefined) out.presentacionUnidad = dto.presentacionUnidad;
   if (dto.unidadBase !== undefined) out.unidadUso = dto.unidadBase;
   if (dto.factorConversion !== undefined) out.factorConversionUso = dto.factorConversion;
-  if (dto.stockPresentaciones !== undefined) out.stockPresentacion = dto.stockPresentaciones;
+  if (dto.stockPresentacion !== undefined) out.stockPresentacion = dto.stockPresentacion;
   if (dto.precioUnitario !== undefined) out.precioUnitarioPresentacion = dto.precioUnitario;
   if (dto.fechaIngreso !== undefined) out.fechaRegistro = dto.fechaIngreso;
   if (dto.idCategoria !== undefined) out.categoriaId = dto.idCategoria;

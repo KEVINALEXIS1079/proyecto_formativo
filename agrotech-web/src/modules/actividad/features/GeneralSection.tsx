@@ -406,6 +406,7 @@ export default function GeneralSection({
               <div className="flex justify-between items-center">
                 <span className="text-sm font-semibold text-gray-600 block">Producto a Cosechar: </span>
                 <Button 
+                  type="button"
                   size="sm" 
                   color="warning" 
                   variant="flat" 

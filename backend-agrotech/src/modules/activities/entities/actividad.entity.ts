@@ -82,16 +82,19 @@ export class Actividad extends BaseEntity {
 
   @OneToMany(() => ActividadResponsable, (responsable) => responsable.actividad, {
     cascade: true,
+    orphanedRowAction: 'delete',
   })
   responsables: ActividadResponsable[];
 
   @OneToMany(() => ActividadServicio, (servicio) => servicio.actividad, {
     cascade: true,
+    orphanedRowAction: 'delete',
   })
   servicios: ActividadServicio[];
 
   @OneToMany(() => ActividadEvidencia, (evidencia) => evidencia.actividad, {
     cascade: true,
+    orphanedRowAction: 'delete',
   })
   evidencias: ActividadEvidencia[];
 
@@ -101,7 +104,10 @@ export class Actividad extends BaseEntity {
   @OneToMany(() => UsoHerramienta, (uso) => uso.actividad)
   usosHerramientas: UsoHerramienta[];
 
-  @OneToMany(() => ActividadHerramienta, (h) => h.actividad, { cascade: true })
+  @OneToMany(() => ActividadHerramienta, (h) => h.actividad, {
+    cascade: true,
+    orphanedRowAction: 'delete',
+  })
   herramientas: ActividadHerramienta[];
 
   // Campos específicos para Cosecha

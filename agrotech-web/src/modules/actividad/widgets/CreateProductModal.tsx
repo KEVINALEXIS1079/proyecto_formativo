@@ -33,7 +33,7 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Creat
       // Fix Typo in backend DTO if exists, but assuming 'unidadBase' matches entity
       const newProduct = await createProductoAgro({
         nombre: data.nombre,
-        unidadMedida: data.unidadBase,
+        unidadBase: data.unidadBase,
         descripcion: data.descripcion
       });
       toast.success("Producto creado exitosamente");
@@ -52,7 +52,10 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Creat
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalContent>
         {(onClose) => (
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={(e) => {
+            e.stopPropagation();
+            handleSubmit(onSubmit)(e);
+          }}>
             <ModalHeader className="flex flex-col gap-1">Registrar Nuevo Producto</ModalHeader>
             <ModalBody>
               <div className="space-y-4">

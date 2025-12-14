@@ -68,6 +68,7 @@ export default function CodePage() {
       const message = e?.response?.data?.message || e?.message || "No se pudo verificar el código";
       setMsg(Array.isArray(message) ? message.join(", ") : message);
       setMsgVariant("danger");
+      setVerified(false);
       setOpen(true);
     }
   }

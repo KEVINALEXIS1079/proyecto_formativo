@@ -127,7 +127,7 @@ export default function InsumoForm({
       creadoPorUsuarioId: user?.id, // Agregar ID del usuario actual
     };
 
-    console.log("DEBUG: Form handleSubmit - Processed data:", data);
+
     setPendingData(data);
     setIsModalOpen(true);
   };

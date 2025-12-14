@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, In, Between, MoreThanOrEqual, LessThanOrEqual, Not } from 'typeorm';
 import { Actividad } from '../../activities/entities/actividad.entity';
 import { ActividadResponsable } from '../../activities/entities/actividad-responsable.entity';
 import { ActividadInsumoUso } from '../../activities/entities/actividad-insumo-uso.entity';
@@ -94,11 +94,14 @@ export class CropReportsService {
     }
 
     // 5. Obtener VENTAS del cultivo
-    const ventaFilter: any = { cultivoId };
+    const ventaFilter: any = { 
+      cultivoId,
+      venta: { estado: Not('anulada') }
+    };
 
     // Solo agregar filtro de relación si hay filtro de fechas
     if (dateFilter) {
-      ventaFilter.venta = { fecha: dateFilter };
+      ventaFilter.venta.fecha = dateFilter;
     }
 
     let ventasDetalles: VentaDetalle[] = [];

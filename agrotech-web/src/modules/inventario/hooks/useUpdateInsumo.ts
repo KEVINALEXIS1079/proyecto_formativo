@@ -108,12 +108,12 @@ function detectarCambios(anterior: Insumo, actual: Insumo): string[] {
   }
   
   // Campos de stock
-  if (anterior.stockPresentaciones !== actual.stockPresentaciones) {
-    cambios.push(`Stock Presentaciones: ${anterior.stockPresentaciones} → ${actual.stockPresentaciones}`);
+  if (anterior.stockPresentacion !== actual.stockPresentacion) {
+    cambios.push(`Stock Presentaciones: ${anterior.stockPresentacion} → ${actual.stockPresentacion}`);
   }
   
-  if (anterior.stockTotalBase !== actual.stockTotalBase) {
-    cambios.push(`Stock Total Base: ${anterior.stockTotalBase} → ${actual.stockTotalBase}`);
+  if (anterior.stockUso !== actual.stockUso) {
+    cambios.push(`Stock Total Base: ${anterior.stockUso} → ${actual.stockUso}`);
   }
   
   // Precios

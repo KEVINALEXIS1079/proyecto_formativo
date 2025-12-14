@@ -456,7 +456,12 @@ export class InventoryController {
 
     // Generar nombre único para el archivo
     const filename = `${Date.now()}-${file.originalname}`;
-    const filePath = `uploads/insumos/${filename}`;
+    const uploadDir = 'uploads/insumos';
+    
+    // Asegurar que el directorio existe
+    await fs.promises.mkdir(uploadDir, { recursive: true });
+
+    const filePath = `${uploadDir}/${filename}`;
 
     // Guardar el archivo
     await fs.promises.writeFile(filePath, file.buffer);

@@ -1,4 +1,5 @@
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Button } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { LoteMap } from "../../cultivos/widgets";
 import { useCreateLote, useUpdateLote } from "../../cultivos/hooks/useLotes";
@@ -18,6 +19,7 @@ import MapValidationAlert from "../components/MapValidationAlert";
 
 export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
   // ... existing hooks
+  const qc = useQueryClient();
   const { data: lotes = [], refetch } = useGeoData();
   const { createLote, loading: creating } = useCreateLote();
   const { updateLote, loading: updating } = useUpdateLote();
@@ -83,7 +85,8 @@ export default function LoteModal({ isOpen, onClose, loteToEdit }: Props) {
       } else {
         await createLote(payload);
       }
-      refetch();
+      // Invalidate queries to update LoteListFeature
+      await qc.invalidateQueries({ queryKey: ["geo", "lotes"] });
       onClose();
     } catch (error: any) {
       // ... error handling

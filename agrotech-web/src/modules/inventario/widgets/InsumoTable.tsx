@@ -112,7 +112,7 @@ export const InsumoTable = ({
               <TableCell>
                 <div className="text-sm text-right">
                   <div>
-                    {insumo.stockPresentaciones} {insumo.presentacionUnidad}
+                    {insumo.stockPresentacion} {insumo.presentacionUnidad}
                   </div>
                   <div className="text-xs text-gray-500">
                     {insumo.stockTotalPresentacion} total

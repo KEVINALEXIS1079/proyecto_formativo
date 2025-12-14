@@ -24,4 +24,16 @@ export class UpdateSensorDto {
   @IsOptional()
   @IsNumber({}, { message: 'El umbral máximo debe ser un número' })
   umbralMax?: number | null;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El ID del lote debe ser un número' })
+  loteId?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El ID del sublote debe ser un número' })
+  subLoteId?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El ID del tipo de sensor debe ser un número' })
+  tipoSensorId?: number;
 }

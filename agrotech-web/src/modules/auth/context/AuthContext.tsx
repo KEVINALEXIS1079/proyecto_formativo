@@ -100,8 +100,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // View AuthContext types to check.
       // If checks strict roleId is hard, we can just reload if we are not sure, or fetch profile.
       // Easiest is to reload permissions.
+      // Update permissions immediately when role changes
       console.log('[Auth] Permissions updated via socket (role)', payload);
-      if (state.user?.id) reloadPermissions(state.user.id);
+      // We assume the payload might contain userId or we reload for current user if role matches?
+      // Actually the event is 'permissions:role-updated' { rolId: number }
+      // Since we don't store rolId in state.user easily, we simply reload permissions for the current user 
+      // to be safe, or we could fetch profile again to see if my role changed.
+      // Better approach: fetch profile to check if my role ID matches the updated role.
+      // For now, let's just reload permissions to be safe if the user is logged in.
+      if (state.user?.id) {
+          await reloadPermissions(state.user.id);
+          // Also refresh profile to get new role name if needed
+          const { getMyProfile } = await import('@/modules/profile/api/profile.api');
+          const userProfile = await getMyProfile();
+           setState(prev => ({
+            ...prev,
+            user: {
+              ...prev.user!,
+              rol: userProfile.rol?.nombre ?? "Sin rol",
+            }
+          }));
+      }
     };
 
     socket.on('permissions:user-updated', handleUserUpdated);

@@ -420,6 +420,7 @@ export class ProductionService {
             costoTotal: detalle.cantidadKg * loteProduccion.costoUnitarioKg,
             descripcion: `Anulación venta ${ventaId}`,
             ventaId,
+            usuarioId,
           });
         }
       }

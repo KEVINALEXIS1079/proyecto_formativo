@@ -24,7 +24,7 @@ export const listProductosAgro = async (): Promise<any[]> => {
   return data;
 };
 
-export const createProductoAgro = async (payload: { nombre: string; unidadMedida: string; descripcion?: string }) => {
+export const createProductoAgro = async (payload: { nombre: string; unidadBase: string; descripcion?: string }) => {
   const { data } = await api.post("/production/productos", payload);
   return data;
 };

@@ -23,7 +23,7 @@ export class CultivosService {
     @Inject(forwardRef(() => GeoService)) private geoService: GeoService,
   ) {}
 
-  async createCultivo(data: CreateCultivoDto) {
+  async createCultivo(data: CreateCultivoDto, usuarioId?: number) {
     // RF12: Validar XOR - exactamente uno debe estar presente
     if (!data.loteId && !data.subLoteId) {
       throw new BadRequestException('Debe especificar loteId o subLoteId');
@@ -78,7 +78,22 @@ export class CultivosService {
       fechaCreacion: new Date(),
     });
 
-    return this.cultivoRepo.save(cultivo);
+    const saved = await this.cultivoRepo.save(cultivo);
+
+    // [FIX]: Registrar historial de creación
+    await this.historialRepo.save(
+      this.historialRepo.create({
+        cultivoId: saved.id,
+        usuarioId: usuarioId ?? 0,
+        motivo: 'Creación inicial del cultivo',
+        cambios: {
+          estado: { previo: null, nuevo: 'activo' },
+          nombre: { previo: null, nuevo: saved.nombreCultivo },
+        },
+      }),
+    );
+
+    return saved;
   }
 
   async listHistorial(limit = 50, cultivoId?: number) {
@@ -301,33 +316,71 @@ export class CultivosService {
   async updateCultivoFechaSiembra(
     cultivoId: number,
     fecha: Date,
+    usuarioId: number,
     manager?: any,
   ) {
     const repo = manager ? manager.getRepository(Cultivo) : this.cultivoRepo;
+    const historialRepo = manager
+      ? manager.getRepository(CultivoHistorial)
+      : this.historialRepo;
+
     const cultivo = await repo.findOne({ where: { id: cultivoId } });
 
     if (!cultivo) throw new NotFoundException(`Cultivo ${cultivoId} not found`);
 
     if (!cultivo.fechaSiembra) {
       cultivo.fechaSiembra = fecha;
+      const oldState = cultivo.estado;
       cultivo.estado = 'activo'; // Ensure crop is marked as active
       await repo.save(cultivo);
+
+      // [FIX] History log
+      await historialRepo.save(
+        historialRepo.create({
+          cultivoId,
+          usuarioId,
+          motivo: 'Siembra registrada',
+          cambios: {
+            estado: { previo: oldState, nuevo: 'activo' },
+            fechaSiembra: { previo: null, nuevo: fecha.toISOString() },
+          },
+        }),
+      );
     }
   }
 
   async updateCultivoFechaFinalizacion(
     cultivoId: number,
     fecha: Date,
+    usuarioId: number,
     manager?: any,
   ) {
     const repo = manager ? manager.getRepository(Cultivo) : this.cultivoRepo;
+    const historialRepo = manager
+      ? manager.getRepository(CultivoHistorial)
+      : this.historialRepo;
+
     const cultivo = await repo.findOne({ where: { id: cultivoId } });
 
     if (!cultivo) throw new NotFoundException(`Cultivo ${cultivoId} not found`);
 
+    const oldState = cultivo.estado;
     cultivo.fechaFinalizacion = fecha;
     cultivo.estado = 'finalizado';
     await repo.save(cultivo);
+
+    // [FIX] History log
+    await historialRepo.save(
+      historialRepo.create({
+        cultivoId,
+        usuarioId,
+        motivo: 'Cosecha/Finalización registrada',
+        cambios: {
+          estado: { previo: oldState, nuevo: 'finalizado' },
+          fechaFinalizacion: { previo: null, nuevo: fecha.toISOString() },
+        },
+      }),
+    );
   }
 
   // RF_INT: Acumular costos al cultivo (Transaccional)

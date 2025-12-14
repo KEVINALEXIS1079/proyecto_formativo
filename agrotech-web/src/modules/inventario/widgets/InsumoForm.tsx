@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { QK_INSUMOS_LIST } from "../hooks/useInsumoList";
+import { toast } from "react-toastify";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
@@ -39,6 +42,7 @@ export const InsumoForm = ({
   const { data: proveedores = [] } = useProveedorList();
   const { data: almacenes = [] } = useAlmacenList();
   const { user } = useAuth();
+  const qc = useQueryClient();
 
   // Hooks para crear catálogos
   const createCategoriaMutation = useCreateCategoria();
@@ -70,14 +74,14 @@ export const InsumoForm = ({
     // Validación obligatoria de descripción
     const descripcion = formData.get("descripcion") as string;
     if (!descripcion || descripcion.trim() === "") {
-      alert("La descripción es obligatoria antes de continuar.");
+      toast.error("La descripción es obligatoria antes de continuar.");
       return;
     }
 
     const presentacionUnidad = formData.get("presentacionUnidad") as UnidadPresentacion;
     const conversion = CONVERSION_TABLE[presentacionUnidad];
     if (!conversion) {
-      alert("Unidad de presentación no soportada");
+      toast.error("Unidad de presentación no soportada");
       return;
     }
 
@@ -96,7 +100,7 @@ export const InsumoForm = ({
       presentacionUnidad,
       unidadBase: conversion.unidadBase,
       factorConversion: conversion.factor,
-      stockPresentaciones: parseInt(formData.get("stockPresentaciones") as string),
+      stockPresentacion: parseInt(formData.get("stockPresentaciones") as string), // Input still named stockPresentaciones for backward compat in UI or rename input too? Let's keep input name but map to right property
       precioUnitario: parseFloat(formData.get("precioUnitario") as string),
       fechaIngreso,
       idCategoria: parseInt(formData.get("idCategoria") as string),
@@ -118,17 +122,23 @@ export const InsumoForm = ({
         if (selectedFile && result?.id) {
           try {
             await uploadInsumoImage(result.id, selectedFile);
-            if (!isEdit) alert('Insumo creado correctamente');
           } catch (uploadError) {
             console.error('Error subiendo imagen:', uploadError);
-            alert('Insumo creado/actualizado, pero hubo un error subiendo la imagen.');
+            toast.warning('Insumo creado/actualizado, pero hubo un error subiendo la imagen.');
           }
         }
 
+        // Force a fresh fetch of the list to show the new image URL
+        await qc.invalidateQueries({ queryKey: QK_INSUMOS_LIST, exact: false });
+
+        if (!isEdit) toast.success('Insumo creado correctamente');
+        else toast.success('Insumo actualizado correctamente');
+        
+        onClose(); // Close the form
         setPendingData(null);
       } catch (error) {
         console.error('Error guardando insumo:', error);
-        alert('Error al guardar el insumo. Verifique la consola.');
+        toast.error('Error al guardar el insumo. Verifique la consola.');
         return;
       }
     }
@@ -193,6 +203,7 @@ export const InsumoForm = ({
               </label>
               <ImageUpload
                 onFileChange={setSelectedFile}
+                currentImageUrl={insumo?.imagenUrl}
                 label="Subir foto"
               />
             </CardBody>
@@ -323,7 +334,7 @@ export const InsumoForm = ({
                 label="Stock (Presentaciones)"
                 type="number"
                 placeholder="0"
-                defaultValue={insumo?.stockPresentaciones?.toString()}
+                defaultValue={insumo?.stockPresentacion?.toString()}
                 required
                 variant="bordered"
                 description="Cantidad de paquetes/bultos disponibles"

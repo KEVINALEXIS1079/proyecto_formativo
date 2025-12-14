@@ -353,6 +353,20 @@ export async function seedPermisos(dataSource: DataSource) {
       descripcion: 'Eliminar transacciones financieras',
     },
 
+    // Reportes & Analítica
+    {
+      modulo: 'reportes',
+      accion: 'ver',
+      clave: 'reportes.ver',
+      descripcion: 'Ver reportes y analítica',
+    },
+    {
+      modulo: 'reportes',
+      accion: 'exportar',
+      clave: 'reportes.exportar',
+      descripcion: 'Exportar reportes (PDF/Excel)',
+    },
+
     // Usuarios extra
     {
       modulo: 'usuarios',

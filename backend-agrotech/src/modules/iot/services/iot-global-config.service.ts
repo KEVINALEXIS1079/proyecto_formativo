@@ -27,8 +27,10 @@ export class IotGlobalConfigService {
     });
     const saved = await this.configRepo.save(entity);
     
-    // Initialize sensors for the first time
-    await this.initializeSensors(saved, [...(saved.defaultTopics || []), ...(saved.customTopics || [])]);
+    // Initialize sensors for the first time ONLY if autoDiscover is enabled
+    if (saved.autoDiscover) {
+      await this.initializeSensors(saved, [...(saved.defaultTopics || []), ...(saved.customTopics || [])]);
+    }
     
     // Mark as initialized
     saved.defaultSensorsInitialized = true;
@@ -61,12 +63,18 @@ export class IotGlobalConfigService {
     // Calculate ONLY new topics to add
     const topicsToAdd = newTopics.filter(t => !oldTopics.includes(t));
 
-    // Store old lote and sublote values to check if they changed
+    // Store old lote, sublote and activo values
     const oldLoteId = cfg.loteId;
     const oldSubLoteId = cfg.subLoteId;
+    const oldActivo = cfg.activo;
 
     Object.assign(cfg, dto);
     const saved = await this.configRepo.save(cfg);
+
+    // Update sensors active status if config status changed
+    if (oldActivo !== saved.activo) {
+       await this.iotService.setSensorsActiveStatusByGlobalConfigId(id, saved.activo);
+    }
 
     // Update lote and sublote of associated sensors if they changed
     if (saved.loteId !== oldLoteId || saved.subLoteId !== oldSubLoteId) {
@@ -77,7 +85,7 @@ export class IotGlobalConfigService {
       );
     }
 
-    if (topicsToAdd.length > 0) {
+    if (topicsToAdd.length > 0 && saved.autoDiscover) {
       await this.initializeSensors(saved, topicsToAdd);
     }
 
@@ -90,6 +98,10 @@ export class IotGlobalConfigService {
     const cfg = await this.findOne(id);
     cfg.activo = false;
     const saved = await this.configRepo.save(cfg);
+    
+    // Deactivate associated sensors
+    await this.iotService.setSensorsActiveStatusByGlobalConfigId(id, false);
+    
     await this.mqttService.updateConfig(saved);
     return saved;
   }

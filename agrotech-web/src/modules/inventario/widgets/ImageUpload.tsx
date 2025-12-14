@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { Button } from "@heroui/button";
 
@@ -12,6 +12,12 @@ export default function ImageUpload({ onFileChange, currentImageUrl, label = "Im
     const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (currentImageUrl) {
+            setPreview(currentImageUrl);
+        }
+    }, [currentImageUrl]);
 
     const handleFileChange = (file: File | null) => {
         if (file) {

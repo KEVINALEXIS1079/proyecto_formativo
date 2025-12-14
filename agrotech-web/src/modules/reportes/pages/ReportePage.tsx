@@ -92,18 +92,13 @@ export default function ReportePage() {
                 || selectedCultivo?.lote?.id
                 || selectedCultivo?.sublote?.idLote;
 
-            console.log("Report Preview - Selected Cultivo:", selectedCultivo);
-            console.log("Report Preview - Resolved Lote ID:", loteId);
-
             if (loteId) {
                 try {
-                    console.log("Fetching IoT Data for Lote:", loteId);
                     const iotData = await IoTApi.getGeneralReport({
                         loteId: loteId,
                         startDate: effectiveStartDate,
                         endDate: effectiveEndDate
                     });
-                    console.log("IoT Data Received:", iotData);
                     setPreviewIotData(iotData);
                 } catch (e) {
                     console.error("Error fetching IoT for preview", e);
@@ -702,18 +697,9 @@ export default function ReportePage() {
                 if (previewIotData.sensoresDetalle && previewIotData.sensoresDetalle.length > 0) {
                     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-                    console.log('=== INICIANDO GENERACIÓN DE GRÁFICAS ===');
-                    console.log('Total sensores:', previewIotData.sensoresDetalle.length);
-
                     for (let i = 0; i < previewIotData.sensoresDetalle.length; i++) {
                         const sensor = previewIotData.sensoresDetalle[i];
-                        console.log(`\n--- Sensor ${i + 1}: ${sensor.nombre} ---`);
-                        console.log('Tiene tendencia:', !!sensor.tendencia);
-                        console.log('Longitud tendencia:', sensor.tendencia?.length || 0);
-
                         if (sensor.tendencia && sensor.tendencia.length > 0) {
-                            console.log('Primeros 3 puntos de tendencia:', sensor.tendencia.slice(0, 3));
-
                             if (yPosition > 170) {
                                 doc.addPage();
                                 yPosition = 20;
@@ -726,8 +712,6 @@ export default function ReportePage() {
                             yPosition += 6;
 
                             try {
-                                console.log(`Llamando a convertChartToImageFallback para ${sensor.nombre}...`);
-
                                 const chartImage = await convertChartToImageFallback(sensor.tendencia, {
                                     title: sensor.nombre,
                                     unit: sensor.unidad,
@@ -736,14 +720,10 @@ export default function ReportePage() {
                                     height: 400,
                                 });
 
-                                console.log(`Resultado de conversión:`, chartImage ? 'ÉXITO (imagen generada)' : 'FALLO (null)');
-
                                 if (chartImage) {
-                                    console.log(`Agregando imagen al PDF (180x90mm)`);
                                     doc.addImage(chartImage, 'PNG', 14, yPosition, 180, 90);
                                     yPosition += 95;
                                 } else {
-                                    console.warn(`No se pudo generar gráfica para ${sensor.nombre} - convertChartToImageFallback retornó null`);
                                     doc.setFontSize(9);
                                     doc.setTextColor(150, 150, 150);
                                     doc.text('(Grafica no disponible - error en generacion)', 14, yPosition);
@@ -751,17 +731,15 @@ export default function ReportePage() {
                                 }
                             } catch (error) {
                                 console.error(`ERROR al generar gráfica para ${sensor.nombre}:`, error);
-                                console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
                                 doc.setFontSize(9);
                                 doc.setTextColor(150, 150, 150);
                                 doc.text('(Error al generar grafica)', 14, yPosition);
                                 yPosition += 10;
                             }
                         } else {
-                            console.log(`Sensor ${sensor.nombre} no tiene datos de tendencia - SALTANDO`);
+                            // No trend data
                         }
                     }
-                    console.log('=== FIN GENERACIÓN DE GRÁFICAS ===\n');
                 }
 
                 // 5. ALERTAS DETALLADAS

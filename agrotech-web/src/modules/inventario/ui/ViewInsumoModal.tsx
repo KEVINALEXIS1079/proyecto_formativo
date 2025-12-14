@@ -64,17 +64,17 @@ export const ViewInsumoModal: React.FC<ViewInsumoModalProps> = ({
 
     if (!insumo) return null;
 
-    const stockPercentage = insumo.stockPresentaciones > 0 ? 100 : 0;
+    const stockPercentage = insumo.stockPresentacion > 0 ? 100 : 0;
     const getStockColor = () => {
-        if (insumo.stockPresentaciones === 0) return 'danger';
-        if (insumo.stockPresentaciones < 10) return 'warning';
+        if (insumo.stockPresentacion === 0) return 'danger';
+        if (insumo.stockPresentacion < 10) return 'warning';
         return 'success';
     };
 
-    const getStockStatus = () => {
-        if (insumo.stockPresentaciones === 0) return 'Sin Stock';
-        if (insumo.stockPresentaciones < 10) return 'Stock Bajo';
-        return 'Stock Disponible';
+    const getStockText = () => {
+        if (insumo.stockPresentacion === 0) return 'Sin Stock';
+        if (insumo.stockPresentacion < 10) return 'Stock Bajo';
+        return 'En Stock';
     };
 
     return (
@@ -91,7 +91,7 @@ export const ViewInsumoModal: React.FC<ViewInsumoModalProps> = ({
                                         </h2>
                                         <div className="flex items-center gap-3 mt-2">
                                             <Chip size="sm" color={getStockColor()} variant="flat">
-                                                {getStockStatus()}
+                                                {getStockText()}
                                             </Chip>
                                             <Chip size="sm" color="secondary" variant="flat">
                                                 {insumo.categoria?.nombre || 'Sin categoría'}
@@ -227,7 +227,7 @@ export const ViewInsumoModal: React.FC<ViewInsumoModalProps> = ({
                                                             Estado del Stock
                                                         </h3>
                                                         <Chip size="sm" color={getStockColor()} variant="flat">
-                                                            {getStockStatus()}
+                                                            {getStockText()}
                                                         </Chip>
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

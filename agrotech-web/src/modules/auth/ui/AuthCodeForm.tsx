@@ -104,7 +104,7 @@ export default function AuthCodeForm({
         color="success"
         className="w-full rounded-full"
         isLoading={loading}
-        onPress={() => onSubmit({ codigo: digits.join("") })}
+
         isDisabled={digits.some(d => d === "")}
       >
         Verificar

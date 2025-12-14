@@ -551,15 +551,17 @@ export default function VerActividadModal({
             </ModalBody>
 
             <ModalFooter className="border-t border-gray-200">
-              <Button
-                as={Link}
-                to={`/actividades/${actividad.id}/editar`}
-                color="warning"
-                variant="flat"
-                startContent={<Pencil className="w-4 h-4" />}
-              >
-                Editar actividad
-              </Button>
+              {!["Finalizada", "FINALIZADA"].includes(actividad.estado) && (
+                <Button
+                  as={Link}
+                  to={`/actividades/${actividad.id}/editar`}
+                  color="warning"
+                  variant="flat"
+                  startContent={<Pencil className="w-4 h-4" />}
+                >
+                  Editar actividad
+                </Button>
+              )}
               <Button color="danger" variant="light" onPress={onClose}>
                 Cerrar
               </Button>

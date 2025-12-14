@@ -579,15 +579,15 @@ export default function DetalleInsumoPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200 text-center">
                 <label className="block text-sm font-semibold text-emerald-700 uppercase tracking-wide">Presentaciones</label>
-                <p className="mt-3 text-4xl font-bold text-emerald-600">{insumo.stockPresentaciones}</p>
+                <p className="mt-3 text-4xl font-bold text-emerald-600">{insumo.stockPresentacion ?? 0}</p>
               </div>
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 text-center">
                 <label className="block text-sm font-semibold text-blue-700 uppercase tracking-wide">Total Base</label>
                 <p className="mt-3 text-4xl font-bold text-blue-600">
-                  {insumo.stockTotalBase} <span className="text-lg">{insumo.unidadBase}</span>
+                  {insumo.stockUso ?? 0} <span className="text-lg">{insumo.unidadBase}</span>
                 </p>
                 <p className="mt-2 text-sm text-blue-600">
-                  Stock Uso: {insumo.stockTotalBase}
+                  Stock Uso: {insumo.stockUso ?? 0}
                 </p>
               </div>
             </div>
@@ -603,16 +603,16 @@ export default function DetalleInsumoPage() {
               <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200 text-center">
                 <label className="block text-sm font-semibold text-amber-700 uppercase tracking-wide">Precio Unitario Presentación</label>
                 <p className="mt-3 text-3xl font-bold text-amber-600">
-                  {insumo.precioUnitarioPresentacion ? `$${insumo.precioUnitarioPresentacion.toLocaleString()}` : 'N/A'}
+                  {insumo.precioUnitarioPresentacion != null ? `$${insumo.precioUnitarioPresentacion.toLocaleString()}` : 'N/A'}
                 </p>
                 <p className="mt-2 text-sm text-amber-600">
-                  Precio Uso: {insumo.precioUnitarioUso ? `$${insumo.precioUnitarioUso.toLocaleString()}` : 'N/A'}
+                  Precio Uso: {insumo.precioUnitarioUso != null ? `$${insumo.precioUnitarioUso.toLocaleString()}` : 'N/A'}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200 text-center">
                 <label className="block text-sm font-semibold text-indigo-700 uppercase tracking-wide">Valor Inventario</label>
                 <p className="mt-3 text-3xl font-bold text-indigo-600">
-                  {insumo.precioTotal ? `$${insumo.precioTotal.toLocaleString()}` : 'N/A'}
+                  {insumo.precioTotal != null ? `$${insumo.precioTotal.toLocaleString()}` : 'N/A'}
                 </p>
               </div>
             </div>

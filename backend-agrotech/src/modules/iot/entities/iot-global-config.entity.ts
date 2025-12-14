@@ -43,6 +43,9 @@ export class IotGlobalConfig extends BaseEntity {
   @Column({ name: 'default_sensors_initialized', default: false })
   defaultSensorsInitialized: boolean;
 
+  @Column({ name: 'auto_discover', default: true })
+  autoDiscover: boolean;
+
   @OneToMany(() => Sensor, (sensor) => sensor.globalConfig)
   sensores: Sensor[];
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import { UserStatus } from '../models/types/user.types';
 import type { User, CreateUserDto } from '../models/types/user.types';
 import { useCreateUser, useUpdateUser, useChangeUserRole, useUploadAvatar } from '../hooks/useUsers';
@@ -40,8 +40,13 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
     rolId: 5, // Default to Invitado
   });
 
+  const isSubmittingRef = useRef(false);
+
   useEffect(() => {
-    if (user) {
+    // Only update form data from props if we are NOT currently submitting.
+    // This prevents race conditions where an intermediate query invalidation (e.g. from updateUser)
+    // fetches old data and resets the form before changeRole has a chance to run.
+    if (user && !isSubmittingRef.current) {
       setFormData({
         nombre: user.nombre,
         apellido: user.apellido,
@@ -81,6 +86,7 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    isSubmittingRef.current = true;
     try {
       // Helper to clean empty strings
       const cleanData = (data: any) => {
@@ -104,9 +110,13 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
         await updateUserMutation.mutateAsync({ id: user.id, data: updateData });
 
         // Update Role if changed
-        if (formData.rolId && formData.rolId !== user.rolId) {
-          console.log(`Updating role for user ${user.id} from ${user.rolId} to ${formData.rolId}`);
-          await changeRoleMutation.mutateAsync({ id: user.id, rolId: formData.rolId });
+        // Capture values from current scope to avoid any state shift issues
+        const currentRolId = formData.rolId;
+        const originalRolId = user.rolId;
+
+        if (currentRolId && currentRolId !== originalRolId) {
+          console.log(`Updating role for user ${user.id} from ${originalRolId} to ${currentRolId}`);
+          await changeRoleMutation.mutateAsync({ id: user.id, rolId: currentRolId });
         }
       } else {
         // Create
@@ -125,6 +135,8 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
     } catch (error) {
       console.error('Error saving user:', error);
       alert('Error al guardar el usuario. Verifique la consola para más detalles.');
+    } finally {
+      isSubmittingRef.current = false;
     }
   };
 

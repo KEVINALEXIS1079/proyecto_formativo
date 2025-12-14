@@ -48,13 +48,8 @@ const IoTPage: React.FC = () => {
   const lastSegment = currentPath.split('/').pop();
   const activeTab = lastSegment === 'analytics' ? 'analytics' : 'dashboard';
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Spinner color="success" label="Cargando módulo IoT..." />
-      </div>
-    );
-  }
+  // Non-blocking loading state - we render layout anyway
+  // if (loading) { return <Spinner /> } <- REMOVED to show menu 
 
   const handleDeleteSensor = async (id: number) => {
     try {
@@ -105,8 +100,15 @@ const IoTPage: React.FC = () => {
 
       {/* Main Content */}
       <Surface className="overflow-hidden p-0">
-        <div className="p-4 md:p-6">
-          <Outlet context={{ sensors, refreshSensors, onToggleSensor: handleToggleSensor, onEditSensor: handleEditSensor, onDeleteSensor: handleDeleteSensor }} />
+        <div className="p-4 md:p-6 min-h-[500px]">
+          {loading ? (
+             <div className="flex flex-col justify-center items-center h-full py-20 space-y-4">
+              <Spinner color="success" size="lg" />
+              <p className="text-gray-500 animate-pulse">Sincronizando sensores...</p>
+            </div>
+          ) : (
+            <Outlet context={{ sensors, refreshSensors, onToggleSensor: handleToggleSensor, onEditSensor: handleEditSensor, onDeleteSensor: handleDeleteSensor }} />
+          )}
         </div>
       </Surface>
 

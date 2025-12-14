@@ -35,9 +35,9 @@ export interface Insumo {
   presentacionUnidad: UnidadPresentacion;
   unidadBase: UnidadBase;
   factorConversion: number;
-  stockPresentaciones: number;
-  stockTotalBase: number;
-  stockTotalPresentacion: number;
+  stockPresentacion: number; // Renamed from stockPresentaciones
+  stockUso: number; // Renamed from stockTotalBase
+  stockTotalPresentacion?: number; // Kept as optional/legacy or check if needed
   precioUnitarioPresentacion: number;
   precioUnitarioUso: number;
   precioTotal: number;
@@ -55,7 +55,6 @@ export interface Insumo {
   fechaUltimoMantenimiento?: string;
   stockReservado?: number;
   stockMinimo?: number;
-  stockUso?: number;
 }
 
 export type ReservaEstado = 'ACTIVA' | 'LIBERADA' | 'UTILIZADA';
@@ -121,7 +120,7 @@ export interface CreateInsumoInput {
   presentacionUnidad: UnidadPresentacion;
   unidadBase: UnidadBase;
   factorConversion: number;
-  stockPresentaciones: number;
+  stockPresentacion: number; // Renamed from stockPresentaciones
   precioUnitario: number;
   fechaIngreso: string;
   idCategoria: number;

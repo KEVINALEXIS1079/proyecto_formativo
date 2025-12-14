@@ -35,11 +35,12 @@ export class CultivosController {
     }),
   }))
   @UsePipes(new ValidationPipe())
-  async createCultivoHttp(@Body() dto: CreateCultivoDto, @UploadedFile() file?: Express.Multer.File) {
+  async createCultivoHttp(@Body() dto: CreateCultivoDto, @UploadedFile() file: Express.Multer.File | undefined, @Req() req: any) {
     if (file) {
       dto.imgCultivo = file.path.replace(/\\/g, '/');
     }
-    return this.createCultivo(dto);
+    const usuarioId = req?.user?.sub ?? req?.user?.id;
+    return this.createCultivo(dto, usuarioId);
   }
 
   @Get()
@@ -125,8 +126,8 @@ export class CultivosController {
   // Internal method for WebSocket: handles creating a cultivo by calling the service
   // Flow: Gateway calls this method -> calls cultivosService.createCultivo -> returns created cultivo
   @UsePipes(new ValidationPipe())
-  async createCultivo(createCultivoDto: CreateCultivoDto) {
-    return this.cultivosService.createCultivo(createCultivoDto);
+  async createCultivo(createCultivoDto: CreateCultivoDto, usuarioId?: number) {
+    return this.cultivosService.createCultivo(createCultivoDto, usuarioId);
   }
 
   // Internal method for WebSocket: handles updating a cultivo by calling the service

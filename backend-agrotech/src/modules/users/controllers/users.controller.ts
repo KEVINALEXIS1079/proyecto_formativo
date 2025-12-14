@@ -179,6 +179,7 @@ export class UsersController implements OnModuleInit {
   @RequirePermissions('usuarios.cambiar_rol')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async changeUserRoleHttp(@Param('id', ParseIntPipe) id: number, @Body() dto: ChangeRoleDto) {
+    console.log(`[UsersController] Change Role Request: ID=${id}, Payload=`, dto);
     return this.changeRole(id, dto);
   }
 

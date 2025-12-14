@@ -7,7 +7,7 @@ export class CreateProductoAgroDto {
 
   @IsString()
   @IsNotEmpty()
-  unidadMedida: string;
+  unidadBase: string;
 
   @IsString()
   @IsOptional()

@@ -32,11 +32,11 @@ export class SeedService implements OnModuleInit {
       `);
       this.logger.log(`Created ${this.SEED_LOG_TABLE} table`);
 
-      // Define seeds
+      // Define seeds (ONLY ESSENTIALS: Roles, Admin, Permisos)
+      // Removed 'modules' to avoid auto-loading test data
       const seeds = [
         { name: 'roles-admin', fn: seedRolesAndAdmin },
         { name: 'permisos', fn: seedPermisos },
-        { name: 'modules', fn: seedModules },
       ];
 
       // Execute seeds individually if not already executed

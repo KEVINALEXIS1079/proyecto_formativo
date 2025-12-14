@@ -777,17 +777,19 @@ export default function GestionarActividadModal({
               </Button>
 
               <div className="flex gap-2">
-                <Button
-                  color="warning"
-                  variant="flat"
-                  startContent={<Pencil className="w-4 h-4" />}
-                  onPress={() => {
-                    onClose();
-                    onEdit?.(actividad);
-                  }}
-                >
-                  Editar
-                </Button>
+                {!["Finalizada", "FINALIZADA"].includes(actividad.estado) && (
+                  <Button
+                    color="warning"
+                    variant="flat"
+                    startContent={<Pencil className="w-4 h-4" />}
+                    onPress={() => {
+                      onClose();
+                      onEdit?.(actividad);
+                    }}
+                  >
+                    Editar
+                  </Button>
+                )}
 
                 <div className="flex flex-col items-end gap-1">
                   {["Pendiente", "PENDIENTE"].includes(actividad.estado || "") && onFinalize && (

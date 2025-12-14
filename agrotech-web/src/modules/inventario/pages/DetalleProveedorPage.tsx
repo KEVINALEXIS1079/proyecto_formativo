@@ -43,7 +43,7 @@ export default function DetalleProveedorPage() {
       case "almacen":
         return item.almacen.nombre;
       case "stock":
-        return item.stockPresentaciones;
+        return item.stockPresentacion;
       default:
         return "";
     }

@@ -39,7 +39,7 @@ export class UsersService {
     // Búsqueda de texto en múltiples campos
     if (filters?.q && filters.q.trim() !== '') {
       queryBuilder.andWhere(
-        '(usuario.nombre ILIKE :q OR usuario.apellido ILIKE :q OR usuario.correo ILIKE :q OR usuario.identificacion ILIKE :q)',
+        '(usuario.nombre ILIKE :q OR usuario.apellido ILIKE :q OR usuario.correo ILIKE :q OR usuario.identificacion ILIKE :q OR usuario.idFicha ILIKE :q)',
         { q: `%${filters.q}%` }
       );
     }
@@ -134,11 +134,16 @@ export class UsersService {
   // RF69: Cambio de rol con invalidación de caché
   async changeRole(id: number, data: ChangeRoleDto) {
     const usuario = await this.findById(id);
-
     const oldRoleId = usuario.rolId;
+    console.log(`[UsersService] Changing role for user ${id}. Old: ${oldRoleId}, New: ${data.rolId}`);
 
+    // FORCE CHANGE: Update ID and clear relation to prevent TypeORM from using the old loaded relation
     usuario.rolId = data.rolId;
+    usuario.rol = null as any; 
+
+    // Explicitly update only the rolId column if possible, but save() is standard
     const updatedUser = await this.usuarioRepo.save(usuario);
+    console.log(`[UsersService] Saved user. Current DB rolId: ${updatedUser.rolId}`);
 
     // Invalidar caché de permisos
     await this.redisService.invalidateUserPermissions(id);
