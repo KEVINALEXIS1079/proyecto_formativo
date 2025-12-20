@@ -13,6 +13,12 @@ export interface User {
   apellido: string;
   identificacion: string;
   idFicha?: string;
+  programaFormacionId?: number;
+  programaFormacion?: {
+    id: number;
+    numeroFicha: string;
+    nombre: string;
+  };
   telefono?: string;
   correo: string;
   estado: UserStatus;
@@ -37,6 +43,7 @@ export interface CreateUserDto {
   apellido: string;
   identificacion: string;
   idFicha?: string;
+  programaFormacionId?: number;
   telefono?: string;
   correo: string;
   password?: string;
@@ -49,6 +56,7 @@ export interface UpdateUserDto {
   apellido?: string;
   identificacion?: string;
   idFicha?: string;
+  programaFormacionId?: number;
   telefono?: string;
   correo?: string;
   password?: string;

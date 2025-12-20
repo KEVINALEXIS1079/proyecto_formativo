@@ -4,7 +4,7 @@ Backend desarrollado en **NestJS v11** con **TypeORM** y **PostgreSQL** para la 
 
 ## Requisitos
 
-- **Node.js**: v18+
+- **Node.js**: v22+
 - **PostgreSQL**: 14+
 - **Redis**: v6 o superior (opcional, para caché y sockets)
 

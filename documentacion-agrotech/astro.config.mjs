@@ -7,10 +7,14 @@ export default defineConfig({
 	server: { host: '0.0.0.0' },
 	integrations: [
 		starlight({
-			title: 'Agrotech API Documentation',
-			logo: {
-				src: './src/assets/LogoTic.png',
+			title: {
+				en: 'Agrotech'
 			},
+			logo: {
+				src: './src/assets/logoAgrotech.png',
+				replacesTitle: true,
+			},
+			favicon: '/favicon.png',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/KEVINALEXIS1079/proyecto_formativo.git' }],
 			credits: false,
 			sidebar: [

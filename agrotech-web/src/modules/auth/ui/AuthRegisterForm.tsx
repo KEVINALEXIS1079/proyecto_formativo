@@ -95,11 +95,13 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
             label="Nombre" value={form.nombre_usuario}
             onValueChange={(v) => handleChange("nombre_usuario", v)}
             radius="lg" required
+            autoComplete="given-name"
           />
           <Input
             label="Apellido" value={form.apellido_usuario}
             onValueChange={(v) => handleChange("apellido_usuario", v)}
             radius="lg" required
+            autoComplete="family-name"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -129,6 +131,7 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
           description="Solo se permiten correos @gmail.com"
           placeholder="usuario@gmail.com"
           radius="lg" required
+          autoComplete="email"
         />
         <Input
           label="ID ficha" value={form.id_ficha}
@@ -137,6 +140,7 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
           isInvalid={!!errors.id_ficha}
           errorMessage={errors.id_ficha}
           radius="lg" inputMode="numeric" maxLength={8} required
+          autoComplete="off"
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -150,6 +154,7 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
             errorMessage={errors.contrasena_usuario}
             radius="lg"
             required
+            autoComplete="new-password"
             endContent={
               <button className="focus:outline-none" type="button" onClick={() => setVisiblePass(!visiblePass)}>
                 {visiblePass ? <EyeOff className="text-2xl text-default-400 pointer-events-none" /> : <Eye className="text-2xl text-default-400 pointer-events-none" />}
@@ -166,6 +171,7 @@ export default function AuthRegisterForm({ onSubmit, loading }: { onSubmit: (v: 
             errorMessage={errors.confirmar}
             radius="lg"
             required
+            autoComplete="new-password"
             endContent={
               <button className="focus:outline-none" type="button" onClick={() => setVisiblePass(!visiblePass)}>
                 {visiblePass ? <EyeOff className="text-2xl text-default-400 pointer-events-none" /> : <Eye className="text-2xl text-default-400 pointer-events-none" />}

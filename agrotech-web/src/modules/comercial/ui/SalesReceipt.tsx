@@ -72,7 +72,7 @@ export function SalesReceipt({ venta }: SalesReceiptProps) {
                     Imprimir
                 </Button>
                 <Button
-                    color="success"
+                    className="bg-gray-900 text-white shadow-md"
                     variant="flat"
                     startContent={<Download className="h-4 w-4" />}
                     onPress={handleDownloadPDF}

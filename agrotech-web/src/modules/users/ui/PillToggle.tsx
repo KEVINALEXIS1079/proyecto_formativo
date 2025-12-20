@@ -1,16 +1,17 @@
 import { motion } from "framer-motion";
-import { Users, Shield, Key } from "lucide-react";
+import { Users, Shield, GraduationCap, Key } from "lucide-react";
 
 export default function PillToggle({
   value,
   onChange,
 }: {
-  value: "users" | "roles" | "permissions";
-  onChange: (v: "users" | "roles" | "permissions") => void;
+  value: "users" | "roles" | "programas" | "permissions";
+  onChange: (v: "users" | "roles" | "programas" | "permissions") => void;
 }) {
   const options = [
     { value: "users" as const, icon: Users, label: "Usuarios" },
     { value: "roles" as const, icon: Shield, label: "Roles" },
+    { value: "programas" as const, icon: GraduationCap, label: "Programas" },
     { value: "permissions" as const, icon: Key, label: "Permisos" },
   ];
 

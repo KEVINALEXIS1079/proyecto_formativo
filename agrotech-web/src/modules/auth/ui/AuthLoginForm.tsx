@@ -24,25 +24,39 @@ export default function AuthLoginForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Auto-append @gmail.com if missing to allow username login
+    let finalCorreo = correo;
+    if (finalCorreo && !finalCorreo.includes('@')) {
+      finalCorreo += '@gmail.com';
+    }
+
     if (remember) {
-      localStorage.setItem("remember_email", correo);
+      localStorage.setItem("remember_email", finalCorreo);
     } else {
       localStorage.removeItem("remember_email");
     }
-    onSubmit({ correo, password, remember });
+    onSubmit({ correo: finalCorreo, password, remember });
   };
 
   return (
     <form className="grid gap-3" onSubmit={handleSubmit}>
       <Input
         label="Correo electrónico"
-        type="email"
+        type="text"
+        inputMode="email"
         value={correo}
         onValueChange={(v) => setCorreo(v.toLowerCase())}
         radius="lg"
         placeholder="usuario@gmail.com"
         isClearable
         required
+        autoComplete="username"
+        endContent={
+          !correo.includes('@') && (
+            <span className="text-default-400 text-small pointer-events-none">@gmail.com</span>
+          )
+        }
       />
       <Input
         label="Contraseña"
@@ -51,6 +65,7 @@ export default function AuthLoginForm({
         onValueChange={setPassword}
         radius="lg"
         required
+        autoComplete="current-password"
         endContent={
           <button className="focus:outline-none" type="button" onClick={toggleVisibility}>
             {isVisible ? (

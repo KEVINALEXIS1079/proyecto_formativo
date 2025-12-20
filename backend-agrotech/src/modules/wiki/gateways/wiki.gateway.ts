@@ -1,11 +1,12 @@
 import {
+  WebSocketServer,
   WebSocketGateway,
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
-import { Socket } from 'socket.io';
+import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
 import { WikiService } from '../services/wiki.service';
 import {
   WikiCreateDoDto,
@@ -22,7 +23,13 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 @WebSocketGateway({ namespace: 'wiki', cors: { origin: '*' } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
 export class WikiGateway {
-  constructor(private readonly wikiService: WikiService) {}
+  @WebSocketServer()
+  server: Server;
+
+  constructor(
+    @Inject(forwardRef(() => WikiService))
+    private readonly wikiService: WikiService
+  ) { }
 
   @SubscribeMessage('findAllEpas')
   @RequirePermissions('cultivos.ver')

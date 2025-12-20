@@ -8,7 +8,7 @@ export class FinanceService {
   constructor(
     @InjectRepository(TransaccionFinanciera)
     private transaccionRepo: Repository<TransaccionFinanciera>,
-  ) {}
+  ) { }
 
   // Registrar gasto de mano de obra en actividad
   async registrarGastoManoObra(
@@ -187,6 +187,7 @@ export class FinanceService {
   }
 
   // Obtener resumen financiero
+  // Obtener resumen financiero (Optimized)
   async getResumenFinanciero(filters?: {
     fechaInicio?: Date;
     fechaFin?: Date;
@@ -202,32 +203,41 @@ export class FinanceService {
       });
     }
 
-    const transacciones = await qb.getMany();
+    // 1. Calculate Ingresos and Gastos Total using SQL
+    // We use conditional summation: SUM(CASE WHEN tipo = '...' THEN monto ELSE 0 END)
+    const { totalIngresos, totalGastos, totalTransacciones } = await qb
+      .select("SUM(CASE WHEN transaccion.tipo = 'INGRESO_VENTA' THEN transaccion.monto ELSE 0 END)", 'totalIngresos')
+      .addSelect("SUM(CASE WHEN transaccion.tipo LIKE 'GASTO%' THEN transaccion.monto ELSE 0 END)", 'totalGastos')
+      .addSelect("COUNT(transaccion.id)", 'totalTransacciones')
+      .getRawOne();
 
-    const totalIngresos = transacciones
-      .filter((t) => t.tipo === 'INGRESO_VENTA')
-      .reduce((sum, t) => sum + t.monto, 0);
+    // 2. Calculate Gastos por Categoria using Group By
+    // We need a separate query for grouping or sophisticated conditional selects. 
+    // Group By is cleaner for dynamic categories.
+    const gastosByCategoryRaw = await this.transaccionRepo
+      .createQueryBuilder('transaccion')
+      .select('transaccion.categoria', 'categoria')
+      .addSelect('SUM(transaccion.monto)', 'total')
+      .where("transaccion.tipo LIKE 'GASTO%'")
+      .andWhere('transaccion.deletedAt IS NULL')
+      .andWhere(filters?.fechaInicio && filters?.fechaFin ? 'transaccion.fecha BETWEEN :inicio AND :fin' : '1=1', {
+        inicio: filters?.fechaInicio,
+        fin: filters?.fechaFin
+      })
+      .groupBy('transaccion.categoria')
+      .getRawMany();
 
-    const totalGastos = transacciones
-      .filter((t) => t.tipo.startsWith('GASTO'))
-      .reduce((sum, t) => sum + t.monto, 0);
-
-    const gastosPorCategoria = transacciones
-      .filter((t) => t.tipo.startsWith('GASTO'))
-      .reduce(
-        (acc, t) => {
-          acc[t.categoria] = (acc[t.categoria] || 0) + t.monto;
-          return acc;
-        },
-        {} as Record<string, number>,
-      );
+    const gastosPorCategoria: Record<string, number> = {};
+    gastosByCategoryRaw.forEach(item => {
+      gastosPorCategoria[item.categoria] = parseFloat(item.total);
+    });
 
     return {
-      totalIngresos,
-      totalGastos,
-      balance: totalIngresos - totalGastos,
+      totalIngresos: parseFloat(totalIngresos || 0),
+      totalGastos: parseFloat(totalGastos || 0),
+      balance: parseFloat(totalIngresos || 0) - parseFloat(totalGastos || 0),
       gastosPorCategoria,
-      totalTransacciones: transacciones.length,
+      totalTransacciones: parseInt(totalTransacciones || 0, 10),
     };
   }
 

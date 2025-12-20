@@ -38,14 +38,14 @@ documentacion-agrotech/
 
 ## 📦 Prerrequisitos
 
-- **Node.js** 18.x
-- **npm** 9.x
+- **Node.js** 22.x
+- **npm** 10.x
 
 ### Verificar versiones
 
 ```bash
-node --version  # Debe ser v18.x
-npm --version   # Debe ser 9.x
+node --version  # Debe ser v22.x
+npm --version   # Debe ser 10.x
 ```
 
 ## 🚀 Instalación

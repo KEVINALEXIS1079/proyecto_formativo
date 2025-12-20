@@ -8,6 +8,8 @@ import { SensorCharts } from '../widgets/SensorCharts';
 import type { Sensor } from '../model/iot.types';
 import { IoTApi } from '../api/iot.api';
 import { useIoTRealTimeSensors } from '../hooks/useIoTRealTimeSensors';
+import { useIoTAlerts } from '../hooks/useIoTAlerts';
+import { useQueryClient } from '@tanstack/react-query';
 
 const MemoizedSensorCharts = React.memo(SensorCharts);
 
@@ -19,49 +21,36 @@ export const LotsAnalyticsPage: React.FC = () => {
   const [reportStart, setReportStart] = useState<string>('');
   const [reportEnd, setReportEnd] = useState<string>('');
   const [exporting, setExporting] = useState(false);
-  const [alerts, setAlerts] = useState<any[]>([]);
   const [liveAlert, setLiveAlert] = useState<any | null>(null);
 
-  // Alert Pagination & Filter State
-  const [alertFilterSensorId, setAlertFilterSensorId] = useState<string>('all');
-  const [alertPage, setAlertPage] = useState<number>(1);
-
-  const filteredAlerts = useMemo(() => {
-    if (alertFilterSensorId === 'all') return alerts;
-    return alerts.filter(a => {
-      // Normalize IDs to string for comparison
-      const id1 = a.sensorId?.toString();
-      // Check nesting - sometimes backend sends sensor: { id: ... }
-      const id2 = a.sensor?.id?.toString();
-      const match = id1 === alertFilterSensorId || id2 === alertFilterSensorId;
-      return match;
-    });
-  }, [alerts, alertFilterSensorId]);
-
-  // Derive filter options from actual alerts to ensure all displayed alerts can be filtered
-  const alertSensorOptions = useMemo(() => {
-    const unique = new Map();
-    alerts.forEach(a => {
-      const sId = a.sensorId?.toString() || a.sensor?.id?.toString();
-      const sName = a.sensor?.nombre || `Sensor ${sId}`;
-      if (sId && !unique.has(sId)) {
-        unique.set(sId, sName);
-      }
-    });
-    return Array.from(unique.entries()).map(([id, name]) => ({ id, name }));
-  }, [alerts]);
-
-  const paginatedAlerts = useMemo(() => {
-    const start = (alertPage - 1) * 5;
-    return filteredAlerts.slice(start, start + 5);
-  }, [filteredAlerts, alertPage]);
-
+  // Moved up: Lote & Sensor Selection State
   const [lotes, setLotes] = useState<any[]>([]);
   const [loadingLotes, setLoadingLotes] = useState(true);
   const [subLotes, setSubLotes] = useState<any[]>([]);
   const [selectedLoteId, setSelectedLoteId] = useState<number | null>(null);
   const [selectedSubLoteId, setSelectedSubLoteId] = useState<number | null>(null);
   const [selectedSensorId, setSelectedSensorId] = useState<string>('all');
+
+  // Alert Pagination & Filter State
+  const [alertFilterSensorId, setAlertFilterSensorId] = useState<string>('all');
+  const [alertPage, setAlertPage] = useState<number>(1);
+  const ALERTS_PER_PAGE = 5;
+
+  const queryClient = useQueryClient();
+
+  // React Query Hook for Alerts
+  const { data: alertsData, isLoading: loadingAlerts } = useIoTAlerts({
+    loteId: selectedLoteId,
+    sensorId: alertFilterSensorId,
+    page: alertPage,
+    limit: ALERTS_PER_PAGE,
+    enabled: !!selectedLoteId
+  });
+
+  const alerts = alertsData?.items || [];
+  const totalAlerts = alertsData?.total || 0;
+
+
 
   // Historical date state removed for strict Real-Time mode
   // const [startDate, setStartDate] = useState...
@@ -178,56 +167,52 @@ export const LotsAnalyticsPage: React.FC = () => {
 
   // Cargar alertas cuando cambie lote (Range removed)
   // Cargar alertas: API + LocalStorage
+
+
+  // Manual fetchAlerts removed in favor of useIoTAlerts hook
+
+  // Reset page on filter change
   useEffect(() => {
-    const loadAlerts = async () => {
-      try {
-        // 1. Recover from LocalStorage first to show something immediately
-        const cached = localStorage.getItem(`alerts_${selectedLoteId}`);
-        if (cached) {
-          setAlerts(JSON.parse(cached));
-        }
+    setAlertPage(1);
+  }, [selectedLoteId, alertFilterSensorId]);
 
-        // 2. Fetch from API (Historical/Recent)
-        const data = await IoTApi.getAlerts({
-          loteId: selectedLoteId || undefined,
-        });
+  // Derive filter options (Still useful for verify available sensors)
+  const alertSensorOptions = useMemo(() => {
+    // Since we paginate, we can't derive ALL sensors from just the current page of alerts.
+    // We should use 'availableSensors' (which is derived from 'localSensors' or 'sensors' context)
+    return availableSensors.map(s => ({ id: s.id.toString(), name: s.nombre }));
+  }, [availableSensors]);
 
-        // 3. Merge: deduplicate by ID if possible, or just replace if API is the source of truth
-        // For now, we trust the API. If the API returns empty, we might keep cached if it was live data.
-        if (data && data.length > 0) {
-          setAlerts(data);
-          localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(data));
-        }
-      } catch (e) {
-        console.error('Error fetching alerts', e);
-      }
-    };
-    if (selectedLoteId) {
-      loadAlerts();
-    }
-  }, [selectedLoteId]);
+  // paginatedAlerts is now just 'alerts' because we fetch checking page size
+  const paginatedAlerts = alerts;
 
-  // Save live alerts to LocalStorage
+  // Save live alerts to LocalStorage (Just cache the first page for fast load)
   useEffect(() => {
-    if (alerts.length > 0 && selectedLoteId) {
-      localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(alerts.slice(0, 50)));
+    if (alerts.length > 0 && selectedLoteId && alertPage === 1) {
+      localStorage.setItem(`alerts_${selectedLoteId}`, JSON.stringify(alerts));
     }
-  }, [alerts, selectedLoteId]);
+  }, [alerts, selectedLoteId, alertPage]);
 
   // Escuchar alertas en vivo por websocket
   useEffect(() => {
     const socket = connectSocket('/iot');
     const handleAlert = (alerta: any) => {
       if (selectedLoteId && alerta.loteId && alerta.loteId !== selectedLoteId) return;
-      setAlerts(prev => [alerta, ...prev].slice(0, 20));
+
       setLiveAlert(alerta);
+
+      // Invalidar query para refrescar lista automáticamente
+      if (selectedLoteId) {
+        queryClient.invalidateQueries({ queryKey: ['iot-alerts', { loteId: selectedLoteId }] });
+      }
+
       setTimeout(() => setLiveAlert(null), 5000);
     };
     socket.on('sensorAlert', handleAlert);
     return () => {
       socket.off('sensorAlert', handleAlert);
     };
-  }, [selectedLoteId]);
+  }, [selectedLoteId, queryClient]);
 
   const handleExport = async (format: 'csv' | 'pdf') => {
     try {
@@ -588,7 +573,7 @@ export const LotsAnalyticsPage: React.FC = () => {
                       {alertSensorOptions.map(s => <SelectItem key={s.id}>{s.name}</SelectItem>) as any}
                     </Select>
                   </div>
-                  <Chip size="sm" variant="flat">{filteredAlerts.length} alertas</Chip>
+                  <Chip size="sm" variant="flat">{totalAlerts} alertas</Chip>
                 </div>
                 {paginatedAlerts.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
@@ -634,12 +619,12 @@ export const LotsAnalyticsPage: React.FC = () => {
                     Anterior
                   </Button>
                   <span className="text-sm flex items-center">
-                    Pág {alertPage} de {Math.max(1, Math.ceil(filteredAlerts.length / 5))}
+                    Pág {alertPage} de {Math.max(1, Math.ceil(totalAlerts / 5))}
                   </span>
                   <Button
                     size="sm"
                     variant="flat"
-                    disabled={alertPage * 5 >= filteredAlerts.length}
+                    disabled={alertPage * 5 >= totalAlerts}
                     onPress={() => setAlertPage(p => p + 1)}
                   >
                     Siguiente

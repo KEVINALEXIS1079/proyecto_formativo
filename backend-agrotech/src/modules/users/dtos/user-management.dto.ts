@@ -37,6 +37,10 @@ export class CreateUserByAdminDto {
 
   @IsOptional()
   rolId?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El programa de formación debe ser un número válido' })
+  programaFormacionId?: number;
 }
 
 export class UpdateProfileDto {
@@ -142,6 +146,10 @@ export class UpdateUserByAdminDto {
   @IsOptional()
   @IsEnum(UserStatus, { message: 'El estado debe ser: activo, inactivo, bloqueado o pendiente_verificacion' })
   estado?: UserStatus;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El programa de formación debe ser un número válido' })
+  programaFormacionId?: number;
 }
 
 export class UserFilterDto {

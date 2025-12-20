@@ -216,6 +216,7 @@ export const UserListFeature = forwardRef<UserListRef>((_, ref) => {
           </div>
         ) : (
           <UserForm
+            ref={userFormRef}
             onClose={() => setIsModalOpen(false)}
             onSuccess={() => setIsModalOpen(false)}
           />

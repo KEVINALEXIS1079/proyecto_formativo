@@ -20,6 +20,8 @@ import { IotModule } from '../modules/iot/iot.module';
 import { SeedsModule } from '../database/seeds/seeds.module';
 import { ReportsModule } from '../modules/reports/reports.module';
 import { FinanceModule } from '../modules/finance/finance.module';
+import { NotificationsModule } from '../modules/notifications/notifications.module';
+import { ProgramasFormacionModule } from '../modules/programas-formacion/programas-formacion.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
@@ -58,6 +60,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     SeedsModule,
     ReportsModule,
     FinanceModule,
+    NotificationsModule,
+    ProgramasFormacionModule,
     ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'uploads'),

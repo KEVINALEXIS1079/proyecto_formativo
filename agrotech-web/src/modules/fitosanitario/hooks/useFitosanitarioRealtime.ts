@@ -20,6 +20,19 @@ export function useFitosanitarioRealtime() {
       queryClient.invalidateQueries({ queryKey: QK.EPA_BY_ID(epa.id_epa_pk) });
     });
 
+    // Eventos de TipoCultivo - Fitosanitario
+    fitosanitarioService.on("tipos-cultivo:created", (_tipo: any) => {
+      queryClient.invalidateQueries({ queryKey: QK.TIPO_CULTIVO_EPA_LIST });
+    });
+
+    fitosanitarioService.on("tipos-cultivo:updated", (_tipo: any) => {
+      queryClient.invalidateQueries({ queryKey: QK.TIPO_CULTIVO_EPA_LIST });
+    });
+
+    fitosanitarioService.on("tipos-cultivo:deleted", (_data: any) => {
+      queryClient.invalidateQueries({ queryKey: QK.TIPO_CULTIVO_EPA_LIST });
+    });
+
     fitosanitarioService.on("epas:removed", ({ id_epa_pk }: { id_epa_pk: number }) => {
       // Invalidar listas de EPA
       queryClient.invalidateQueries({ queryKey: QK.EPA_LIST_ROOT });

@@ -367,6 +367,32 @@ export async function seedPermisos(dataSource: DataSource) {
       descripcion: 'Exportar reportes (PDF/Excel)',
     },
 
+    // Programas de Formación
+    {
+      modulo: 'programas_formacion',
+      accion: 'ver',
+      clave: 'programas_formacion.ver',
+      descripcion: 'Ver programas de formación',
+    },
+    {
+      modulo: 'programas_formacion',
+      accion: 'crear',
+      clave: 'programas_formacion.crear',
+      descripcion: 'Crear programas de formación',
+    },
+    {
+      modulo: 'programas_formacion',
+      accion: 'editar',
+      clave: 'programas_formacion.editar',
+      descripcion: 'Editar programas de formación',
+    },
+    {
+      modulo: 'programas_formacion',
+      accion: 'eliminar',
+      clave: 'programas_formacion.eliminar',
+      descripcion: 'Eliminar programas de formación',
+    },
+
     // Usuarios extra
     {
       modulo: 'usuarios',

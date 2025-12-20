@@ -15,7 +15,7 @@ export default function Sidebar({
   className = "",
 }: SidebarProps) {
   const { can } = useAuth();
-  
+
   // Filter items based on permissions
   const visibleItems = NAVIGATION_ITEMS.filter(item => {
     if (!item.permission) return true;
@@ -26,15 +26,15 @@ export default function Sidebar({
     <aside
       className={`peer group/sidebar fixed top-0 left-0 bottom-0 z-40
       bg-white transition-all duration-300 ease-in-out
-      w-16 hover:w-64 flex flex-col shadow-sm pb-3 ${className}`}
+      w-16 hover:w-64 hidden md:flex flex-col shadow-sm pb-3 ${className}`}
     >
       <nav className="pt-[74px] px-2 py-2 flex flex-col gap-1 flex-1 overflow-y-auto scroll-smooth">
         {visibleItems.map((item) => (
-          <HoverItem 
-            key={item.to} 
-            to={item.to} 
-            icon={item.icon} 
-            label={item.label} 
+          <HoverItem
+            key={item.to}
+            to={item.to}
+            icon={item.icon}
+            label={item.label}
           />
         ))}
       </nav>

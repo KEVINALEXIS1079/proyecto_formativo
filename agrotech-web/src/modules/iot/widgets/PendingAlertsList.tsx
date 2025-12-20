@@ -27,7 +27,7 @@ export const PendingAlertsList: React.FC<PendingAlertsListProps> = ({ loteId }) 
         loteId: loteId ?? undefined,
         from: from.toISOString()
       });
-      setAlerts(res);
+      setAlerts(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error(err);
     } finally {

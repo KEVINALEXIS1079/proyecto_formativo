@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { Can } from '../../auth/components/Can';
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from '@heroui/react';
 import { Plus } from 'lucide-react';
@@ -14,28 +15,37 @@ import type { MovimientoListRef } from '../features/MovimientoListFeature';
 import type { ActivosFijosListRef } from '../features/ActivosFijosListFeature';
 import CatalogoTabs from '../ui/widgets/CatalogoTabs';
 
-type Tab = 'insumos' | 'movimientos' | 'activos-fijos' | 'catalogos' | 'reservas';
+type Tab = 'insumos' | 'movimientos' | 'herramientas' | 'maquinaria' | 'catalogos' | 'reservas';
+
+import { useInventarioRealtime } from '../hooks/useInventarioRealtime';
 
 export default function InventarioPage() {
   const [activeTab, setActiveTab] = useState<Tab>('insumos');
   const insumoListRef = useRef<InsumoListRef>(null);
   const movimientoListRef = useRef<MovimientoListRef>(null);
-  const activosFijosListRef = useRef<ActivosFijosListRef>(null);
+  const herramientasListRef = useRef<ActivosFijosListRef>(null);
+  const maquinariaListRef = useRef<ActivosFijosListRef>(null);
+
+  // Activar listeners de tiempo real
+  useInventarioRealtime();
 
   const handleCreate = () => {
     if (activeTab === 'insumos' && insumoListRef.current) {
       insumoListRef.current.openCreateModal();
     } else if (activeTab === 'movimientos' && movimientoListRef.current) {
       movimientoListRef.current.openCreateModal();
-    } else if (activeTab === 'activos-fijos' && activosFijosListRef.current) {
-      activosFijosListRef.current.openCreateModal();
+    } else if (activeTab === 'herramientas' && herramientasListRef.current) {
+      herramientasListRef.current.openCreateModal();
+    } else if (activeTab === 'maquinaria' && maquinariaListRef.current) {
+      maquinariaListRef.current.openCreateModal();
     }
   };
 
   const getButtonLabel = () => {
     if (activeTab === 'insumos') return 'Nuevo Insumo';
     if (activeTab === 'movimientos') return 'Nuevo Movimiento';
-    if (activeTab === 'activos-fijos') return 'Nuevo Activo';
+    if (activeTab === 'herramientas') return 'Nueva Herramienta';
+    if (activeTab === 'maquinaria') return 'Nueva Maquinaria';
     return 'Nuevo';
   };
 
@@ -49,17 +59,19 @@ export default function InventarioPage() {
 
       {/* PillToggle y botón de acción en la misma fila */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <InventarioPillToggle value={activeTab} onChange={setActiveTab} />
+        <InventarioPillToggle value={activeTab} onChange={(val) => setActiveTab(val as Tab)} />
         <div className="flex items-center gap-2">
           {/* <StockAlertBell /> Removed as it is now in main header */}
-          {(activeTab === 'insumos' || activeTab === 'movimientos' || activeTab === 'activos-fijos') && (
-            <Button
-              color="success"
-              startContent={<Plus className="h-4 w-4" />}
-              onPress={handleCreate}
-            >
-              {getButtonLabel()}
-            </Button>
+          {(activeTab === 'insumos' || activeTab === 'movimientos' || activeTab === 'herramientas' || activeTab === 'maquinaria') && (
+            <Can permission="inventario.crear">
+              <Button
+                color="success"
+                startContent={<Plus className="h-4 w-4" />}
+                onPress={handleCreate}
+              >
+                {getButtonLabel()}
+              </Button>
+            </Can>
           )}
         </div>
       </div>
@@ -78,8 +90,12 @@ export default function InventarioPage() {
                 <InsumoListFeature ref={insumoListRef} />
               )}
 
-              {activeTab === 'activos-fijos' && (
-                <ActivosFijosListFeature ref={activosFijosListRef} />
+              {activeTab === 'herramientas' && (
+                <ActivosFijosListFeature ref={herramientasListRef} type="HERRAMIENTA" />
+              )}
+
+              {activeTab === 'maquinaria' && (
+                <ActivosFijosListFeature ref={maquinariaListRef} type="MAQUINARIA" />
               )}
 
               {activeTab === 'reservas' && (

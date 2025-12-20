@@ -23,6 +23,7 @@ export const actividadSchema = z.object({
   // Harvest specifics
   cantidadPlantas: z.coerce.number().optional(),
   kgRecolectados: z.coerce.number().optional(),
+  precioVentaCrop: z.coerce.number().optional(), // UI Field for Harvest Price
   productoAgroId: z.coerce.number().optional(),
 
   // Arrays
@@ -46,6 +47,7 @@ export const actividadSchema = z.object({
     nombreServicio: z.string().nonempty(),
     horas: z.number().min(0),
     precioHora: z.number().min(0),
+    maquinariaId: z.coerce.number().optional(),
     tempId: z.string().optional(),
   })).optional(),
 
@@ -76,6 +78,7 @@ export const finalizarActividadSchema = z.object({
   produccion: z.object({
     cantidad: z.coerce.number().min(0),
     unidad: z.string().default("Kg"),
+    precioVenta: z.coerce.number().min(0).optional(),
   }).optional(),
 });
 

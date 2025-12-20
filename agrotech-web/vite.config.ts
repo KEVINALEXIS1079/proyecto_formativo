@@ -16,7 +16,13 @@ export default defineConfig({
       globals: { Buffer: true, global: true, process: true },
     }),
   ],
-  server: { port: 3000, host: true },
+  server: {
+    port: 3000,
+    host: true,
+    headers: {
+      "Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' blob:; worker-src blob:; connect-src * 'unsafe-inline' ws: wss: data: blob:;"
+    }
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

@@ -3,7 +3,7 @@
 /* activa el plugin que acabas de crear */
 @plugin "./hero.ts";
 
-/* dile a Tailwind dónde están los estilos de HeroUI */
+/*aTailwind dónde están los estilos de HeroUI */
 @source "../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}";
 
 /* (opcional) variante dark por clase .dark */

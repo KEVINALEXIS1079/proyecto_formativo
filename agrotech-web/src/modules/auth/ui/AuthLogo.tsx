@@ -1,3 +1,3 @@
 export default function AuthLogo() {
-  return <img src="/LogoTic.png" alt="TIC Yamboró" className="h-22 md:h-25 w-auto object-contain" />;
+  return <img src="/logoAgrotech.png" alt="TIC Yamboró" className="h-20 md:h-24 w-auto object-contain" />;
 }

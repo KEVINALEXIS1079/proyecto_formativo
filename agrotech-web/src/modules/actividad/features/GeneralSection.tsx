@@ -74,7 +74,7 @@ export default function GeneralSection({
   onProductCreated, // New prop
 }: GeneralSectionProps & { onProductCreated?: (product: any) => void }) {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  
+
   const tipo = watch("tipo");
   const subtipo = watch("subtipo");
   const selectedLoteId = watch("loteId");
@@ -405,11 +405,11 @@ export default function GeneralSection({
             <div className="p-4 bg-white rounded-md border border-orange-100 space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-semibold text-gray-600 block">Producto a Cosechar: </span>
-                <Button 
+                <Button
                   type="button"
-                  size="sm" 
-                  color="warning" 
-                  variant="flat" 
+                  size="sm"
+                  color="warning"
+                  variant="flat"
                   startContent={<Plus size={16} />}
                   onPress={() => setIsProductModalOpen(true)}
                 >
@@ -444,17 +444,17 @@ export default function GeneralSection({
                 )}
               />
             </div>
-            
-            <CreateProductModal 
-              isOpen={isProductModalOpen} 
+
+            <CreateProductModal
+              isOpen={isProductModalOpen}
               onClose={() => setIsProductModalOpen(false)}
               onSuccess={(newProduct) => {
-                if(onProductCreated) onProductCreated(newProduct);
+                if (onProductCreated) onProductCreated(newProduct);
                 setValue("productoAgroId", newProduct.id); // Auto-select new product
               }}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Controller
                 name="cantidadPlantas"
                 control={control}
@@ -463,7 +463,7 @@ export default function GeneralSection({
                   <Input
                     {...field}
                     value={field.value !== undefined ? String(field.value) : ""}
-                    label="¿Cuántos palos/plantas se cosecharon?"
+                    label="Cant. Plantas"
                     placeholder="0"
                     type="number"
                     variant="bordered"
@@ -482,7 +482,7 @@ export default function GeneralSection({
                   <Input
                     {...field}
                     value={field.value !== undefined ? String(field.value) : ""}
-                    label="Cantidad Recolectada (Kg/Und)"
+                    label="Cant. Recolectada"
                     placeholder="0.00"
                     type="number"
                     variant="bordered"
@@ -493,6 +493,8 @@ export default function GeneralSection({
                   />
                 )}
               />
+
+
             </div>
           </CardBody>
         </Card>

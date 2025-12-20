@@ -74,17 +74,17 @@ export default function PosPage() {
     const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + (item.cantidad * item.precio), 0), [cart]);
 
     return (
-        <div className="h-[calc(100vh-80px)] w-full flex gap-4 p-4 bg-gray-50/50">
+        <div className="h-[calc(100vh-80px)] w-full flex flex-col lg:flex-row gap-4 p-4 bg-gray-50/50 overflow-y-auto lg:overflow-hidden">
             {/* LEFT: Product Grid */}
-            <div className="flex-1 flex flex-col gap-4">
+            <div className="flex-1 flex flex-col gap-4 min-h-0">
                 {/* Header / Search */}
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-800">Punto de Venta</h1>
                         <p className="text-sm text-gray-500">Selecciona productos para agregar al carrito</p>
                     </div>
 
-                    <div className="w-1/3">
+                    <div className="w-full sm:w-1/3">
                         <Input
                             placeholder="Buscar producto..."
                             startContent={<Search className="text-gray-400" />}
@@ -109,7 +109,7 @@ export default function PosPage() {
                             <p>No hay productos disponibles.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                             {products.map((lote: any) => (
                                 <Card
                                     key={lote.id}
@@ -125,9 +125,9 @@ export default function PosPage() {
 
                                         <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center mb-1 overflow-hidden relative">
                                             {(lote.productoAgro as any)?.imagen ? (
-                                                <img 
-                                                    src={getImageUrl((lote.productoAgro as any).imagen)} 
-                                                    alt={lote.productoAgro?.nombre} 
+                                                <img
+                                                    src={getImageUrl((lote.productoAgro as any).imagen)}
+                                                    alt={lote.productoAgro?.nombre}
                                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                                 />
                                             ) : (
@@ -153,7 +153,7 @@ export default function PosPage() {
             </div>
 
             {/* RIGHT: Cart */}
-            <div className="w-96 bg-white rounded-2xl shadow-xl border border-gray-100 flex flex-col h-full right-panel-cart">
+            <div className="w-full lg:w-96 bg-white rounded-2xl shadow-xl border border-gray-100 flex flex-col h-[500px] lg:h-full right-panel-cart shrink-0">
                 <div className="p-5 border-b border-gray-100 bg-gray-50/50 rounded-t-2xl">
                     <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
                         <ShoppingCart className="text-green-600" />
@@ -173,9 +173,9 @@ export default function PosPage() {
                             <div key={item.lote.id} className="flex gap-3 items-center bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
                                 <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-gray-200">
                                     {(item.lote.productoAgro as any)?.imagen ? (
-                                        <img 
-                                            src={getImageUrl((item.lote.productoAgro as any).imagen)} 
-                                            alt="" 
+                                        <img
+                                            src={getImageUrl((item.lote.productoAgro as any).imagen)}
+                                            alt=""
                                             className="w-full h-full object-cover"
                                         />
                                     ) : (

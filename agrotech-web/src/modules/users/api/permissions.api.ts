@@ -65,7 +65,7 @@ export const syncPermisosRol = async (rolId: number, permisoIds: number[]): Prom
 // ==================== PERMISOS DE USUARIO ====================
 
 export const getUserPermissions = async (userId: number): Promise<Permiso[]> => {
-  const { data } = await api.get<Permiso[]>(`/permissions/usuarios/${userId}/permisos/directos`);
+  const { data } = await api.get<Permiso[]>(`/permissions/usuarios/${userId}/permisos/efectivos`);
   return data;
 };
 

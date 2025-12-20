@@ -1,6 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Actividad } from './actividad.entity';
+import { Insumo } from '../../inventory/entities/insumo.entity';
 
 @Entity('actividades_servicios')
 export class ActividadServicio extends BaseEntity {
@@ -22,4 +23,11 @@ export class ActividadServicio extends BaseEntity {
   @ManyToOne(() => Actividad, (actividad) => actividad.servicios)
   @JoinColumn({ name: 'actividadId' })
   actividad: Actividad;
+
+  @Column({ nullable: true })
+  maquinariaId: number;
+
+  @ManyToOne(() => Insumo)
+  @JoinColumn({ name: 'maquinariaId' })
+  maquinaria: Insumo;
 }

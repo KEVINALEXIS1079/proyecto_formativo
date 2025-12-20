@@ -67,7 +67,7 @@ class InventarioService {
 
   connect(): Socket {
     if (!this.socket || this.socket.disconnected) {
-      this.socket = connectSocket("/inventario");
+      this.socket = connectSocket("/inventory");
     }
     return this.socket;
   }

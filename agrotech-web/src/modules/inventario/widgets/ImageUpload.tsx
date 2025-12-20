@@ -93,7 +93,7 @@ export default function ImageUpload({ onFileChange, currentImageUrl, label = "Im
                         <img
                             src={preview}
                             alt="Preview"
-                            className="w-full h-48 object-cover rounded-lg"
+                            className="w-full h-48 object-cover rounded-lg bg-white"
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 rounded-lg flex items-center justify-center">
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">

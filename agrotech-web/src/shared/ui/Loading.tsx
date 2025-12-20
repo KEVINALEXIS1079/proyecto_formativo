@@ -8,7 +8,7 @@ interface LoadingProps {
 export default function Loading({ size = "md", label }: LoadingProps) {
   return (
     <div className="flex items-center justify-center p-4">
-      <Spinner size={size} label={label} />
+      <Spinner size={size} label={label} color="success" />
     </div>
   );
 }

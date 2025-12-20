@@ -149,6 +149,7 @@ export function ReporteChart({ reporte }: ReporteChartProps) {
                 selectedKeys={[chartType]}
                 onChange={(e) => setChartType(e.target.value as ChartType)}
                 disallowEmptySelection
+                aria-label="Seleccionar tipo de gráfico"
               >
                 <SelectItem key="bar" textValue="Barras">Barras</SelectItem>
                 <SelectItem key="pie" textValue="Pastel">Pastel</SelectItem>
@@ -225,7 +226,7 @@ export function ReporteChart({ reporte }: ReporteChartProps) {
                   ) : (
                     <div className="h-full">
                       <div className="flex justify-end mb-4">
-                        <Select size="sm" label="Periodo" className="w-40" defaultSelectedKeys={['all']}>
+                        <Select size="sm" label="Periodo" className="w-40" defaultSelectedKeys={['all']} aria-label="Seleccionar periodo de análisis">
                           <SelectItem key="all">Todo el año</SelectItem>
                           <SelectItem key="q1">Q1</SelectItem>
                         </Select>

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ProductoAgro } from '../entities/producto-agro.entity';
@@ -14,6 +14,8 @@ import { UpdateProductoAgroDto } from '../dtos/update-producto-agro.dto';
 import { CreateLoteProduccionDto } from '../dtos/create-lote-produccion.dto';
 import { UpdateLoteProduccionDto } from '../dtos/update-lote-produccion.dto';
 
+import { ProductionGateway } from '../gateways/production.gateway';
+
 @Injectable()
 export class ProductionService {
   constructor(
@@ -26,6 +28,8 @@ export class ProductionService {
     @InjectRepository(Pago) private pagoRepo: Repository<Pago>,
     @InjectRepository(HistorialPrecioLote) private historialPrecioRepo: Repository<HistorialPrecioLote>,
     private dataSource: DataSource,
+    @Inject(forwardRef(() => ProductionGateway))
+    private productionGateway: ProductionGateway,
   ) { }
 
   // ==================== PRODUCTO AGRO ====================
@@ -90,6 +94,7 @@ export class ProductionService {
     costoCultivo?: number; // Costo acumulado real del cultivo
     usuarioId: number; // Required for MovimientoProduccion
     productoAgroId?: number; // Added
+    precioVenta?: number; // Added for POS pricing
   }, manager?: any) {
     const repoLote = manager ? manager.getRepository(LoteProduccion) : this.loteProduccionRepo;
     const repoMov = manager ? manager.getRepository(MovimientoProduccion) : this.movimientoRepo;
@@ -111,7 +116,8 @@ export class ProductionService {
       stockDisponibleKg: data.cantidadKg,
       costoUnitarioKg: costoUnitario,
       costoTotal: costoTotal,
-      precioSugeridoKg: costoUnitario * 1.35, // Margen sugerido 35%
+      // Use provided sales price OR fallback to default markup
+      precioSugeridoKg: data.precioVenta ?? (costoUnitario * 1.35),
       fechaExpiracion: new Date(data.fecha.getTime() + 1000 * 60 * 60 * 24 * 30), // +30 días default
     });
 
@@ -131,6 +137,11 @@ export class ProductionService {
 
     await repoMov.save(movimiento);
 
+    await repoMov.save(movimiento);
+
+    if (this.productionGateway?.server) {
+      this.productionGateway.server.emit('lotes:created', saved);
+    }
     return saved;
   }
 
@@ -160,16 +171,16 @@ export class ProductionService {
 
     if (data.precioSugeridoKg !== undefined && data.precioSugeridoKg !== lote.precioSugeridoKg) {
       changeDesc += `Precio: ${lote.precioSugeridoKg} -> ${data.precioSugeridoKg}. `;
-      
+
       // Save Price History
       if (data.usuarioId) {
         await this.historialPrecioRepo.save({
-            loteProduccionId: lote.id,
-            precioAnterior: lote.precioSugeridoKg,
-            precioNuevo: data.precioSugeridoKg,
-            usuarioId: data.usuarioId,
-            fecha: new Date(),
-            razon: 'Actualización de Inventario'
+          loteProduccionId: lote.id,
+          precioAnterior: lote.precioSugeridoKg,
+          precioNuevo: data.precioSugeridoKg,
+          usuarioId: data.usuarioId,
+          fecha: new Date(),
+          razon: 'Actualización de Inventario'
         });
       }
 
@@ -196,14 +207,18 @@ export class ProductionService {
       return savedLote;
     }
 
+    if (hasChanges && this.productionGateway?.server) {
+      this.productionGateway.server.emit('lotes:updated', lote);
+    }
+
     return lote;
   }
 
   async getHistorialPrecios(loteId: number) {
     return this.historialPrecioRepo.find({
-        where: { loteProduccionId: loteId },
-        relations: ['usuario'],
-        order: { fecha: 'DESC' }
+      where: { loteProduccionId: loteId },
+      relations: ['usuario'],
+      order: { fecha: 'DESC' }
     });
   }
 
@@ -257,7 +272,7 @@ export class ProductionService {
 
       // Validar que los pagos cubran el total
       const totalPagos = data.pagos.reduce((sum, p) => sum + p.monto, 0);
-      
+
       // Allow small epsilon for floating point errors or just compare rounded
       if (Math.round(totalPagos * 100) < Math.round(total * 100)) {
         throw new BadRequestException(`Los pagos (${totalPagos}) no cubren el total de la venta (${total})`);
@@ -338,7 +353,12 @@ export class ProductionService {
 
       await queryRunner.commitTransaction();
 
-      return this.findVentaById(savedVenta.id);
+      const ventaCompleta = await this.findVentaById(savedVenta.id);
+      if (this.productionGateway?.server) {
+        this.productionGateway.server.emit('ventas:created', ventaCompleta);
+        // Emit also updates for lotes if needed, or just rely on 'lotes:updated' if we emitted it inside the loop (we didn't, so frontend should refetch lotes list on 'ventas:created')
+      }
+      return ventaCompleta;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -433,7 +453,11 @@ export class ProductionService {
 
       await queryRunner.commitTransaction();
 
-      return this.findVentaById(ventaId);
+      const ventaAnulada = await this.findVentaById(ventaId);
+      if (this.productionGateway?.server) {
+        this.productionGateway.server.emit('ventas:updated', ventaAnulada); // or ventas:anulada
+      }
+      return ventaAnulada;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;

@@ -1,28 +1,52 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
+
 const fadeInUp = {
-    initial: { opacity: 0, y: 24 },
-    animate: { opacity: 1, y: 0, transition: ({ duration: 0.55, ease: [0.22, 1, 0.36, 1] } as any) },
+    initial: { opacity: 0, y: 30 },
+    animate: { opacity: 1, y: 0, transition: { duration: 1.0, ease: "easeOut" as const } },
 };
 
 const stagger = {
     initial: {},
-    animate: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
+    animate: { transition: { staggerChildren: 0.3, delayChildren: 0.3 } },
 };
 
 export default function LandingHero() {
     return (
         <section className="relative overflow-hidden">
-            {/* Fondo */}
-            <img
-                src="/FondoLogin.jpeg"
-                alt="Fondo agrícola"
-                className="absolute inset-0 h-full w-full object-cover"
+            {/* Fondo con Efecto "Vuelo de Dron" sobre Platanal */}
+            <motion.div
+                className="absolute inset-0 z-0"
+                initial={{ scale: 1.15, y: -20 }}
+                animate={{ scale: 1, y: 0 }}
+                transition={{ duration: 18, ease: "easeOut" }}
+            >
+                <img
+                    src="/FondoLogin.jpeg"
+                    alt="Cultivo de plátano"
+                    className="h-full w-full object-cover object-center brightness-[0.9] saturate-[1.15]" // Más saturación para resaltar los verdes
+                />
+            </motion.div>
+
+            {/* Capa de Grano Cinematográfico (Noise) */}
+            <div className="absolute inset-0 opacity-[0.04] z-0 pointer-events-none mix-blend-overlay"
+                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}
             />
-            {/* Radial + degradado */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.65),rgba(0,0,0,0.8))]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
+
+            {/* Degradados Atmosféricos Mejorados */}
+            <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/90 via-emerald-900/50 to-black/30 mix-blend-multiply z-0" />
+
+            {/* Efecto "God Rays" (Rayos de Sol) Animados */}
+            <motion.div
+                className="absolute inset-0 bg-[conic-gradient(at_top_right,_var(--tw-gradient-stops))] from-yellow-100/10 via-transparent to-transparent z-0 opacity-60"
+                initial={{ opacity: 0, rotate: -5 }}
+                animate={{ opacity: [0.3, 0.5, 0.3], rotate: 0 }}
+                transition={{ duration: 10, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+            />
+
+            {/* Luz cenital suave para profundidad */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(0,0,0,0)_0%,rgba(0,20,10,0.5)_100%)] z-0" />
 
             {/* Blobs con animación lenta (no cambia color) */}
             <div
@@ -55,17 +79,15 @@ export default function LandingHero() {
                         <motion.h1
                             className="mt-4 text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight"
                             variants={fadeInUp}
-                            transition={{ delay: 0.05 }}
                         >
-                            Gestiona tus Cultivos
+                            <span>Gestiona tus Cultivos</span>
                             <br className="hidden md:block" />
-                            con Inteligencia
+                            <span>con Inteligencia</span>
                         </motion.h1>
 
                         <motion.p
                             className="mt-5 max-w-2xl mx-auto text-sm md:text-base lg:text-lg text-white/90"
                             variants={fadeInUp}
-                            transition={{ delay: 0.12 }}
                         >
                             Optimiza, planifica y analiza cada etapa de tu producción. Todo en un solo lugar,
                             con datos claros y decisiones más rápidas.
@@ -74,14 +96,13 @@ export default function LandingHero() {
                         <motion.div
                             className="mt-8 flex items-center justify-center gap-3 md:gap-4"
                             variants={fadeInUp}
-                            transition={{ delay: 0.18 }}
                         >
                             <Link
                                 to="/register"
                                 className="
                                     rounded-full px-7 py-3 font-medium
-                                    bg-white text-emerald-700
-                                    hover:bg-gray-100
+                                    bg-emerald-600 text-white
+                                    hover:bg-emerald-700
                                     shadow-sm hover:shadow-lg
                                     transition-all
                                 "

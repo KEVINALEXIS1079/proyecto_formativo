@@ -3,6 +3,7 @@ import * as bcrypt from 'bcrypt';
 
 // Auth/Users
 import { Usuario } from '../../modules/users/entities/usuario.entity';
+import { ProgramaFormacion } from '../../modules/programas-formacion/entities/programa-formacion.entity';
 
 // Geo
 import { Lote } from '../../modules/geo/entities/lote.entity';
@@ -50,6 +51,7 @@ export async function seedPrueba1(dataSource: DataSource) {
 
   // Repositorios
   const usuarioRepo = dataSource.getRepository(Usuario);
+  const programaRepo = dataSource.getRepository(ProgramaFormacion);
   const loteRepo = dataSource.getRepository(Lote);
   const subLoteRepo = dataSource.getRepository(SubLote);
   const cultivoRepo = dataSource.getRepository(Cultivo);
@@ -79,6 +81,9 @@ export async function seedPrueba1(dataSource: DataSource) {
   const ePARepo = dataSource.getRepository(EPA);
   const ePATipoCultivoWikiRepo = dataSource.getRepository(EPA_TipoCultivoWiki);
 
+  // Obtener programa ADSO para vincular usuarios
+  const programaAdso = await programaRepo.findOne({ where: { numeroFicha: '2925484' } });
+
   // Usuarios adicionales
   console.log('  Creando usuarios adicionales...');
   const usuariosData = [
@@ -90,6 +95,7 @@ export async function seedPrueba1(dataSource: DataSource) {
       passwordHash: await bcrypt.hash('password123', 10),
       rolId: 2, // Instructor
       estado: 'activo',
+      programaFormacionId: programaAdso?.id,
       emailVerifiedAt: new Date(),
     },
     {
@@ -100,6 +106,7 @@ export async function seedPrueba1(dataSource: DataSource) {
       passwordHash: await bcrypt.hash('password123', 10),
       rolId: 3, // Aprendiz
       estado: 'activo',
+      programaFormacionId: programaAdso?.id,
       emailVerifiedAt: new Date(),
     },
     {
@@ -110,6 +117,7 @@ export async function seedPrueba1(dataSource: DataSource) {
       passwordHash: await bcrypt.hash('password123', 10),
       rolId: 4, // Pasante
       estado: 'activo',
+      programaFormacionId: programaAdso?.id,
       emailVerifiedAt: new Date(),
     },
   ];
@@ -140,11 +148,11 @@ export async function seedPrueba1(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.091, 1.892],
-          [-76.087, 1.892],
-          [-76.087, 1.894],
-          [-76.091, 1.894],
-          [-76.091, 1.892]
+          [-76.051, 1.854],
+          [-76.050, 1.854],
+          [-76.050, 1.855],
+          [-76.051, 1.855],
+          [-76.051, 1.854]
         ]]
       } as any
     },
@@ -157,11 +165,11 @@ export async function seedPrueba1(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.087, 1.890],
-          [-76.085, 1.890],
-          [-76.085, 1.892],
-          [-76.087, 1.892],
-          [-76.087, 1.890]
+          [-76.050, 1.852],
+          [-76.049, 1.852],
+          [-76.049, 1.853],
+          [-76.050, 1.853],
+          [-76.050, 1.852]
         ]]
       } as any
     },
@@ -201,11 +209,11 @@ export async function seedPrueba1(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.091, 1.892],
-          [-76.089, 1.892],
-          [-76.089, 1.893],
-          [-76.091, 1.893],
-          [-76.091, 1.892]
+          [-76.051, 1.854],
+          [-76.050, 1.854],
+          [-76.050, 1.8545],
+          [-76.051, 1.8545],
+          [-76.051, 1.854]
         ]]
       } as any
     },
@@ -218,11 +226,11 @@ export async function seedPrueba1(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.089, 1.893],
-          [-76.087, 1.893],
-          [-76.087, 1.894],
-          [-76.089, 1.894],
-          [-76.089, 1.893]
+          [-76.051, 1.8545],
+          [-76.050, 1.8545],
+          [-76.050, 1.855],
+          [-76.051, 1.855],
+          [-76.051, 1.8545]
         ]]
       } as any
     },

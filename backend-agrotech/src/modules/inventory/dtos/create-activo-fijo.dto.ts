@@ -1,5 +1,6 @@
 import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TipoInsumo } from '../entities/insumo.entity';
 
 export class CreateActivoFijoDto {
     @IsString()
@@ -52,4 +53,9 @@ export class CreateActivoFijoDto {
     @IsOptional()
     @Type(() => Number)
     cantidad?: number;
+
+    @IsString()
+    @IsOptional()
+    @IsEnum(TipoInsumo)
+    tipoInsumo?: TipoInsumo;
 }

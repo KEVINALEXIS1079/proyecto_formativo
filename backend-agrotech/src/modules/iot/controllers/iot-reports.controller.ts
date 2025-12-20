@@ -6,6 +6,8 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
   UseGuards,
+  Post,
+  Body,
 } from '@nestjs/common';
 import { IotReportsService } from '../services/iot-reports.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -15,7 +17,7 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 @Controller('api/v1/iot')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class IotReportsController {
-  constructor(private readonly reportsService: IotReportsService) {}
+  constructor(private readonly reportsService: IotReportsService) { }
 
   @Get('reports/general')
   @RequirePermissions('iot.ver')
@@ -31,6 +33,21 @@ export class IotReportsController {
       endDate,
       sensorId: sensorId ? parseInt(sensorId) : undefined,
     });
+  }
+
+  @Post('reports/summary/bulk')
+  @RequirePermissions('iot.ver')
+  async getBulkSummaries(@Body() body: { sensorIds: number[]; from?: string; to?: string }) {
+    if (!body.sensorIds || !Array.isArray(body.sensorIds)) {
+      return {};
+    }
+    return this.reportsService.getBulkSummaries(
+      body.sensorIds,
+      {
+        from: body.from ? new Date(body.from) : undefined,
+        to: body.to ? new Date(body.to) : undefined
+      }
+    );
   }
 
   @Get('comparison')

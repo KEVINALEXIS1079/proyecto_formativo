@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Card, CardBody, Spinner } from "@heroui/react";
+import { Button, Card, CardBody, Spinner, Skeleton } from "@heroui/react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import type { LayoutContext } from "@/app/layout/ProtectedLayout";
 import { motion, AnimatePresence } from "framer-motion";
@@ -160,8 +160,15 @@ export default function Home() {
               </div>
 
               {loadingSensors ? (
-                <div className="flex justify-center py-4">
-                  <Spinner color="success" label="Cargando sensores..." />
+                <div className="space-y-3">
+                  <div className="flex gap-2 mb-4">
+                    <Skeleton className="h-4 w-24 rounded-lg" />
+                  </div>
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <Skeleton className="h-32 rounded-xl" />
+                    <Skeleton className="h-32 rounded-xl" />
+                    <Skeleton className="h-32 rounded-xl" />
+                  </div>
                 </div>
               ) : lotSlides.length === 0 ? (
                 <p className="text-sm text-foreground-500">No hay sensores activos por lote.</p>
@@ -228,8 +235,16 @@ export default function Home() {
               </div>
 
               {actividadesLoading ? (
-                <div className="flex justify-center py-4">
-                  <Spinner color="success" label="Cargando actividades..." />
+                <div className="space-y-4">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="flex justify-between items-center py-2">
+                      <div className="space-y-2">
+                        <Skeleton className="h-3 w-32 rounded-lg" />
+                        <Skeleton className="h-3 w-24 rounded-lg" />
+                      </div>
+                      <Skeleton className="h-8 w-16 rounded-full" />
+                    </div>
+                  ))}
                 </div>
               ) : actividadesRecientes.length === 0 ? (
                 <p className="text-sm text-foreground-500">No hay actividades registradas.</p>
@@ -279,9 +294,11 @@ export default function Home() {
                   );
                 })}
                 {cultivosLoading && (
-                  <div className="col-span-1 sm:col-span-2 flex justify-center py-4">
-                    <Spinner color="success" label="Cargando cultivos..." />
-                  </div>
+                  <>
+                    {[1, 2, 3, 4].map(i => (
+                      <Skeleton key={i} className="rounded-xl h-24 w-full" />
+                    ))}
+                  </>
                 )}
                 {!cultivosLoading && cultivos.length === 0 && <p className="text-sm text-foreground-500">No hay cultivos registrados.</p>}
               </div>

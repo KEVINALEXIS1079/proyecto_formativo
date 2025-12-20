@@ -45,89 +45,91 @@ export default function SalesHistory() {
                 </div>
             </div>
 
-            <Table aria-label="Historial de Ventas" selectionMode="none">
-                <TableHeader>
-                    <TableColumn>ID VENTA</TableColumn>
-                    <TableColumn>FECHA</TableColumn>
-                    <TableColumn>CLIENTE</TableColumn>
-                    <TableColumn>ITEMS</TableColumn>
-                    <TableColumn>TOTAL</TableColumn>
-                    <TableColumn>ESTADO</TableColumn>
-                    <TableColumn>ACCIONES</TableColumn>
-                </TableHeader>
-                <TableBody emptyContent="No hay ventas registradas">
-                    {ventas.map((venta) => (
-                        <TableRow key={venta.id}>
-                            <TableCell>
-                                <span className="font-mono text-xs">#{String(venta.id).padStart(6, '0')}</span>
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex flex-col">
-                                    <span className="text-sm">{format(new Date(venta.fecha), "dd MMM yyyy")}</span>
-                                    <span className="text-xs text-gray-400">{format(new Date(venta.fecha), "HH:mm")}</span>
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex flex-col">
-                                    <span className="font-semibold">{venta.cliente?.nombre || "Consumidor Final"}</span>
-                                    {venta.cliente?.identificacion && <span className="text-xs text-gray-400">{venta.cliente.identificacion}</span>}
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <span className="text-sm">{venta.detalles?.length || 0} productos</span>
-                            </TableCell>
-                            <TableCell>
-                                <span className="font-bold text-green-600">${venta.total.toLocaleString()}</span>
-                            </TableCell>
-                            <TableCell>
-                                <Chip
-                                    color={venta.estado === 'completada' ? 'success' : 'danger'}
-                                    variant="flat"
-                                    size="sm"
-                                >
-                                    {venta.estado.toUpperCase()}
-                                </Chip>
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex gap-2">
-                                    <Tooltip content="Ver Factura">
-                                        <Button 
-                                            isIconOnly 
-                                            size="sm" 
-                                            variant="light"
-                                            onPress={() => {
-                                                console.log("Opening modal for venta:", venta);
-                                                setSelectedVenta(venta);
-                                            }}
-                                        >
-                                            <Eye size={18} />
-                                        </Button>
-                                    </Tooltip>
-                                    {venta.estado === 'completada' && (
-                                        <Tooltip color="danger" content="Anular Venta">
+            <div className="overflow-x-auto">
+                <Table aria-label="Historial de Ventas" selectionMode="none" className="min-w-[800px]">
+                    <TableHeader>
+                        <TableColumn>ID VENTA</TableColumn>
+                        <TableColumn>FECHA</TableColumn>
+                        <TableColumn>CLIENTE</TableColumn>
+                        <TableColumn>ITEMS</TableColumn>
+                        <TableColumn>TOTAL</TableColumn>
+                        <TableColumn>ESTADO</TableColumn>
+                        <TableColumn>ACCIONES</TableColumn>
+                    </TableHeader>
+                    <TableBody emptyContent="No hay ventas registradas">
+                        {ventas.map((venta) => (
+                            <TableRow key={venta.id}>
+                                <TableCell>
+                                    <span className="font-mono text-xs">#{String(venta.id).padStart(6, '0')}</span>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm">{format(new Date(venta.fecha), "dd MMM yyyy")}</span>
+                                        <span className="text-xs text-gray-400">{format(new Date(venta.fecha), "HH:mm")}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold">{venta.cliente?.nombre || "Consumidor Final"}</span>
+                                        {venta.cliente?.identificacion && <span className="text-xs text-gray-400">{venta.cliente.identificacion}</span>}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <span className="text-sm">{venta.detalles?.length || 0} productos</span>
+                                </TableCell>
+                                <TableCell>
+                                    <span className="font-bold text-green-600">${venta.total.toLocaleString()}</span>
+                                </TableCell>
+                                <TableCell>
+                                    <Chip
+                                        color={venta.estado === 'completada' ? 'success' : 'danger'}
+                                        variant="flat"
+                                        size="sm"
+                                    >
+                                        {venta.estado.toUpperCase()}
+                                    </Chip>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex gap-2">
+                                        <Tooltip content="Ver Factura">
                                             <Button
                                                 isIconOnly
                                                 size="sm"
-                                                color="danger"
                                                 variant="light"
-                                                onPress={() => handleAnular(venta.id)}
-                                                isLoading={anularMutation.isPending}
+                                                onPress={() => {
+                                                    console.log("Opening modal for venta:", venta);
+                                                    setSelectedVenta(venta);
+                                                }}
                                             >
-                                                <Undo2 size={18} />
+                                                <Eye size={18} />
                                             </Button>
                                         </Tooltip>
-                                    )}
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-            
-            <PosReceiptModal 
-                isOpen={!!selectedVenta} 
-                onClose={() => setSelectedVenta(null)} 
-                venta={selectedVenta} 
+                                        {venta.estado === 'completada' && (
+                                            <Tooltip color="danger" content="Anular Venta">
+                                                <Button
+                                                    isIconOnly
+                                                    size="sm"
+                                                    color="danger"
+                                                    variant="light"
+                                                    onPress={() => handleAnular(venta.id)}
+                                                    isLoading={anularMutation.isPending}
+                                                >
+                                                    <Undo2 size={18} />
+                                                </Button>
+                                            </Tooltip>
+                                        )}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            <PosReceiptModal
+                isOpen={!!selectedVenta}
+                onClose={() => setSelectedVenta(null)}
+                venta={selectedVenta}
             />
         </div>
     );

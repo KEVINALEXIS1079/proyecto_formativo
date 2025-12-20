@@ -3,9 +3,10 @@ import {
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
-import { Socket } from 'socket.io';
+import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
 import { InventoryService } from '../services/inventory.service';
 import {
   InventoryFindAllInsumosDoDto,
@@ -27,7 +28,13 @@ import { WsCurrentUser } from '../../../common/decorators/ws-current-user.decora
 @WebSocketGateway({ namespace: 'inventory', cors: { origin: '*' } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
 export class InventoryGateway {
-  constructor(private readonly inventoryService: InventoryService) {}
+  @WebSocketServer()
+  server: Server;
+
+  constructor(
+    @Inject(forwardRef(() => InventoryService))
+    private readonly inventoryService: InventoryService
+  ) { }
 
   // ==================== INSUMOS ====================
 

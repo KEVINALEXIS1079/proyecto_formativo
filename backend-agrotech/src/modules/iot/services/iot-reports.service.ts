@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
+import { IotService } from './iot.service';
 import { SensorLectura } from '../entities/sensor-lectura.entity';
 import { Sensor } from '../entities/sensor.entity';
 import { TipoSensor } from '../entities/tipo-sensor.entity';
@@ -22,7 +23,9 @@ export class IotReportsService {
     private readonly tipoSensorRepo: Repository<TipoSensor>,
     @InjectRepository(Lote)
     private readonly loteRepo: Repository<Lote>,
-  ) {}
+    @Inject(forwardRef(() => IotService))
+    private readonly iotService: IotService,
+  ) { }
 
   private resolveRange({ startDate, endDate }: DateRangeParams) {
     const start = startDate ? new Date(startDate) : undefined;
@@ -255,5 +258,13 @@ export class IotReportsService {
       subLoteId: params.subLoteId ?? null,
       sensores,
     };
+  }
+
+  async getBulkSummaries(sensorIds: number[], params: { from?: Date; to?: Date }) {
+    if (!this.iotService) {
+      console.warn('IotService not injected in IotReportsService');
+      return {};
+    }
+    return this.iotService.getBulkSummaries(sensorIds, params);
   }
 }

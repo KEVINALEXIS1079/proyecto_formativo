@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer, Polygon, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 
 // Fix Leaflet Default Icon Issue in React
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -32,8 +32,8 @@ function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }
   return null;
 }
 
-export default function LeafletMap({
-  center = [4.5709, -74.2973], // Default Colombia
+export default React.memo(function LeafletMap({
+  center = [1.85371, -76.05071], // Tecnoparque Yamboro Pitalito
   zoom = 13,
   polygon,
   markers = [],
@@ -52,7 +52,7 @@ export default function LeafletMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
+
         <ChangeView center={center} zoom={zoom} />
 
         {polygon && polygon.length > 0 && (
@@ -64,10 +64,10 @@ export default function LeafletMap({
             <Popup>{m.label}</Popup>
           </Marker>
         ))}
-        
+
         {/* Simple Click Handler */}
         {/* Implementation note: useMapEvents is better for refined interactions, keep simple for now */}
       </MapContainer>
     </div>
   );
-}
+});

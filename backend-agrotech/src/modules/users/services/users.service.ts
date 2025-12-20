@@ -34,6 +34,7 @@ export class UsersService {
   async findAll(filters?: { q?: string; rolId?: number; estado?: string }) {
     const queryBuilder = this.usuarioRepo.createQueryBuilder('usuario')
       .leftJoinAndSelect('usuario.rol', 'rol')
+      .leftJoinAndSelect('usuario.programaFormacion', 'programaFormacion')
       .where('usuario.deletedAt IS NULL');
 
     // Búsqueda de texto en múltiples campos
@@ -139,7 +140,7 @@ export class UsersService {
 
     // FORCE CHANGE: Update ID and clear relation to prevent TypeORM from using the old loaded relation
     usuario.rolId = data.rolId;
-    usuario.rol = null as any; 
+    usuario.rol = null as any;
 
     // Explicitly update only the rolId column if possible, but save() is standard
     const updatedUser = await this.usuarioRepo.save(usuario);

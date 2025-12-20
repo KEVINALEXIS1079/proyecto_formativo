@@ -17,7 +17,9 @@ export enum InsumoEstado {
 
 export enum TipoInsumo {
   CONSUMIBLE = 'CONSUMIBLE',
-  NO_CONSUMIBLE = 'NO_CONSUMIBLE',
+  NO_CONSUMIBLE = 'NO_CONSUMIBLE', // Deprecated but kept for compatibility
+  HERRAMIENTA = 'HERRAMIENTA',
+  MAQUINARIA = 'MAQUINARIA',
 }
 
 @Entity('insumos')

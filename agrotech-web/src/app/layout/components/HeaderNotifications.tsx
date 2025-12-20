@@ -1,5 +1,6 @@
 import { Popover, PopoverTrigger, PopoverContent, Chip, Spinner, Badge, Button, ScrollShadow } from "@heroui/react";
-import { Bell, Wheat, Package, AlertTriangle, AlertOctagon, Clock, CheckCircle2, UserPlus, Users, ListChecks } from "lucide-react";
+import { Bell, AlertTriangle, AlertOctagon, UserPlus, ListChecks } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 type Notification = {
   id: string;
@@ -9,9 +10,11 @@ type Notification = {
   time?: string;
   source?: 'monitoreo' | 'inventario' | 'usuarios' | 'actividades';
   type?: string;
+  metadata?: any;
 };
 
-export default function HeaderNotifications({ items, loading }: { items: Notification[]; loading?: boolean }) {
+export default function HeaderNotifications({ items, loading, onMarkAsRead, onNotificationClick }: { items: Notification[]; loading?: boolean; onMarkAsRead?: (id: string) => void; onNotificationClick?: (n: Notification) => void }) {
+  const navigate = useNavigate();
   const unread = items.filter((n) => n.unread).length;
 
   const monitoreoItems = items.filter(n => n.source === 'monitoreo' || (!n.source && !n.id.startsWith('stock') && !n.id.startsWith('user') && !n.id.startsWith('act')));
@@ -20,99 +23,63 @@ export default function HeaderNotifications({ items, loading }: { items: Notific
   const actividadItems = items.filter(n => n.source === 'actividades' || n.id.startsWith('act'));
 
   const getIcon = (source: string | undefined, type: string | undefined) => {
-    if (source === 'inventario') {
-      return type === 'danger' ? <AlertOctagon size={18} /> : <AlertTriangle size={18} />;
-    }
-    if (source === 'usuarios') {
-      return <UserPlus size={18} />;
-    }
-    if (source === 'actividades') {
-      return <ListChecks size={18} />;
-    }
-    // IoT / Monitoreo
-    return <AlertTriangle size={18} />;
+    if (source === 'inventario') return type === 'danger' ? <AlertOctagon size={16} /> : <AlertTriangle size={16} />;
+    if (source === 'usuarios') return <UserPlus size={16} />;
+    if (source === 'actividades') return <ListChecks size={16} />;
+    return <AlertTriangle size={16} />;
   };
 
   const getColorClass = (type: string | undefined, source: string | undefined) => {
-    if (source === 'inventario') {
-      if (type === 'danger') return "bg-red-50 text-red-600 border-red-100";
-      return "bg-orange-50 text-orange-600 border-orange-100";
-    }
-    if (source === 'usuarios') {
-      return "bg-purple-50 text-purple-600 border-purple-100";
-    }
-    if (source === 'actividades') {
-      return "bg-emerald-50 text-emerald-600 border-emerald-100";
-    }
-    // IoT
-    return "bg-blue-50 text-blue-600 border-blue-100";
+    if (source === 'inventario') return type === 'danger' ? "bg-red-50 text-red-600" : "bg-orange-50 text-orange-600";
+    if (source === 'usuarios') return "bg-purple-50 text-purple-600";
+    if (source === 'actividades') return "bg-emerald-50 text-emerald-600";
+    return "bg-blue-50 text-blue-600";
   };
 
-  const renderSection = (title: string, icon: React.ReactNode, list: Notification[], emptyMsg: string, headerColor: string) => (
-    <div className="flex flex-col relative w-full">
-      <div className={`px-4 py-3 flex items-center gap-2 sticky top-0 z-20 backdrop-blur-md bg-opacity-95 text-xs font-bold uppercase tracking-wider border-b border-default-100 shadow-sm ${headerColor}`}>
-        {icon}
-        {title}
-        {list.length > 0 && (
-          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-white/60 px-1.5 font-mono text-[10px] text-foreground-500 shadow-sm border border-black/5">
-            {list.length}
-          </span>
-        )}
+  const renderSection = (title: string, list: Notification[]) => (
+    <div className="flex flex-col w-full">
+      <div className="px-4 py-2 text-[10px] font-bold text-default-400 uppercase tracking-wider bg-default-50 border-y border-default-100 sticky top-0 z-10 backdrop-blur-sm bg-default-50/80">
+        {title} <span className="ml-1 text-default-300">({list.length})</span>
       </div>
-
-      {list.length === 0 ? (
-        <div className="p-6 flex flex-col items-center justify-center text-center gap-2 opacity-60">
-          <div className="p-2 bg-default-100 rounded-full">
-            <CheckCircle2 size={16} className="text-default-400" />
-          </div>
-          <p className="text-[10px] text-default-500 font-medium uppercase tracking-tight">{emptyMsg}</p>
-        </div>
-      ) : (
-        <ul className="flex flex-col divide-y divide-default-100">
-          {list.map((n) => (
-            <li key={n.id} className="relative group p-4 hover:bg-default-50/50 transition-colors cursor-pointer">
-              {n.unread && (
-                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-              )}
-              <div className="flex gap-3">
-                {/* Icon Box */}
-                <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center border shadow-sm ${getColorClass(n.type, n.source)}`}>
-                  {getIcon(n.source, n.type)}
-                </div>
-
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className={`text-sm font-semibold leading-tight ${n.unread ? "text-foreground-900" : "text-default-600"}`}>
-                      {n.title}
-                    </p>
-                    {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-danger shrink-0 mt-1" />}
-                  </div>
-
-                  {n.body && (
-                    <p className="text-xs text-default-500 leading-relaxed line-clamp-2">
-                      {n.body}
-                    </p>
-                  )}
-
-                  {n.time && (
-                    <div className="flex items-center gap-1 pt-1.5">
-                      <Clock size={10} className="text-default-400" />
-                      <span className="text-[10px] text-default-400 font-medium tracking-tight">
-                        {n.time}
-                      </span>
-                    </div>
-                  )}
-                </div>
+      <ul className="flex flex-col divide-y divide-default-50">
+        {list.map((n) => (
+          <li
+            key={n.id}
+            className={`relative group px-4 py-3 hover:bg-default-100 transition-all cursor-pointer ${n.unread ? "bg-white" : "bg-default-50/20 opacity-75"}`}
+            onClick={() => onNotificationClick ? onNotificationClick(n) : onMarkAsRead?.(n.id)}
+          >
+            {n.unread && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-primary rounded-r-md" />
+            )}
+            <div className="flex gap-3">
+              <div className={`mt-0.5 shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${getColorClass(n.type, n.source)}`}>
+                {getIcon(n.source, n.type)}
               </div>
-            </li>
-          ))}
-        </ul>
-      )}
+
+              <div className="flex-1 min-w-0 space-y-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className={`text-sm font-medium leading-tight ${n.unread ? "text-foreground-900" : "text-default-600"}`}>
+                    {n.title}
+                  </p>
+                  {n.time && <span className="text-[10px] text-default-400 shrink-0 font-medium">{n.time}</span>}
+                </div>
+                {n.body && (
+                  <p className="text-xs text-default-500 leading-relaxed line-clamp-2">
+                    {n.body}
+                  </p>
+                )}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 
+  const hasItems = items.length > 0;
+
   return (
-    <Popover placement="bottom-end" showArrow offset={10} classNames={{ content: "p-0 border-none shadow-xl rounded-xl" }}>
+    <Popover placement="bottom-end" showArrow offset={10} classNames={{ content: "p-0 border-0 shadow-lg ring-1 ring-black/5 rounded-medium w-[90vw] sm:w-[360px]" }}>
       <Badge content={unread > 0 ? unread : null} shape="circle" color="danger" size="sm" className="border-2 border-white shadow-sm" isInvisible={unread === 0}>
         <PopoverTrigger>
           <Button isIconOnly variant="light" radius="full" className="h-10 w-10 data-[hover=true]:bg-default-100" aria-label="Notificaciones">
@@ -121,79 +88,57 @@ export default function HeaderNotifications({ items, loading }: { items: Notific
         </PopoverTrigger>
       </Badge>
 
-      <PopoverContent className="w-[360px] sm:w-[380px] max-w-[95vw] bg-white text-foreground">
-        {/* Header */}
-        <div className="px-4 py-3 bg-white border-b border-default-100 flex items-center justify-between sticky top-0 z-30">
-          <div>
+      <PopoverContent className="w-[90vw] sm:w-[360px] bg-white text-foreground overflow-hidden flex flex-col">
+        {/* Static Header */}
+        <div className="px-4 py-3 bg-white border-b border-default-100 flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-2">
             <h4 className="text-sm font-bold text-foreground-900">Notificaciones</h4>
+            {unread > 0 ? (
+              <Chip size="sm" color="danger" variant="flat" className="h-5 px-1.5 text-[10px] font-bold uppercase tracking-wider">
+                {unread} nuevas
+              </Chip>
+            ) : null}
           </div>
-          {unread > 0 && (
-            <Chip size="sm" color="danger" variant="flat" classNames={{ content: "font-semibold text-xs px-2" }} className="h-6">
-              {unread} nuevas
-            </Chip>
-          )}
         </div>
 
-        {/* Content */}
-        <ScrollShadow className="max-h-[480px] w-full bg-white relative">
+        {/* Scrollable Content */}
+        <ScrollShadow className="flex-1 w-full bg-white relative max-h-[60vh] overflow-y-auto">
           {loading ? (
             <div className="h-[200px] flex flex-col items-center justify-center gap-3 text-default-400">
               <Spinner size="md" color="current" />
-              <p className="text-xs font-medium">Cargando...</p>
             </div>
-          ) : items.length === 0 ? (
-            <div className="py-12 px-6 flex flex-col items-center text-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-default-50 flex items-center justify-center">
+          ) : !hasItems ? (
+            <div className="py-12 px-6 flex flex-col items-center text-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-default-50 flex items-center justify-center ring-4 ring-default-50/50">
                 <Bell size={24} className="text-default-300" />
               </div>
-              <p className="text-xs text-default-500">
-                No tienes notificaciones pendientes.
-              </p>
+              <div>
+                <p className="text-sm font-semibold text-foreground-700">Estas al día</p>
+                <p className="text-xs text-default-400 mt-1 max-w-[200px] mx-auto">
+                  No tienes notificaciones pendientes.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col pb-2">
-              {/* Sección Usuarios */}
-              {renderSection(
-                "Usuarios Pendientes",
-                <Users size={14} className="text-purple-600" />,
-                usuarioItems,
-                "Sin usuarios por activar.",
-                "bg-purple-50/90 text-purple-700"
-              )}
-
-              {/* Sección Actividades */}
-              {renderSection(
-                "Actividades Asignadas",
-                <ListChecks size={14} className="text-emerald-600" />,
-                actividadItems,
-                "Sin nuevas asignaciones.",
-                "bg-emerald-50/90 text-emerald-700"
-              )}
-              {renderSection(
-                "Monitoreo",
-                <Wheat size={14} className="text-blue-600" />,
-                monitoreoItems,
-                "Sin alertas de monitoreo.",
-                "bg-blue-50/90 text-blue-700"
-              )}
-
-              {/* Sección Inventario */}
-              {renderSection(
-                "Inventario",
-                <Package size={14} className="text-orange-600" />,
-                inventarioItems,
-                "Inventario al día.",
-                "bg-orange-50/90 text-orange-700"
-              )}
+              {usuarioItems.length > 0 && renderSection("Usuarios", usuarioItems)}
+              {actividadItems.length > 0 && renderSection("Actividades", actividadItems)}
+              {monitoreoItems.length > 0 && renderSection("Monitoreo", monitoreoItems)}
+              {inventarioItems.length > 0 && renderSection("Inventario", inventarioItems)}
             </div>
           )}
         </ScrollShadow>
 
-        {/* Footer */}
-        <div className="p-2 border-t border-default-100 bg-gray-50 flex justify-center sticky bottom-0 z-30">
-          <button className="text-[10px] font-semibold text-default-500 hover:text-primary transition-colors uppercase tracking-wide px-4 py-1">
-            Ver todo el historial
-          </button>
+        {/* Static Footer */}
+        <div className="p-2 border-t border-default-100 bg-gray-50/50 shrink-0 z-20">
+          <Button
+            size="sm"
+            variant="light"
+            className="text-xs font-semibold text-primary uppercase tracking-wide w-full"
+            onPress={() => navigate('/notificaciones')}
+          >
+            Ver historial completo
+          </Button>
         </div>
       </PopoverContent>
     </Popover>

@@ -1,8 +1,10 @@
-import { Button, Input, Card, CardBody } from "@heroui/react";
+import { Button, Input, Card, CardBody, Select, SelectItem } from "@heroui/react";
 import type { Control } from "react-hook-form";
 import { useFieldArray, Controller } from "react-hook-form";
 import type { ActividadFormData } from "../models/schemas";
 import { Plus, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getActivosFijos } from "../../inventario/api/insumos.service";
 
 interface ServiciosSectionProps {
   control: Control<ActividadFormData>;
@@ -12,6 +14,11 @@ export default function ServiciosSection({ control }: ServiciosSectionProps) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "servicios",
+  });
+
+  const { data: maquinariaList } = useQuery({
+    queryKey: ['activos-fijos', 'MAQUINARIA'],
+    queryFn: () => getActivosFijos('MAQUINARIA')
   });
 
   return (
@@ -53,8 +60,8 @@ export default function ServiciosSection({ control }: ServiciosSectionProps) {
                   render={({ field: f, fieldState }) => (
                     <Input
                       {...f}
-                      label="Nombre del Servicio / Maquinaria"
-                      placeholder="Ej. Tractor, Guadaña"
+                      label="Nombre del Servicio"
+                      placeholder="Ej. Arado, Riego"
                       errorMessage={fieldState.error?.message}
                       isInvalid={!!fieldState.error}
                       variant="bordered"
@@ -64,7 +71,33 @@ export default function ServiciosSection({ control }: ServiciosSectionProps) {
                 />
               </div>
 
-              <div className="w-full md:w-32">
+              <div className="flex-1 w-full">
+                <Controller
+                  name={`servicios.${index}.maquinariaId`}
+                  control={control}
+                  render={({ field: f }) => (
+                    <Select
+                      label="Maquinaria (Opcional)"
+                      placeholder="Seleccionar..."
+                      variant="bordered"
+                      size="sm"
+                      selectedKeys={f.value ? [String(f.value)] : []}
+                      onSelectionChange={(keys) => {
+                        const val = Array.from(keys)[0];
+                        f.onChange(val ? Number(val) : undefined);
+                      }}
+                    >
+                      {(maquinariaList || []).map((m: any) => (
+                        <SelectItem key={m.id} textValue={m.nombre}>
+                          {m.nombre} {m.modelo ? `(${m.modelo})` : ''}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+              </div>
+
+              <div className="w-full md:w-24">
                 <Controller
                   name={`servicios.${index}.horas`}
                   control={control}
@@ -73,7 +106,7 @@ export default function ServiciosSection({ control }: ServiciosSectionProps) {
                       {...f}
                       value={f.value?.toString() || ""}
                       type="number"
-                      label="Horas Uso"
+                      label="Horas"
                       placeholder="0"
                       variant="bordered"
                       size="sm"
@@ -92,7 +125,7 @@ export default function ServiciosSection({ control }: ServiciosSectionProps) {
                       {...f}
                       value={f.value?.toString() || ""}
                       type="number"
-                      label="Precio/Hora"
+                      label="Precio/Hr"
                       placeholder="0"
                       variant="bordered"
                       size="sm"

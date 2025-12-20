@@ -4,7 +4,7 @@ Plataforma web desarrollada con **React 19**, **Vite** y **TailwindCSS v4**.
 
 ## Requisitos
 
-- **Node.js**: v18 o superior
+- **Node.js**: v22 o superior
 
 ## Configuración
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { connectSocket, api } from '../../../shared/api/client';
 import { IoTApi } from '../api/iot.api';
 import type { Sensor, SensorLectura, LotMetrics } from '../model/iot.types';
@@ -59,89 +59,91 @@ export const useIoTLotCharts = (
 
   useEffect(() => {
     if (activeSensors.length === 0) {
-        setReadings({});
-        setSummaries({});
-        setLoading(false);
-        return;
+      setReadings({});
+      setSummaries({});
+      setLoading(false);
+      return;
     }
 
     const fetchData = async () => {
       setLoading(true);
       const newReadings: Record<number, SensorLectura[]> = {};
       const newSummaries: Record<number, any> = {};
-      
+
       try {
         if (dateRange) {
           // ==============================
           // BULK STRATEGY (High Performance)
           // ==============================
           const diffDays = (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 3600 * 24);
-          
+
           if (diffDays > 2) {
-             let interval: 'hour' | 'day' | 'week' = 'day';
-             if (diffDays <= 7) interval = 'hour';
-             else if (diffDays <= 60) interval = 'day';
-             else interval = 'week';
+            let interval: 'hour' | 'day' | 'week' = 'day';
+            if (diffDays <= 7) interval = 'hour';
+            else if (diffDays <= 60) interval = 'day';
+            else interval = 'week';
 
-             // 1. Bulk Call
-             const sensorIds = activeSensors.map(s => s.id);
-             const bulkData = await IoTApi.getBulkAggregatedReadings(sensorIds, {
-               from: dateRange.start.toISOString(),
-               to: dateRange.end.toISOString(),
-               interval
-             });
+            // 1. Bulk Call
+            const sensorIds = activeSensors.map(s => s.id);
+            const bulkData = await IoTApi.getBulkAggregatedReadings(sensorIds, {
+              from: dateRange.start.toISOString(),
+              to: dateRange.end.toISOString(),
+              interval
+            });
 
-             // 2. Map response
-             Object.entries(bulkData).forEach(([sId, data]) => {
-                const sensorId = parseInt(sId);
-                newReadings[sensorId] = data.map((a: any) => ({
-                  id: 0,
-                  sensorId: sensorId,
-                  valor: a.promedio,
-                  fechaLectura: a.fecha, 
-                  fecha: a.fecha
-                }));
-             });
+            // 2. Map response
+            Object.entries(bulkData).forEach(([sId, data]) => {
+              const sensorId = parseInt(sId);
+              newReadings[sensorId] = data.map((a: any) => ({
+                id: 0,
+                sensorId: sensorId,
+                valor: a.promedio,
+                fechaLectura: a.fecha,
+                fecha: a.fecha
+              }));
+            });
           } else {
-             // Short range: Parallel Fetch (still N+1 but acceptable for small data range or implement bulk raw later)
-             await Promise.all(activeSensors.map(async (sensor) => {
-                const options: any = { 
-                   from: dateRange.start.toISOString(),
-                   to: dateRange.end.toISOString()
-                };
-                const data = await IoTApi.getSensorReadings(sensor.id, options);
-                newReadings[sensor.id] = data.reverse();
-             }));
+            // Short range: Parallel Fetch (still N+1 but acceptable for small data range or implement bulk raw later)
+            await Promise.all(activeSensors.map(async (sensor) => {
+              const options: any = {
+                from: dateRange.start.toISOString(),
+                to: dateRange.end.toISOString()
+              };
+              const data = await IoTApi.getSensorReadings(sensor.id, options);
+              newReadings[sensor.id] = data.reverse();
+            }));
           }
 
         } else {
-           // ==============================
-           // LIVE STRATEGY
-           // ==============================
-           await Promise.all(activeSensors.map(async (sensor) => {
-             const data = await IoTApi.getSensorReadings(sensor.id, { limit: 100 });
-             const reversedData = data.reverse();
-             newReadings[sensor.id] = capLiveReadings(filterRecentReadings(reversedData));
-           }));
+          // ==============================
+          // LIVE STRATEGY
+          // ==============================
+          await Promise.all(activeSensors.map(async (sensor) => {
+            const data = await IoTApi.getSensorReadings(sensor.id, { limit: 100 });
+            const reversedData = data.reverse();
+            newReadings[sensor.id] = capLiveReadings(filterRecentReadings(reversedData));
+          }));
         }
 
         // Fetch Summaries in parallel (optimizable to bulk later if needed)
         // For now, allow these to fail without blocking charts
-        activeSensors.forEach(sensor => {
-            if (sensor.tipoSensorId) {
-                // Fire and forget-ish, or just dont wait for all
-                const summaryParams: any = {
-                   tipoSensorId: sensor.tipoSensorId,
-                   from: dateRange ? dateRange.start.toISOString() : '2020-01-01',
-                   to: dateRange ? dateRange.end.toISOString() : '2030-12-31'
-                };
-                api.get('/reports/iot/summary', { params: summaryParams })
-                   .then(res => {
-                       setSummaries(prev => ({ ...prev, [sensor.id]: res.data }));
-                   })
-                   .catch(e => console.warn('Summary fetch failed', e));
-            }
-        });
+        // Fetch Summaries in BULK (Optimized)
+        if (activeSensors.length > 0) {
+          const sensorIds = activeSensors
+            .filter(s => s.tipoSensorId) // Ensure we only ask for valid ones if needed, or backend handles it
+            .map(s => s.id);
+
+          if (sensorIds.length > 0) {
+            IoTApi.getBulkSummaries(sensorIds, {
+              from: dateRange ? dateRange.start.toISOString() : undefined,
+              to: dateRange ? dateRange.end.toISOString() : undefined
+            })
+              .then(res => {
+                setSummaries(res);
+              })
+              .catch(e => console.warn('Bulk summary fetch failed', e));
+          }
+        }
 
         setReadings(newReadings);
       } catch (err) {
@@ -153,48 +155,74 @@ export const useIoTLotCharts = (
 
     fetchData();
 
-    if (!isLive) return; 
+    if (!isLive) return;
 
     // Socket logic: Always connect if "isLive" (current time in range), 
     // but ONLY filter by 2 minutes if we are strictly in "No Range" mode.
     const socket = connectSocket('/iot');
-    
+
+    // EXTREME MODE: ZERO VIOLATIONS FOR CHARTS
+    let pendingReadings = new Map<number, any[]>();
+    let chartUpdateTimeout: NodeJS.Timeout | null = null;
+    const MIN_CHART_FLUSH_INTERVAL = 2500; // 2.5 seconds - absolute maximum
+    const MAX_READINGS_PER_SENSOR = 10; // Reduced to 10
+
+    const flushPendingReadings = () => {
+      if (pendingReadings.size === 0) return;
+
+      const updates = new Map(pendingReadings);
+      pendingReadings.clear();
+
+      setReadings(prev => {
+        const newReadings = { ...prev };
+        updates.forEach((lecturas, sensorId) => {
+          const sensorReadings = newReadings[sensorId] || [];
+
+          // Limit incoming batch size to prevent performance issues
+          const limitedLecturas = lecturas.length > MAX_READINGS_PER_SENSOR
+            ? lecturas.slice(-MAX_READINGS_PER_SENSOR)
+            : lecturas;
+
+          let updated = [...sensorReadings, ...limitedLecturas];
+
+          if (!dateRange) {
+            updated = capLiveReadings(filterRecentReadings(updated));
+          } else {
+            if (updated.length > 500) updated = updated.slice(-500);
+          }
+
+          newReadings[sensorId] = updated;
+        });
+        return newReadings;
+      });
+    };
+
     const handleNuevaLectura = (lectura: any) => {
       const isActiveSensor = activeSensors.some(s => s.id === lectura.sensorId);
       if (!isActiveSensor) return;
 
-      setReadings(prev => {
-        const sensorReadings = prev[lectura.sensorId] || [];
-        const transformedLectura = {
-          ...lectura,
-          fechaLectura: lectura.fecha || lectura.fechaLectura,
-          valor: typeof lectura.valor === 'string' ? parseFloat(parseFloat(lectura.valor).toFixed(2)) : parseFloat(Number(lectura.valor).toFixed(2))
-        };
-        
-        let updated = [...sensorReadings, transformedLectura];
+      const transformedLectura = {
+        ...lectura,
+        fechaLectura: lectura.fecha || lectura.fechaLectura,
+        valor: typeof lectura.valor === 'string' ? parseFloat(parseFloat(lectura.valor).toFixed(2)) : parseFloat(Number(lectura.valor).toFixed(2))
+      };
 
-        // If explicitly dateRanged, we don't strictly cap to 2 mins, but we might want to cap length to avoid memory leak
-        if (!dateRange) {
-           updated = capLiveReadings(filterRecentReadings(updated));
-        } else {
-           // For Ranged views, just ensure we don't hold infinite points. 
-           // If we are aggregating, we shouldn't really append raw points blindly, 
-           // but for UX it's nicer to see them appear. 
-           // We'll keep last 500 to be safe.
-           if (updated.length > 500) updated = updated.slice(-500);
-        }
+      // Batch readings by sensor ID
+      const existing = pendingReadings.get(lectura.sensorId) || [];
+      pendingReadings.set(lectura.sensorId, [...existing, transformedLectura]);
 
-        return { ...prev, [lectura.sensorId]: updated };
-      });
+      // Aggressive throttle updates
+      if (chartUpdateTimeout) clearTimeout(chartUpdateTimeout);
+      chartUpdateTimeout = setTimeout(flushPendingReadings, MIN_CHART_FLUSH_INTERVAL);
     };
-    
+
     socket.on('nuevaLectura', handleNuevaLectura);
 
     // Cleanup interval: Only needed for strict live mode
     const cleanupInterval = setInterval(() => {
-       if (dateRange) return; // Don't auto-clean in history mode
-       
-       setReadings(prev => {
+      if (dateRange) return; // Don't auto-clean in history mode
+
+      setReadings(prev => {
         const cleaned: Record<number, SensorLectura[]> = {};
         Object.keys(prev).forEach(sensorIdStr => {
           const sensorId = parseInt(sensorIdStr);
@@ -204,9 +232,15 @@ export const useIoTLotCharts = (
       });
     }, 30000); // 30 seconds
 
-    return () => { 
+    return () => {
       socket.off('nuevaLectura', handleNuevaLectura);
       clearInterval(cleanupInterval);
+
+      // Clear pending timeout and flush remaining updates
+      if (chartUpdateTimeout) {
+        clearTimeout(chartUpdateTimeout);
+        flushPendingReadings();
+      }
     };
   }, [activeSensors, dateRange, isLive]);
 
@@ -216,14 +250,14 @@ export const useIoTLotCharts = (
 
     // If we have summaries, use them for global aggregation
     const hasSummaries = Object.keys(summaries).length > 0;
-    
+
     if (hasSummaries) {
       // Note: Summary is per TYPE, so this might duplicate if multiple sensors have same type
       // But for "Lot Analysis" it's an approximation. 
       // Ideally we'd sum up totals, but we only have averages.
       // Let's use readings for global aggregation to be safe, 
       // OR rely on the fact that summaries are accurate for the sensor.
-      
+
       // Actually, let's stick to aggregating readings for the LOT metrics
       // because the summary endpoint is per-type, not per-sensor-instance.
     }
@@ -310,13 +344,13 @@ export const useIoTLotCharts = (
 
       // Calculate from readings (used when date range is present or summary missing)
       if (sensorReadings.length === 0) return null;
-      
+
       const values = sensorReadings.map(r => r.valor);
       const sum = values.reduce((a, b) => a + b, 0);
       const avg = sum / values.length;
       const min = Math.min(...values);
       const max = Math.max(...values);
-      
+
       return {
         sensorId: sensor.id,
         name: sensor.nombre,

@@ -17,10 +17,10 @@ export const useIoTReportGenerator = () => {
   const generatePdf = async ({ loteId, startDate, endDate, sensorId }: UseIoTReportGeneratorProps) => {
     try {
       setGeneratingPdf(true);
-      
+
       // Load Logo
       const logoImg = new Image();
-      logoImg.src = '/LogoTic.png';
+      logoImg.src = '/logoAgrotech.png';
       await new Promise((resolve) => {
         logoImg.onload = resolve;
         logoImg.onerror = resolve;
@@ -32,10 +32,10 @@ export const useIoTReportGenerator = () => {
         endDate,
         sensorId: sensorId || undefined
       });
-      
+
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
-      
+
       // Choose report type based on loteId
       if (loteId) {
         generateSpecificReport(doc, data, logoImg, pageWidth, loteId, startDate, endDate);
@@ -76,7 +76,7 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(41, 98, 255);
   doc.text(`REPORTE DE LOTE: ${loteId}`, pageWidth / 2, 20, { align: 'center' });
-  
+
   // Period
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -99,7 +99,7 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
   doc.setFillColor(236, 240, 241);
   doc.setDrawColor(189, 195, 199);
   doc.roundedRect(20, yPos, pageWidth - 40, 18, 2, 2, 'FD');
-  
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(44, 62, 80);
@@ -125,27 +125,27 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text("MAXIMO GLOBAL", startX + cardW/2, yPos + 8, { align: 'center' });
+  doc.text("MAXIMO GLOBAL", startX + cardW / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(18);
-  doc.text(data.maxGlobal.toFixed(2), startX + cardW/2, yPos + 20, { align: 'center' });
+  doc.text(data.maxGlobal.toFixed(2), startX + cardW / 2, yPos + 20, { align: 'center' });
 
   // Min Card
   doc.setFillColor(52, 152, 219);
   doc.roundedRect(startX + cardW + cardGap, yPos, cardW, cardH, 3, 3, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
-  doc.text("MINIMO GLOBAL", startX + cardW + cardGap + cardW/2, yPos + 8, { align: 'center' });
+  doc.text("MINIMO GLOBAL", startX + cardW + cardGap + cardW / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(18);
-  doc.text(data.minGlobal.toFixed(2), startX + cardW + cardGap + cardW/2, yPos + 20, { align: 'center' });
+  doc.text(data.minGlobal.toFixed(2), startX + cardW + cardGap + cardW / 2, yPos + 20, { align: 'center' });
 
   // Avg Card
   doc.setFillColor(155, 89, 182);
   doc.roundedRect(startX + (cardW + cardGap) * 2, yPos, cardW, cardH, 3, 3, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
-  doc.text("PROMEDIO", startX + (cardW + cardGap) * 2 + cardW/2, yPos + 8, { align: 'center' });
+  doc.text("PROMEDIO", startX + (cardW + cardGap) * 2 + cardW / 2, yPos + 8, { align: 'center' });
   doc.setFontSize(18);
-  doc.text(data.avgGlobal.toFixed(2), startX + (cardW + cardGap) * 2 + cardW/2, yPos + 20, { align: 'center' });
+  doc.text(data.avgGlobal.toFixed(2), startX + (cardW + cardGap) * 2 + cardW / 2, yPos + 20, { align: 'center' });
 
   yPos += cardH + 15;
 
@@ -197,7 +197,7 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(44, 62, 80);
       doc.text(`${sensor.nombre} (ID: #${sensor.id})`, 20, yPos);
-      
+
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100);
@@ -208,7 +208,7 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
 
       // Draw Chart for this sensor
       const sensorReadings = data.chartData.filter((d: any) => d.sensorId === sensor.id);
-      
+
       if (sensorReadings.length > 1) {
         const chartX = 20;
         const chartY = yPos + 8;
@@ -230,7 +230,7 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
         // Draw line
         doc.setDrawColor(41, 128, 185);
         doc.setLineWidth(1);
-        
+
         for (let i = 0; i < sensorReadings.length - 1; i++) {
           const x1 = chartX + 2 + (i / (sensorReadings.length - 1)) * (chartW - 4);
           const y1 = chartY + chartH - 2 - ((sensorReadings[i].valor - sMin) / sRange) * (chartH - 4);
@@ -238,7 +238,7 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
           const y2 = chartY + chartH - 2 - ((sensorReadings[i + 1].valor - sMin) / sRange) * (chartH - 4);
           doc.line(x1, y1, x2, y2);
         }
-        
+
         yPos += chartH + 15;
       } else {
         doc.setFontSize(8);
@@ -247,7 +247,7 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
         yPos += 15;
       }
     });
-    
+
     yPos += 5; // Gap between types
   });
 
@@ -282,13 +282,13 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
         s.estado === 'CONECTADO' ? 'Activo' : 'Inactivo'
       ]),
       theme: 'striped',
-      headStyles: { 
-        fillColor: [41, 128, 185], 
+      headStyles: {
+        fillColor: [41, 128, 185],
         textColor: 255,
         fontSize: 9,
         fontStyle: 'bold'
       },
-      styles: { 
+      styles: {
         fontSize: 8,
         cellPadding: 3
       },
@@ -302,7 +302,7 @@ function generateSpecificReport(doc: jsPDF, data: any, logoImg: HTMLImageElement
   doc.setFontSize(7);
   doc.setTextColor(149, 165, 166);
   const pageCount = (doc as any).internal.getNumberOfPages();
-  for(let i = 1; i <= pageCount; i++) {
+  for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.text(`Reporte generado por AgroTech IoT System - ${new Date().toLocaleDateString('es-ES')} - Pagina ${i} de ${pageCount}`, pageWidth / 2, 285, { align: 'center' });
   }
@@ -328,7 +328,7 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(41, 98, 255);
   doc.text("Reporte General de Estado", pageWidth - 20, 20, { align: 'right' });
-  
+
   // Metadata
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -345,36 +345,36 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
   const cardHeight = 32;
   const gap = 7;
   const startX = (pageWidth - (cardWidth * 3 + gap * 2)) / 2;
-  
+
   // Card 1: Total Sensores
   doc.setFillColor(52, 152, 219);
   doc.roundedRect(startX, startY, cardWidth, cardHeight, 3, 3, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text("TOTAL SENSORES", startX + cardWidth/2, startY + 10, { align: 'center' });
+  doc.text("TOTAL SENSORES", startX + cardWidth / 2, startY + 10, { align: 'center' });
   doc.setFontSize(20);
-  doc.text(String(data.totalSensors), startX + cardWidth/2, startY + 24, { align: 'center' });
+  doc.text(String(data.totalSensors), startX + cardWidth / 2, startY + 24, { align: 'center' });
 
   // Card 2: Activos
   doc.setFillColor(46, 204, 113);
   doc.roundedRect(startX + cardWidth + gap, startY, cardWidth, cardHeight, 3, 3, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
-  doc.text("ACTIVOS", startX + cardWidth + gap + cardWidth/2, startY + 10, { align: 'center' });
+  doc.text("ACTIVOS", startX + cardWidth + gap + cardWidth / 2, startY + 10, { align: 'center' });
   doc.setFontSize(20);
-  doc.text(`${data.activos}`, startX + cardWidth + gap + cardWidth/2, startY + 20, { align: 'center' });
+  doc.text(`${data.activos}`, startX + cardWidth + gap + cardWidth / 2, startY + 20, { align: 'center' });
   doc.setFontSize(9);
-  doc.text(`(${data.porcentajeActivos}%)`, startX + cardWidth + gap + cardWidth/2, startY + 27, { align: 'center' });
+  doc.text(`(${data.porcentajeActivos}%)`, startX + cardWidth + gap + cardWidth / 2, startY + 27, { align: 'center' });
 
   // Card 3: Alertas
   doc.setFillColor(231, 76, 60);
   doc.roundedRect(startX + (cardWidth + gap) * 2, startY, cardWidth, cardHeight, 3, 3, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
-  doc.text("ALERTAS", startX + (cardWidth + gap) * 2 + cardWidth/2, startY + 10, { align: 'center' });
+  doc.text("ALERTAS", startX + (cardWidth + gap) * 2 + cardWidth / 2, startY + 10, { align: 'center' });
   doc.setFontSize(20);
-  doc.text(String(data.alertasActivas), startX + (cardWidth + gap) * 2 + cardWidth/2, startY + 24, { align: 'center' });
+  doc.text(String(data.alertasActivas), startX + (cardWidth + gap) * 2 + cardWidth / 2, startY + 24, { align: 'center' });
 
   // Separator
   doc.setDrawColor(189, 195, 199);
@@ -383,7 +383,7 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
 
   // CHARTS SECTION
   const chartY = startY + cardHeight + 20;
-  
+
   // Connection Status
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
@@ -391,13 +391,13 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
   doc.text("ESTADO DE CONEXION", 20, chartY);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  
+
   // Legend with icons
   doc.setFillColor(46, 204, 113);
   doc.circle(25, chartY + 8, 2, 'F');
   doc.setTextColor(44, 62, 80);
   doc.text(`Conectados: ${data.estados.conectados}`, 30, chartY + 9);
-  
+
   doc.setFillColor(189, 195, 199);
   doc.circle(25, chartY + 15, 2, 'F');
   doc.text(`Desconectados: ${data.estados.desconectados}`, 30, chartY + 16);
@@ -409,7 +409,7 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
   doc.text("PROTOCOLOS", 100, chartY);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  
+
   const drawEnhancedBar = (label: string, value: number, y: number, color: number[]) => {
     const maxBarWidth = 60;
     const barWidth = Math.min((value / (data.totalSensors || 1)) * maxBarWidth, maxBarWidth);
@@ -438,7 +438,7 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(52, 73, 94);
     doc.text("RESUMEN POR LOTES", 20, barY + 38);
-    
+
     autoTable(doc, {
       startY: barY + 43,
       head: [['Lote', 'Total Sensores', 'Activos', '% Activos']],
@@ -449,13 +449,13 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
         `${Math.round((l.activos / l.totalSensores) * 100)}%`
       ]),
       theme: 'striped',
-      headStyles: { 
-        fillColor: [52, 152, 219], 
+      headStyles: {
+        fillColor: [52, 152, 219],
         textColor: 255,
         fontSize: 9,
         fontStyle: 'bold'
       },
-      styles: { 
+      styles: {
         fontSize: 8,
         cellPadding: 3
       },
@@ -466,7 +466,7 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
   }
 
   const finalY = (doc as any).lastAutoTable?.finalY || (barY + 60);
-  
+
   // AVERAGES
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
@@ -476,7 +476,7 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
   const avgY = finalY + 20;
   const avgCardWidth = 42;
   const avgGap = 8;
-  
+
   // Dynamic Cards with colors
   const colors = [
     [231, 76, 60],   // Red
@@ -489,7 +489,7 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
   if (Array.isArray(data.promedios) && data.promedios.length > 0) {
     data.promedios.forEach((item: any, index: number) => {
       const x = 20 + (avgCardWidth + avgGap) * index;
-      
+
       if (x + avgCardWidth < pageWidth - 20) {
         const color = colors[index % colors.length];
         doc.setFillColor(color[0], color[1], color[2]);
@@ -498,11 +498,11 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
         const label = item.label.charAt(0).toUpperCase() + item.label.slice(1);
-        doc.text(label, x + avgCardWidth/2, avgY + 7, { align: 'center' });
+        doc.text(label, x + avgCardWidth / 2, avgY + 7, { align: 'center' });
         doc.setFontSize(14);
-        doc.text(`${item.value}`, x + avgCardWidth/2, avgY + 14, { align: 'center' });
+        doc.text(`${item.value}`, x + avgCardWidth / 2, avgY + 14, { align: 'center' });
         doc.setFontSize(7);
-        doc.text(item.unit, x + avgCardWidth/2, avgY + 19, { align: 'center' });
+        doc.text(item.unit, x + avgCardWidth / 2, avgY + 19, { align: 'center' });
       }
     });
   }
@@ -511,7 +511,7 @@ function generateGeneralReport(doc: jsPDF, data: any, logoImg: HTMLImageElement,
   doc.setFontSize(7);
   doc.setTextColor(149, 165, 166);
   const pageCount = (doc as any).internal.getNumberOfPages();
-  for(let i = 1; i <= pageCount; i++) {
+  for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.text(`Reporte generado por AgroTech IoT System - ${new Date().toLocaleDateString('es-ES')} - Pagina ${i} de ${pageCount}`, pageWidth / 2, 285, { align: 'center' });
   }

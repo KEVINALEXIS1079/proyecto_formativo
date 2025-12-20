@@ -48,20 +48,6 @@ export default function ListaPage() {
   useRealTimeActividades();
   const { data: list = [], isLoading } = useActividades();
 
-  // Metrics
-  const metrics = useMemo(() => {
-    const total = list.length;
-    const horas = list.reduce(
-      (acc, x) => acc + Number(x.horasActividad || 0),
-      0
-    );
-    const costo = list.reduce(
-      (acc, x) => acc + Number(x.costoManoObra || 0),
-      0
-    );
-    return { total, horas, costo };
-  }, [list]);
-
   // Filter Logic
   const filtered = useMemo(() => {
     return list.filter((x) => {
@@ -97,6 +83,20 @@ export default function ListaPage() {
       return matchQ && matchTipo && matchFecha && matchTab;
     });
   }, [list, q, tipo, desde, hasta, activeTab]);
+
+  // Metrics
+  const metrics = useMemo(() => {
+    const total = filtered.length;
+    const horas = filtered.reduce(
+      (acc, x) => acc + Number(x.horasActividad || 0),
+      0
+    );
+    const costo = filtered.reduce(
+      (acc, x) => acc + Number(x.costoManoObra || 0),
+      0
+    );
+    return { total, horas, costo };
+  }, [filtered]);
 
   // Export handlers
   const handleExportPDF = async () => {

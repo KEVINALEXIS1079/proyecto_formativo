@@ -54,9 +54,15 @@ export class InventoryController {
 
   @Get('activos-fijos')
   @RequirePermissions('inventario.ver')
-  async findAllActivosFijos() {
-    // Filtramos insumos que sean NO_CONSUMIBLE
-    return this.inventoryService.findAllInsumos({ tipoInsumo: TipoInsumo.NO_CONSUMIBLE });
+  async findAllActivosFijos(@Query('tipo') tipo?: TipoInsumo, @Query('q') q?: string) {
+    // Si no se especifica tipo, traer activos fijos "generales" (NO_CONSUMIBLE)
+    // O si el frontend manda un tipo específico (HERRAMIENTA, MAQUINARIA), usar ese.
+    const filter: any = tipo ? { tipoInsumo: tipo } : { tipoInsumo: TipoInsumo.NO_CONSUMIBLE };
+    if (q) filter.q = q;
+
+    // Si el tipo es NO_CONSUMIBLE, incluimos también MAQUINARIA y HERRAMIENTA para compatibilidad?
+    // No, mejor que sea explícito.
+    return this.inventoryService.findAllInsumos(filter);
   }
 
   @Post('activos-fijos')
@@ -77,11 +83,13 @@ export class InventoryController {
         // Generar nombre con índice si es múltiple
         const nombre = cantidad > 1 ? `${dto.nombre} (${i + 1})` : dto.nombre;
 
-        // Convertir DTO a lo que espera createInsumo, marcando como NO_CONSUMIBLE
+        // Convertir DTO a lo que espera createInsumo
         const insumoData: any = {
           ...dto,
           nombre,
-          tipoInsumo: TipoInsumo.NO_CONSUMIBLE,
+          // Use provided type or fallback to "General" (NO_CONSUMIBLE)
+          // Ideally HERRAMIENTA or MAQUINARIA should be used.
+          tipoInsumo: dto.tipoInsumo || TipoInsumo.NO_CONSUMIBLE,
           presentacionTipo: 'UNIDAD', // Valores por defecto para campos obligatorios de Insumo
           presentacionCantidad: 1,
           presentacionUnidad: 'UND',
@@ -457,7 +465,7 @@ export class InventoryController {
     // Generar nombre único para el archivo
     const filename = `${Date.now()}-${file.originalname}`;
     const uploadDir = 'uploads/insumos';
-    
+
     // Asegurar que el directorio existe
     await fs.promises.mkdir(uploadDir, { recursive: true });
 

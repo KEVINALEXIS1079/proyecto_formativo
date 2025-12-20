@@ -42,7 +42,7 @@ export class IotService implements OnModuleInit {
     @Inject(forwardRef(() => IotGateway))
     private iotGateway: IotGateway,
     private geoService: GeoService,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     // 1. Connect to existing sensors
@@ -196,27 +196,27 @@ export class IotService implements OnModuleInit {
     // Manually delete dependencies to ensure clean removal regardless of DB constraints
     const linkedSensors = await this.sensorRepo.find({
       where: { globalConfigId: id },
-      withDeleted: true 
+      withDeleted: true
     });
 
     if (linkedSensors.length > 0) {
       const sensorIds = linkedSensors.map(s => s.id);
       console.log(`[IoT] Deleting ${linkedSensors.length} sensors linked to Global Config ${id}`);
-      
+
       // Delete readings and alerts first (if DB cascade fails)
       await this.lecturaRepo.delete({ sensorId: In(sensorIds) } as any); // Cast to any if needed or use FindOptions
       await this.alertaRepo.delete({ sensorId: In(sensorIds) } as any);
-      
+
       // Delete sensors
       await this.sensorRepo.remove(linkedSensors);
     }
 
     // Stop the Global Discovery Client so it stops spawning zombies
     if (this.globalClients.has(id)) {
-        console.log(`[IoT] Stopping Discovery Client for Deleted Config ${id}`);
-        const client = this.globalClients.get(id);
-        if (client) client.end();
-        this.globalClients.delete(id);
+      console.log(`[IoT] Stopping Discovery Client for Deleted Config ${id}`);
+      const client = this.globalClients.get(id);
+      if (client) client.end();
+      this.globalClients.delete(id);
     }
 
     return this.configRepo.remove(config);
@@ -236,10 +236,10 @@ export class IotService implements OnModuleInit {
 
     // Disconnect existing client if any
     if (this.globalClients.has(config.id)) {
-        console.log(`[IoT] Disconnecting existing Global Client for Config ${config.id}`);
-        const existing = this.globalClients.get(config.id);
-        if (existing) existing.end();
-        this.globalClients.delete(config.id);
+      console.log(`[IoT] Disconnecting existing Global Client for Config ${config.id}`);
+      const existing = this.globalClients.get(config.id);
+      if (existing) existing.end();
+      this.globalClients.delete(config.id);
     }
 
     console.log(
@@ -589,11 +589,11 @@ export class IotService implements OnModuleInit {
 
   async setSensorsActiveStatusByGlobalConfigId(globalConfigId: number, activo: boolean) {
     if (!activo) {
-       // Disconnect active clients if deactivating
-       const sensors = await this.sensorRepo.find({ where: { globalConfigId } });
-       for (const sensor of sensors) {
-         this.disconnectSensorClient(sensor.id);
-       }
+      // Disconnect active clients if deactivating
+      const sensors = await this.sensorRepo.find({ where: { globalConfigId } });
+      for (const sensor of sensors) {
+        this.disconnectSensorClient(sensor.id);
+      }
     }
     await this.sensorRepo.update({ globalConfigId }, { activo });
   }
@@ -665,141 +665,47 @@ export class IotService implements OnModuleInit {
       };
     }
 
-    // 5. Detalles por sensor con estadísticas y tendencias
-    const sensoresDetalle = [];
+    // 5. Detalles por sensor (OPTIMIZADO - Bulk Fetch)
+    // En lugar de iterar, usamos getBulkSummariesInternal
+    const startDateQuery = startDate
+      ? startDate
+      : new Date(Date.now() - 48 * 60 * 60 * 1000); // Default 48h
+    // Si no hay endDate, usamos now
+    const endDateQuery = endDate || new Date();
 
-    for (const sensor of sensors) {
-      // Estadísticas del sensor - SIN restricción de fechas
-      const qbStats = this.lecturaRepo
-        .createQueryBuilder('lectura')
-        .select('AVG(CAST(lectura.valor AS decimal))', 'promedio')
-        .addSelect('MIN(CAST(lectura.valor AS decimal))', 'minimo')
-        .addSelect('MAX(CAST(lectura.valor AS decimal))', 'maximo')
-        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
-        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'"); // Solo valores numéricos
+    const bulkSummaries =
+      sensorIds.length > 0
+        ? await this.getBulkSummariesInternal(
+          sensorIds,
+          startDateQuery,
+          endDateQuery,
+        )
+        : {};
 
-      const stats = await qbStats.getRawOne();
+    // Mapear resultados
+    const sensoresDetalle = sensors.map((sensor) => {
+      const summary = bulkSummaries[sensor.id];
 
-      // Obtener lectura con valor mínimo (con fecha) - SIN restricción de fechas
-      const qbMin = this.lecturaRepo
-        .createQueryBuilder('lectura')
-        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
-        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
-        .orderBy('CAST(lectura.valor AS decimal)', 'ASC')
-        .limit(1);
+      // fallback safe values
+      const prom = summary?.avg ?? 0;
+      const minVal = summary?.min ?? 0;
+      const maxVal = summary?.max ?? 0;
+      const lastVal = summary?.last ?? 0;
+      // Tendencia simplificada (no full array, to keep it light in report)
+      // O si el frontend necesita la tendencia completa, podríamos traerla también,
+      // pero getBulkSummariesInternal actualmente devuelve stats.
+      // Para tendencia visual (sparkline), el frontend usa chartData global o endpoints específicos.
+      // Mantendremos "tendencia" como array vacío o simplificado si el usuario no requiere 48 puntos per sensor.
+      // *Revisión*: El código original traía 48 puntos por sensor. Esto es muy pesado.
+      // Vamos a devolver stats precisos y si el frontend quiere gráficos por sensor, que los pida on-demand.
+      // PERO para no romper compatibilidad, podemos intentar traer "sparkline" simple o devolver empty.
+      // El dashboard actual usa "chartData" global para el gráfico grande.
+      // Y usa "tendencia" en el objeto detalle?
+      // Revisando LotsAnalyticsPage, parece que usa "sensorSummaryData" que tiene avg/min/max.
+      // No parece renderizar una sparkline por cada fila en el general report table, solo valores.
+      // Así que empty array debería ser seguro.
 
-      const minReading = await qbMin.getOne();
-
-      // Obtener lectura con valor máximo (con fecha) - SIN restricción de fechas
-      const qbMax = this.lecturaRepo
-        .createQueryBuilder('lectura')
-        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
-        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
-        .orderBy('CAST(lectura.valor AS decimal)', 'DESC')
-        .limit(1);
-
-      const maxReading = await qbMax.getOne();
-
-      // Obtener última lectura - SIN restricción de fechas
-      const qbLast = this.lecturaRepo
-        .createQueryBuilder('lectura')
-        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
-        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
-        .orderBy('lectura.fechaLectura', 'DESC')
-        .limit(1);
-
-      const lastReading = await qbLast.getOne();
-
-
-
-      // Obtener datos de tendencia (últimas 48 horas o rango especificado, agregado por hora)
-      const qbTrend = this.lecturaRepo
-        .createQueryBuilder('lectura')
-        .select("date_trunc('hour', lectura.fechaLectura)", 'fecha')
-        .addSelect('AVG(CAST(lectura.valor AS decimal))', 'valor')
-        .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
-        .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'"); // Solo valores numéricos
-
-      if (startDate) {
-        qbTrend.andWhere('lectura.fechaLectura >= :start', {
-          start: startDate,
-        });
-      } else {
-        // Default: últimas 48 horas
-        const twoDaysAgo = new Date();
-        twoDaysAgo.setHours(twoDaysAgo.getHours() - 48);
-        qbTrend.andWhere('lectura.fechaLectura >= :twoDaysAgo', {
-          twoDaysAgo,
-        });
-      }
-
-      if (endDate) {
-        qbTrend.andWhere('lectura.fechaLectura <= :end', { end: endDate });
-      }
-
-      const trendData = await qbTrend
-        .groupBy("date_trunc('hour', lectura.fechaLectura)")
-        .orderBy('fecha', 'ASC')
-        .limit(48) // Limitar a 48 puntos máximo
-        .getRawMany();
-
-
-
-      // FALLBACK: Si no hay datos en el rango, buscar en los últimos 30 días
-      let finalTrendData = trendData;
-      if (finalTrendData.length === 0) {
-
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        finalTrendData = await this.lecturaRepo
-          .createQueryBuilder('lectura')
-          .select("date_trunc('hour', lectura.fechaLectura)", 'fecha')
-          .addSelect('AVG(CAST(lectura.valor AS decimal))', 'valor')
-          .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
-          .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
-          .andWhere('lectura.fechaLectura >= :thirtyDaysAgo', { thirtyDaysAgo })
-          .groupBy("date_trunc('hour', lectura.fechaLectura)")
-          .orderBy('fecha', 'DESC')
-          .limit(48)
-          .getRawMany();
-        
-
-      }
-
-      // FALLBACK 2: Si aún no hay datos, buscar CUALQUIER dato sin restricción de fechas
-      if (finalTrendData.length === 0) {
-
-        
-        finalTrendData = await this.lecturaRepo
-          .createQueryBuilder('lectura')
-          .select("date_trunc('hour', lectura.fechaLectura)", 'fecha')
-          .addSelect('AVG(CAST(lectura.valor AS decimal))', 'valor')
-          .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
-          .andWhere("lectura.valor ~ '^[0-9]+(\\.[0-9]+)?$'") // Solo valores numéricos
-          .groupBy("date_trunc('hour', lectura.fechaLectura)")
-          .orderBy('fecha', 'DESC')
-          .limit(48)
-          .getRawMany();
-        
-
-        
-        // Verificar si hay ALGUNA lectura para este sensor
-        const totalCount = await this.lecturaRepo
-          .createQueryBuilder('lectura')
-          .where('lectura.sensorId = :sensorId', { sensorId: sensor.id })
-          .getCount();
-        
-
-      }
-
-      const tendencia = finalTrendData.map((t) => ({
-        fecha: t.fecha,
-        valor: parseFloat(t.valor),
-      }));
-
-      // Construir objeto de detalle del sensor
-      sensoresDetalle.push({
+      return {
         id: sensor.id,
         nombre: sensor.nombre,
         protocolo: sensor.protocolo || 'N/A',
@@ -807,25 +713,25 @@ export class IotService implements OnModuleInit {
         unidad: sensor.tipoSensor?.unidad || '',
         estadoConexion: sensor.estadoConexion || 'DESCONOCIDO',
         estadisticas: {
-          promedio: stats?.promedio ? parseFloat(stats.promedio) : 0,
+          promedio: prom,
           minimo: {
-            valor: minReading ? parseFloat(minReading.valor) : 0,
-            fecha: minReading?.fechaLectura || null,
+            valor: minVal,
+            fecha: null, // Optimización: no traemos fecha exacta del min en bulk por ahora
           },
           maximo: {
-            valor: maxReading ? parseFloat(maxReading.valor) : 0,
-            fecha: maxReading?.fechaLectura || null,
+            valor: maxVal,
+            fecha: null,
           },
           ultimaLectura: {
-            valor: lastReading ? parseFloat(lastReading.valor) : 0,
-            fecha: lastReading?.fechaLectura || null,
+            valor: lastVal,
+            fecha: sensor.ultimaLectura || null,
           },
         },
-        tendencia,
-      });
-    }
+        tendencia: [], // Optimización: Sparklines via on-demand si se requieren
+      };
+    });
 
-    // 6. Promedios globales (para compatibilidad con código existente)
+    // 6. Promedios globales
     const promedios = sensoresDetalle.map((s) => ({
       label: s.nombre,
       value: s.estadisticas.promedio.toFixed(2),
@@ -835,6 +741,7 @@ export class IotService implements OnModuleInit {
     }));
 
     // 7. Chart Data global (TimeSeries promedio de todos los sensores)
+    // ESTO SÍ SE MANTIENE porque es una sola query agregada
     let chartData: { fecha: Date; valor: string }[] = [];
     if (sensorIds.length > 0) {
       const qbChart = this.lecturaRepo
@@ -907,14 +814,104 @@ export class IotService implements OnModuleInit {
         desconectados,
       },
       alertasActivas,
-      alertasDetalle, // NUEVO: Alertas detalladas
+      alertasDetalle,
       configuracionMqtt,
       sensoresDetalle,
-      promedios, // Mantener para compatibilidad
+      promedios,
       minGlobal,
       maxGlobal,
       chartData,
     };
+  }
+
+  // ==================== BULK OPERATIONS ====================
+
+  async getBulkSummariesInternal(
+    sensorIds: number[],
+    from: Date,
+    to: Date,
+  ): Promise<
+    Record<
+      number,
+      { avg: number; min: number; max: number; last: number; count: number }
+    >
+  > {
+    if (!sensorIds.length) return {};
+
+    try {
+      // Postgres Optimized Aggregation
+      const result = await this.lecturaRepo.query(
+        `
+        SELECT
+          "sensor_id",
+          AVG(CASE WHEN "valor" ~ '^[0-9.]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as avg_val,
+          MIN(CASE WHEN "valor" ~ '^[0-9.]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as min_val,
+          MAX(CASE WHEN "valor" ~ '^[0-9.]+$' THEN CAST("valor" AS FLOAT) ELSE NULL END) as max_val,
+          COUNT(*) as count_val
+        FROM "sensor_lecturas"
+        WHERE "sensor_id" = ANY($1::int[])
+          AND "fecha_lectura" >= $2
+          AND "fecha_lectura" <= $3
+        GROUP BY "sensor_id"
+        `,
+        [sensorIds, from, to],
+      );
+
+      // We also need the LAST reading for each sensor.
+      // Doing this efficiently in one query is tricky (Requires DISTINCT ON or Window Functions).
+      // Let's use DISTINCT ON for the last reading.
+      const lastReadings = await this.lecturaRepo.query(
+        `
+        SELECT DISTINCT ON ("sensor_id")
+          "sensor_id",
+          "valor"
+        FROM "sensor_lecturas"
+        WHERE "sensor_id" = ANY($1::int[])
+        ORDER BY "sensor_id", "fecha_lectura" DESC
+        `,
+        [sensorIds],
+      );
+
+      const map: Record<number, any> = {};
+
+      // Initialize with zeros
+      sensorIds.forEach(id => {
+        map[id] = { avg: 0, min: 0, max: 0, last: 0, count: 0 };
+      });
+
+      result.forEach((row: any) => {
+        const sId = row.sensor_id;
+        map[sId] = {
+          ...map[sId],
+          avg: parseFloat(row.avg_val) || 0,
+          min: parseFloat(row.min_val) || 0,
+          max: parseFloat(row.max_val) || 0,
+          count: parseInt(row.count_val) || 0,
+        };
+      });
+
+      lastReadings.forEach((row: any) => {
+        const sId = row.sensor_id;
+        const val = parseFloat(row.valor);
+        if (map[sId]) {
+          map[sId].last = isNaN(val) ? 0 : val;
+        }
+      });
+
+      return map;
+    } catch (e) {
+      console.error('Error in getBulkSummariesInternal', e);
+      return {};
+    }
+  }
+
+  async getBulkSummaries(
+    sensorIds: number[],
+    params: { from?: Date; to?: Date },
+  ) {
+    const from = params.from || new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const to = params.to || new Date();
+    return this.getBulkSummariesInternal(sensorIds, from, to);
   }
 
   async createAutoSensor(data: {
@@ -1075,7 +1072,7 @@ export class IotService implements OnModuleInit {
 
   async updateSensor(id: number, data: UpdateSensorDto) {
     const sensor = await this.findSensorById(id);
-    
+
     // Store old values to check for connection-critical changes
     const oldConfigId = sensor.globalConfigId;
     const oldTopic = sensor.mqttTopic;
@@ -1107,22 +1104,22 @@ export class IotService implements OnModuleInit {
     const savedSensor = await this.sensorRepo.save(sensor);
 
     // Only reconnect if connection details changed or if re-activated
-    const needsReconnection = 
-        (savedSensor.protocolo === ProtocoloSensor.MQTT) &&
-        (
-            savedSensor.globalConfigId !== oldConfigId ||
-            savedSensor.mqttTopic !== oldTopic ||
-            (savedSensor.activo && !oldActivo) || // Reactivated
-            (savedSensor.activo && savedSensor.protocolo !== oldProtocolo) // Protocol changed to MQTT
-        );
+    const needsReconnection =
+      (savedSensor.protocolo === ProtocoloSensor.MQTT) &&
+      (
+        savedSensor.globalConfigId !== oldConfigId ||
+        savedSensor.mqttTopic !== oldTopic ||
+        (savedSensor.activo && !oldActivo) || // Reactivated
+        (savedSensor.activo && savedSensor.protocolo !== oldProtocolo) // Protocol changed to MQTT
+      );
 
     // If deactivated, disconnect
     if (oldActivo && !savedSensor.activo) {
-        this.disconnectSensorClient(savedSensor.id);
-    } 
+      this.disconnectSensorClient(savedSensor.id);
+    }
     else if (needsReconnection && savedSensor.activo) {
-        console.log(`[IoT] Reconnecting Sensor ${savedSensor.id} due to config changes`);
-        this.connectToMqttSensor(savedSensor);
+      console.log(`[IoT] Reconnecting Sensor ${savedSensor.id} due to config changes`);
+      this.connectToMqttSensor(savedSensor);
     }
 
     return savedSensor;
@@ -1136,14 +1133,14 @@ export class IotService implements OnModuleInit {
 
   async removeSensor(id: number) {
     const sensor = await this.findSensorById(id);
-    
+
     // Manually delete dependencies first to ensure robust deletion
     try {
-        console.log(`[IoT] Deleting dependencies for sensor ${id}`);
-        await this.lecturaRepo.delete({ sensorId: id });
-        await this.alertaRepo.delete({ sensorId: id });
+      console.log(`[IoT] Deleting dependencies for sensor ${id}`);
+      await this.lecturaRepo.delete({ sensorId: id });
+      await this.alertaRepo.delete({ sensorId: id });
     } catch (e) {
-        console.warn(`[IoT] Warning deleting dependencies for sensor ${id}:`, e);
+      console.warn(`[IoT] Warning deleting dependencies for sensor ${id}:`, e);
     }
 
     return this.sensorRepo.remove(sensor); // Use remove (hard delete) instead of softRemove if we want to clean up completely, or softRemove if we want to keep it.
@@ -1160,7 +1157,7 @@ export class IotService implements OnModuleInit {
       where,
       // relations: ['sensor'], // Removed for performance (charts dont need full sensor object)
       order: { fechaLectura: 'DESC' },
-      take: 1000, 
+      take: 1000,
     });
   }
 
@@ -1213,7 +1210,7 @@ export class IotService implements OnModuleInit {
     interval: 'hour' | 'day' | 'week' = 'day'
   ) {
     if (!sensorIds.length) return {};
-    
+
     // Construct interval string
     const intervalStr =
       interval === 'week' ? 'week' : interval === 'hour' ? 'hour' : 'day';
@@ -1237,21 +1234,21 @@ export class IotService implements OnModuleInit {
         `,
         [intervalStr, sensorIds, from, to],
       );
-      
+
       // Group by sensorId
       const grouped: Record<number, any[]> = {};
       sensorIds.forEach(id => grouped[id] = []);
-      
+
       result.forEach((r: any) => {
         if (!grouped[r.sensor_id]) grouped[r.sensor_id] = [];
         grouped[r.sensor_id].push({
-           fecha: r.date,
-           promedio: r.avg_value || 0,
-           lecturaMinima: { valor: r.min_value || 0 }, // Mock object structure to match existing DTO
-           lecturaMaxima: { valor: r.max_value || 0 }
+          fecha: r.date,
+          promedio: r.avg_value || 0,
+          lecturaMinima: { valor: r.min_value || 0 }, // Mock object structure to match existing DTO
+          lecturaMaxima: { valor: r.max_value || 0 }
         });
       });
-      
+
       return grouped;
     } catch (error) {
       console.error('Error in bulk readings:', error);
@@ -1265,22 +1262,18 @@ export class IotService implements OnModuleInit {
     sensorId?: number;
     from?: Date;
     to?: Date;
+    skip?: number;
+    take?: number;
   }) {
-    const where: any = {};
-    if (filters.sensorId) where.sensorId = filters.sensorId;
-    if (filters.loteId) where.loteId = filters.loteId;
-    if (filters.from) where.fechaAlerta = where.fechaAlerta || {};
-    if (filters.from) where.fechaAlerta['$gte'] = filters.from;
-    if (filters.to) {
-      where.fechaAlerta = where.fechaAlerta || {};
-      where.fechaAlerta['$lte'] = filters.to;
-    }
+    const skip = filters.skip ?? 0;
+    const take = filters.take ?? 100;
 
     const query = this.alertaRepo
       .createQueryBuilder('alerta')
       .leftJoinAndSelect('alerta.sensor', 'sensor')
       .orderBy('alerta.fechaAlerta', 'DESC')
-      .take(200);
+      .skip(skip)
+      .take(take);
 
     if (filters.sensorId) {
       query.andWhere('alerta.sensorId = :sensorId', {
@@ -1297,7 +1290,8 @@ export class IotService implements OnModuleInit {
       query.andWhere('alerta.fechaAlerta <= :to', { to: filters.to });
     }
 
-    return query.getMany();
+    const [items, total] = await query.getManyAndCount();
+    return { items, total, skip, take };
   }
 
   // RFxx: Get context (surrounding readings) for a specific alert
@@ -1316,7 +1310,7 @@ export class IotService implements OnModuleInit {
       .orderBy('l.fechaLectura', 'DESC')
       .take(15) // 15 points before (including the point itself roughly)
       .getMany();
-      
+
     const contextAfter = await this.lecturaRepo
       .createQueryBuilder('l')
       .where('l.sensorId = :sensorId', { sensorId: alert.sensorId })
@@ -1326,16 +1320,16 @@ export class IotService implements OnModuleInit {
       .getMany();
 
     // Combine and sort
-    const context = [...contextBefore, ...contextAfter].sort((a, b) => 
-        new Date(a.fechaLectura).getTime() - new Date(b.fechaLectura).getTime()
+    const context = [...contextBefore, ...contextAfter].sort((a, b) =>
+      new Date(a.fechaLectura).getTime() - new Date(b.fechaLectura).getTime()
     );
 
     return {
-       alert,
-       context: context.map(c => ({
-         ...c,
-         valor: parseFloat(String(c.valor)) || 0
-       }))
+      alert,
+      context: context.map(c => ({
+        ...c,
+        valor: parseFloat(String(c.valor)) || 0
+      }))
     };
   }
 
@@ -1375,7 +1369,7 @@ export class IotService implements OnModuleInit {
       );
     doc.moveDown(0.5);
     doc.text(`Sensores incluidos: ${sensores.length}`);
-    doc.text(`Alertas en rango: ${alerts.length}`);
+    doc.text(`Alertas en rango: ${alerts.items.length}`);
     doc.moveDown();
 
     for (const sensor of sensores.slice(0, 5)) {
@@ -1422,7 +1416,7 @@ export class IotService implements OnModuleInit {
         });
         doc.strokeColor('#0ea5e9').stroke();
 
-        const alertasSensor = alerts.filter((a) => a.sensorId === sensor.id);
+        const alertasSensor = alerts.items.filter((a) => a.sensorId === sensor.id);
         alertasSensor.forEach((a) => {
           let idx = 0;
           if (lecturasFiltradas.length > 1 && a.fechaAlerta) {
@@ -1447,11 +1441,11 @@ export class IotService implements OnModuleInit {
       }
     }
 
-    if (alerts.length > 0) {
+    if (alerts.items.length > 0) {
       doc.addPage();
       doc.fontSize(12).text('Alertas', { underline: true });
       doc.moveDown(0.5);
-      alerts.slice(0, 50).forEach((a) => {
+      alerts.items.slice(0, 50).forEach((a) => {
         doc
           .fontSize(9)
           .fillColor(a.tipo === 'LOW' ? '#0f766e' : '#b91c1c')

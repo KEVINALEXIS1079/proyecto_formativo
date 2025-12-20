@@ -2,13 +2,13 @@ import { motion } from "framer-motion";
 import { Activity, Boxes, LineChart } from "lucide-react";
 
 const fadeInUp = {
-    initial: { opacity: 0, y: 24 },
-    animate: { opacity: 1, y: 0, transition: ({ duration: 0.55, ease: [0.22, 1, 0.36, 1] } as any) },
+    initial: { opacity: 0, y: 40 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.9, ease: "easeOut" as const } },
 };
 
 const stagger = {
     initial: {},
-    animate: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
+    animate: { transition: { staggerChildren: 0.2, delayChildren: 0.2 } },
 };
 
 const tiltHover = {
@@ -113,10 +113,11 @@ export default function LandingFeatures() {
                     variants={fadeInUp}
                     initial="initial"
                     whileInView="animate"
-                    viewport={{ once: true, amount: 0.35 }}
+                    viewport={{ once: true, amount: 0.5 }}
+                    transition={{ delay: 0.4 }}
                 >
-                    <img src="/LogoTic.png" alt="TIC" className="h-16 md:h-20 w-auto object-contain" />
-                    <img src="/logoSena.png" alt="SENA" className="h-14 md:h-18 w-auto object-contain" />
+                    <img src="/logoAgrotech.png" alt="TIC" className="h-20 md:h-24 w-auto object-contain" />
+                    <img src="/logoSena.png" alt="SENA" className="h-20 md:h-24 w-auto object-contain" />
                 </motion.div>
             </div>
         </section>

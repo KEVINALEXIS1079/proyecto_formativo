@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button } from "@heroui/react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { useProfile } from "@/modules/profile/hooks/useProfile";
+import MobileSidebar from "./components/MobileSidebar";
 import Sidebar from "./components/Sidebar";
 import ProtectedHeader from "./components/ProtectedHeader";
 import { IoTApi } from "@/modules/iot/api/iot.api";
@@ -9,6 +11,7 @@ import { getStockAlerts } from "@/modules/inventario/api/insumos.service";
 import { getUsers } from "@/modules/users/api/users.api";
 import { UserStatus } from "@/modules/users/models/types/user.types";
 import { connectSocket } from "@/shared/api/client";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export type LayoutContext = { setTitle: (t: string) => void };
 
@@ -40,16 +43,26 @@ type RawAlert = {
 };
 
 export default function ProtectedLayout() {
-  const [, setTitle] = useState("Inicio"); // title unused in layout now
+  const [, setTitle] = useState("Inicio");
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { profile, isLoading } = useProfile();
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const [iotAlerts, setIotAlerts] = useState<RawAlert[]>([]);
   const [stockAlerts, setStockAlerts] = useState<RawAlert[]>([]);
   const [pendingUsers, setPendingUsers] = useState<RawAlert[]>([]);
-  const [activityAlerts, setActivityAlerts] = useState<RawAlert[]>([]);
+  const [activityAlerts, setActivityAlerts] = useState<RawAlert[]>([]); // Deprecated? Kept for non-persisted real-time feedback if any
   const [loadingAlerts, setLoadingAlerts] = useState(false);
+
+  const { notifications: dbNotifications, refetch: refetchNotifications, markAsRead } = useNotifications();
+
+  // Refs for alert throttling - must be at component top level
+  const pendingAlertsRef = useRef<RawAlert[]>([]);
+  const alertRafIdRef = useRef<number | null>(null);
+  const lastAlertFlushRef = useRef<number>(0);
+  const MIN_ALERT_FLUSH_INTERVAL = 200; // 200ms for alerts
 
   const user = profile
     ? {
@@ -116,26 +129,59 @@ export default function ProtectedLayout() {
     };
   }, []);
 
-  // Tiempo real por WebSocket (solo IoT por ahora)
+  // Maximum performance throttling for alerts - Ultra aggressive
   useEffect(() => {
     const socket = connectSocket("/iot");
-    const handleAlert = (alerta: RawAlert) => {
+
+    let pendingAlerts: RawAlert[] = [];
+    let alertTimeout: NodeJS.Timeout | null = null;
+    const MIN_ALERT_FLUSH_INTERVAL = 600; // 600ms ultra-aggressive
+    const MAX_ALERTS_PER_BATCH = 10; // Reduced to 10
+
+    const flushPendingAlerts = () => {
+      if (pendingAlerts.length === 0) return;
+
+      // Limit batch size - only keep most recent alerts
+      const alerts = pendingAlerts.length > MAX_ALERTS_PER_BATCH
+        ? pendingAlerts.slice(-MAX_ALERTS_PER_BATCH)
+        : [...pendingAlerts];
+
+      pendingAlerts = [];
+
       setIotAlerts((prev) => {
-        const merged = [alerta, ...prev];
-        const unique = merged.filter(
-          (item, idx) =>
-            merged.findIndex(
-              (o) => String(o.id ?? (o as any)._id ?? idx) === String(item.id ?? (item as any)._id ?? idx)
-            ) === idx
-        );
+        const merged = [...alerts, ...prev];
+        // Optimized duplicate removal using Set
+        const seen = new Set<string>();
+        const unique = merged.filter((item, idx) => {
+          const id = String(item.id ?? (item as any)._id ?? idx);
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
         return unique.slice(0, 6);
       });
     };
+
+    const handleAlert = (alerta: RawAlert) => {
+      pendingAlerts.push(alerta);
+
+      // Ultra-aggressive throttle
+      if (alertTimeout) clearTimeout(alertTimeout);
+      alertTimeout = setTimeout(flushPendingAlerts, MIN_ALERT_FLUSH_INTERVAL);
+    };
+
     socket.on("sensorAlert", handleAlert);
     socket.on("alertaIot", handleAlert);
+
     return () => {
       socket.off("sensorAlert", handleAlert);
       socket.off("alertaIot", handleAlert);
+
+      // Flush remaining alerts
+      if (alertTimeout) {
+        clearTimeout(alertTimeout);
+        flushPendingAlerts();
+      }
     };
   }, []);
 
@@ -149,7 +195,9 @@ export default function ProtectedLayout() {
       // Check if notification is for me
       if (data.targetUserId && Number(data.targetUserId) !== Number(profile.id)) return;
 
-      setActivityAlerts((prev) => [data, ...prev]);
+      // setActivityAlerts((prev) => [data, ...prev]);
+      // Refetch from DB to get the persisted notification
+      refetchNotifications();
     };
 
     socket.on("activityNotification", handleNotification);
@@ -202,15 +250,39 @@ export default function ProtectedLayout() {
         type: n.tipo || 'info'
       }));
 
-      return [...mappedActivities, ...mappedUsers, ...mappedStock, ...mappedIoT];
+      // Merge DB notifications (avoiding duplicates if logic overlaps, but DB usually wins for persistence)
+      // Filter out activities from DB if we already showed them via socket? 
+      // Actually, socket 'activityAlerts' was ephemeral in previous code. 
+      // Now we prefer DB.
+      // Let's use dbNotifications PRIMARILY. And mappedIoT/Stock as supplement.
+
+      // Ensure types match
+      const dbMapped = dbNotifications.map(n => ({
+        ...n,
+        source: n.source as any
+      }));
+
+      // Combine: DB items first (they have timestamps), then others
+      return [...dbMapped, ...mappedUsers, ...mappedStock, ...mappedIoT];
     },
-    [iotAlerts, stockAlerts, pendingUsers]
+    [iotAlerts, stockAlerts, pendingUsers, activityAlerts, dbNotifications]
   );
 
-  const handleLogout = async () => {
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+
+  const handleLogoutClick = useCallback(() => {
+    setIsLogoutConfirmOpen(true);
+  }, []);
+
+  const handleConfirmLogout = async () => {
+    setIsLogoutConfirmOpen(false);
     await logout();
     navigate("/start", { replace: true });
   };
+
+  /* Handlers estables */
+  const handleOpenMenu = useCallback(() => setIsMobileMenuOpen(true), []);
+  const handleCloseMenu = useCallback(() => setIsMobileMenuOpen(false), []);
 
   return (
     <div className="min-h-dvh bg-white">
@@ -219,15 +291,53 @@ export default function ProtectedLayout() {
         loading={isLoading}
         notifications={notifications}
         notificationsLoading={loadingAlerts}
-        onLogout={handleLogout}
+        onLogout={handleLogoutClick}
+        onMarkAsRead={markAsRead}
+        onOpenMenu={handleOpenMenu}
       />
 
-      <Sidebar onLogout={handleLogout} />
+      {/* Desktop Sidebar */}
+      <Sidebar className="hidden md:flex" onLogout={handleLogoutClick} />
 
-      <main className="relative p-4 md:p-6 pt-16 transition-[margin] duration-200 ml-16 peer-hover:ml-64">
+      {/* Mobile Sidebar */}
+      <MobileSidebar
+        isOpen={isMobileMenuOpen}
+        onClose={handleCloseMenu}
+        onLogout={handleLogoutClick}
+      />
+
+      <main className="relative p-4 md:p-6 pt-6 transition-[margin] duration-200 md:ml-16 peer-hover:ml-64">
         <Outlet context={{ setTitle } satisfies LayoutContext} />
       </main>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        isOpen={isLogoutConfirmOpen}
+        onOpenChange={setIsLogoutConfirmOpen}
+        size="sm"
+        placement="center"
+        backdrop="blur"
+        className="z-[9999] mx-4" // mx-4 ensures some margin on very narrow screens
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flexflex-col gap-1">Cerrar Sesión</ModalHeader>
+              <ModalBody>
+                <p>¿Estás seguro de que deseas salir?</p>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Cancelar
+                </Button>
+                <Button className="bg-emerald-500 text-black hover:bg-emerald-400" onPress={handleConfirmLogout}>
+                  Confirmar
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
-

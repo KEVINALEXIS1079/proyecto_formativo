@@ -3,6 +3,8 @@ import { DataSource } from 'typeorm';
 import { seedRolesAndAdmin } from '../roles-admin.seed';
 import { seedPermisos } from '../permisos.seed';
 import { seedModules } from '../modules.seed';
+import { seedTiposFormacion } from '../tipos-formacion.seed';
+import { seedProgramasFormacion } from '../programas-formacion.seed';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -32,11 +34,12 @@ export class SeedService implements OnModuleInit {
       `);
       this.logger.log(`Created ${this.SEED_LOG_TABLE} table`);
 
-      // Define seeds (ONLY ESSENTIALS: Roles, Admin, Permisos)
-      // Removed 'modules' to avoid auto-loading test data
+      // Define seeds (ONLY ESSENTIALS)
       const seeds = [
         { name: 'roles-admin', fn: seedRolesAndAdmin },
-        { name: 'permisos', fn: seedPermisos },
+        { name: 'permisos-v2', fn: seedPermisos },
+        { name: 'tipos-formacion', fn: seedTiposFormacion },
+        { name: 'programas-formacion', fn: seedProgramasFormacion },
       ];
 
       // Execute seeds individually if not already executed

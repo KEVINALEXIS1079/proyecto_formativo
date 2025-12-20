@@ -1,12 +1,14 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { ShoppingBag, History, Package } from "lucide-react";
 import PosPage from "./PosPage";
 import SalesHistory from "../widgets/SalesHistory";
 import ProductionInventory from "../widgets/ProductionInventory";
 import Surface from "@/modules/users/ui/Surface";
 import PillToggle from "@/modules/actividad/ui/PillToggle";
+import { useProductionRealtime } from "../hooks/useProduction";
 
 export default function ProductionPage() {
+    useProductionRealtime();
     const [selected, setSelected] = useState("pos");
 
     return (

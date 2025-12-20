@@ -15,6 +15,7 @@ import { Rol } from '../users/entities/rol.entity';
 import { Permiso } from '../users/entities/permiso.entity';
 import { RolPermiso } from './entities/rol-permiso.entity';
 import { UsuarioPermiso } from '../users/entities/usuario-permiso.entity';
+import { ProgramaFormacion } from '../programas-formacion/entities/programa-formacion.entity';
 import { EmailService } from '../../common/services/email.service';
 import { RedisService } from '../../common/services/redis.service';
 import { VerificationService } from '../../common/services/verification.service';
@@ -22,7 +23,7 @@ import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Usuario, EmailCode, Rol, Permiso, RolPermiso, UsuarioPermiso]),
+    TypeOrmModule.forFeature([Usuario, EmailCode, Rol, Permiso, RolPermiso, UsuarioPermiso, ProgramaFormacion]),
     PassportModule,
     forwardRef(() => UsersModule),
     JwtModule.registerAsync({
@@ -38,4 +39,4 @@ import { UsersModule } from '../users/users.module';
   providers: [AuthService, PermissionsService, LocalStrategy, JwtStrategy, EmailService, RedisService, VerificationService],
   exports: [AuthService, PermissionsService],
 })
-export class AuthModule {}
+export class AuthModule { }

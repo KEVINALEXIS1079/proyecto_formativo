@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import React, { Suspense, lazy } from "react";
 import { Spinner } from "@heroui/react";
 
 // Públicas
@@ -63,6 +63,7 @@ const HistorialMovimientosPage = lazy(() => import("@/modules/inventario/pages/H
 
 const GeoPage = lazy(() => import("@/modules/geo/pages/GeoPage"));
 const ProductionPage = lazy(() => import("@/modules/production/pages/ProductionPage"));
+const NotificationsPage = lazy(() => import("@/modules/notifications/pages/NotificationsPage"));
 
 // Guards
 import { ProtectedRoute } from "@/modules/auth/ui/ProtectedRoute";
@@ -72,10 +73,11 @@ import {
   RequireRecoveryCode,
 } from "@/app/guards";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
+import { RequirePermission } from "@/modules/auth/components/RequirePermission";
 
 const LoadingFallback = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-gray-50/50">
-    <Spinner size="lg" color="primary" label="Cargando..." />
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm">
+    <Spinner size="lg" color="primary" label="Cargando aplicación..." />
   </div>
 );
 
@@ -157,78 +159,101 @@ export default function AppRoutes() {
           <Route path="/home" element={<Home />} />
 
           {/* Actividades */}
-          <Route path="/actividades" element={<ListaPage />} />
-          <Route path="/actividades/crear" element={<CrearPage />} />
-          {/* <Route path="/actividades/:id" element={<ActividadDetailPage />} /> */}
-          <Route path="/actividades/:id/editar" element={<EditarPage />} />
+          <Route element={<RequirePermission permission="actividades.ver" />}>
+            <Route path="/actividades" element={<ListaPage />} />
+            <Route path="/actividades/crear" element={<CrearPage />} />
+            {/* <Route path="/actividades/:id" element={<ActividadDetailPage />} /> */}
+            <Route path="/actividades/:id/editar" element={<EditarPage />} />
+          </Route>
 
           {/* Cultivos */}
-          <Route path="/cultivos/crear" element={<CultivoCreatePage />} />
-          <Route path="/cultivos" element={<CultivosListPage />} />
-          <Route path="/cultivos/editar/:id" element={<CultivoEditPage />} />
-          <Route path="/cultivos/detalle/:id" element={<CultivoDetailPage />} />
-          {/* <Route path="/tipo-cultivo/crear" element={<CrearPageTipoCultivo />} /> */}
+          <Route element={<RequirePermission permission="cultivos.ver" />}>
+            <Route path="/cultivos/crear" element={<CultivoCreatePage />} />
+            <Route path="/cultivos" element={<CultivosListPage />} />
+            <Route path="/cultivos/editar/:id" element={<CultivoEditPage />} />
+            <Route path="/cultivos/detalle/:id" element={<CultivoDetailPage />} />
+            {/* <Route path="/tipo-cultivo/crear" element={<CrearPageTipoCultivo />} /> */}
+          </Route>
 
           {/* Fitosanitario */}
-          <Route path="/fitosanitario" element={<EpaListPage />} />
-          <Route path="/fitosanitario/crear" element={<EpaCreatePage />} />
-          <Route path="/fitosanitario/:id" element={<EpaDetailPage />} />
-          <Route path="/fitosanitario/:id/editar" element={<EpaEditPage />} />
-          <Route path="/fitosanitario/tipos" element={<TipoEpaPage />} />
-          <Route
-            path="/fitosanitario/tipo-cultivos"
-            element={<TipoCultivoEpaPage />}
-          />
+          <Route element={<RequirePermission permission="wiki.ver" />}>
+            <Route path="/fitosanitario" element={<EpaListPage />} />
+            <Route path="/fitosanitario/crear" element={<EpaCreatePage />} />
+            <Route path="/fitosanitario/:id" element={<EpaDetailPage />} />
+            <Route path="/fitosanitario/:id/editar" element={<EpaEditPage />} />
+            <Route path="/fitosanitario/tipos" element={<TipoEpaPage />} />
+            <Route
+              path="/fitosanitario/tipo-cultivos"
+              element={<TipoCultivoEpaPage />}
+            />
+          </Route>
 
           {/* Comercial (Antes Finanzas) - Unified Module */}
-          <Route path="/comercial" element={<ComercialPage />} />
-          {/* Redirect old routes */}
-          <Route path="/finanzas/*" element={<Navigate to="/comercial" replace />} />
-          <Route path="/lotes/*" element={<Navigate to="/comercial" replace />} />
+          <Route element={<RequirePermission permission="produccion.ver" />}>
+            <Route path="/comercial" element={<ComercialPage />} />
+            {/* Redirect old routes */}
+            <Route path="/finanzas/*" element={<Navigate to="/comercial" replace />} />
+            <Route path="/lotes/*" element={<Navigate to="/comercial" replace />} />
+          </Route>
 
           {/* Inventario */}
-          <Route path="/inventario" element={<InventarioPage />} />
-          <Route path="/inventario/crear" element={<CrearInsumoPage />} />
-          <Route path="/inventario/:id" element={<DetalleInsumoPage />} />
-          <Route path="/inventario/:id/editar" element={<EditarInsumoPage />} />
-          <Route path="/inventario/categorias" element={<CategoriasPage />} />
-          <Route path="/inventario/proveedores" element={<ProveedoresPage />} />
-          <Route path="/inventario/almacenes" element={<AlmacenesPage />} />
-          <Route
-            path="/inventario/insumos-eliminados"
-            element={<InsumosEliminadosPage />}
-          />
-          <Route
-            path="/inventario/historial-movimientos"
-            element={<HistorialMovimientosPage />}
-          />
+          <Route element={<RequirePermission permission="inventario.ver" />}>
+            <Route path="/inventario" element={<InventarioPage />} />
+            <Route path="/inventario/crear" element={<CrearInsumoPage />} />
+            <Route path="/inventario/:id" element={<DetalleInsumoPage />} />
+            <Route path="/inventario/:id/editar" element={<EditarInsumoPage />} />
+            <Route path="/inventario/categorias" element={<CategoriasPage />} />
+            <Route path="/inventario/proveedores" element={<ProveedoresPage />} />
+            <Route path="/inventario/almacenes" element={<AlmacenesPage />} />
+            <Route
+              path="/inventario/insumos-eliminados"
+              element={<InsumosEliminadosPage />}
+            />
+            <Route
+              path="/inventario/historial-movimientos"
+              element={<HistorialMovimientosPage />}
+            />
+          </Route>
 
           {/* Reportes */}
-          <Route path="/reportes" element={<PageReportes />} />
-          <Route path="/lista-reportes" element={<ListaPageReporte />} />
-          <Route path="/crear-reporte" element={<CrearPageReporte />} />
-          <Route path="/editar-reporte" element={<EditarPageReporte />} />
-          <Route path="/reportes/cultivo" element={<ReporteCultivoPage />} />
-          <Route path="/reportes/lote" element={<ReporteLotePage />} />
+          <Route element={<RequirePermission permission="reportes.ver" />}>
+            <Route path="/reportes" element={<PageReportes />} />
+            <Route path="/lista-reportes" element={<ListaPageReporte />} />
+            <Route path="/crear-reporte" element={<CrearPageReporte />} />
+            <Route path="/editar-reporte" element={<EditarPageReporte />} />
+            <Route path="/reportes/cultivo" element={<ReporteCultivoPage />} />
+            <Route path="/reportes/lote" element={<ReporteLotePage />} />
+          </Route>
 
           {/* Usuarios */}
-          <Route path="/usuarios" element={<UsersPage />} />
-          <Route path="/usuarios/roles" element={<RolesPage />} />
+          <Route element={<RequirePermission permission="usuarios.ver" />}>
+            <Route path="/usuarios" element={<UsersPage />} />
+            <Route path="/usuarios/roles" element={<RolesPage />} />
+          </Route>
 
           {/* Perfil */}
           <Route path="/perfil" element={<ProfilePage />} />
 
           {/* IoT */}
-          <Route path="/iot" element={<IoTPage />}>
-            <Route index element={<IoTDashboard />} />
-            <Route path="analytics" element={<LotsAnalyticsPage />} />
+          <Route element={<RequirePermission permission="iot.ver" />}>
+            <Route path="/iot" element={<IoTPage />}>
+              <Route index element={<IoTDashboard />} />
+              <Route path="analytics" element={<LotsAnalyticsPage />} />
+            </Route>
           </Route>
 
           {/* Producción */}
-          <Route path="/production" element={<ProductionPage />} />
+          <Route element={<RequirePermission permission="produccion.ver" />}>
+            <Route path="/production" element={<ProductionPage />} />
+          </Route>
 
           {/* Geo */}
-          <Route path="/geo" element={<GeoPage />} />
+          <Route element={<RequirePermission permission="lotes.ver" />}>
+            <Route path="/geo" element={<GeoPage />} />
+          </Route>
+
+          {/* Notificaciones */}
+          <Route path="/notificaciones" element={<NotificationsPage />} />
         </Route>
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/start" replace />} />

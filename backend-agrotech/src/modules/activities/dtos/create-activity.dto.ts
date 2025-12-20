@@ -82,6 +82,10 @@ export class CreateActivityServicioDto {
   @IsNumber()
   @Min(0)
   precioHora: number;
+
+  @IsOptional()
+  @IsNumber()
+  maquinariaId?: number;
 }
 
 export class CreateActivityEvidenciaDto {
@@ -170,6 +174,12 @@ export class CreateActivityDto {
   @ValidateIf((o) => o.subtipo === SubtipoActividad.COSECHA)
   @IsNumber({}, { message: 'El producto es requerido para cosecha' })
   productoAgroId?: number;
+
+  @ValidateIf((o) => o.subtipo === SubtipoActividad.COSECHA)
+  @IsOptional()
+  @IsNumber({}, { message: 'El precio de venta debe ser un número' })
+  @Min(0, { message: 'El precio de venta no puede ser negativo' })
+  precioVenta?: number;
 
   @IsOptional()
   @IsArray()

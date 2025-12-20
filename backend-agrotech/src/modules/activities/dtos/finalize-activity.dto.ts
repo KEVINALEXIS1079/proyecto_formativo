@@ -29,22 +29,27 @@ export class FinalizeActivityResponsableDto {
 }
 
 export class FinalizeActivityProduccionDto {
-    @IsNumber()
-    @Min(0)
-    cantidad: number;
+  @IsNumber()
+  @Min(0)
+  cantidad: number;
 
-    @IsString()
-    unidad: string;
+  @IsString()
+  unidad: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  precioVenta?: number;
 }
 
 export class FinalizeActivityEvidenciaDto {
-    @IsString()
-    descripcion: string;
-  
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    imagenes: string[];
+  @IsString()
+  descripcion: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imagenes: string[];
 }
 
 export class FinalizeActivityDto {

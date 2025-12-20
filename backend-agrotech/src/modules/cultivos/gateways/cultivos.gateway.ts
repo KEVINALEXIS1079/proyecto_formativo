@@ -1,7 +1,7 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';
-import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
-import { Socket } from 'socket.io';
-import { CultivosController } from '../controllers/cultivos.controller';
+import { WebSocketGateway, SubscribeMessage, MessageBody, ConnectedSocket, WebSocketServer } from '@nestjs/websockets';
+import { UseGuards, UsePipes, ValidationPipe, Inject, forwardRef } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
+import { CultivosService } from '../services/cultivos.service';
 import {
   CultivosFindAllDoDto,
   CultivosFindByIdDoDto,
@@ -16,13 +16,19 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 @WebSocketGateway({ namespace: 'cultivos', cors: { origin: '*' } })
 @UseGuards(WsJwtGuard, WsPermissionsGuard)
 export class CultivosGateway {
-  constructor(private readonly cultivosController: CultivosController) {}
+  @WebSocketServer()
+  server: Server;
+
+  constructor(
+    @Inject(forwardRef(() => CultivosService))
+    private readonly cultivosService: CultivosService,
+  ) { }
 
   @SubscribeMessage('findAllCultivos')
   @RequirePermissions('cultivos.ver')
   @UsePipes(new ValidationPipe())
   async findAllCultivos(@MessageBody() filters: CultivosFindAllDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.cultivosController.findAllCultivos(filters);
+    const result = await this.cultivosService.findAllCultivos(filters);
     client.emit('findAllCultivos.result', result);
     return result;
   }
@@ -31,7 +37,7 @@ export class CultivosGateway {
   @RequirePermissions('cultivos.ver')
   @UsePipes(new ValidationPipe())
   async findCultivoById(@MessageBody() data: CultivosFindByIdDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.cultivosController.findCultivoById(data.id);
+    const result = await this.cultivosService.findCultivoById(data.id);
     client.emit('findCultivoById.result', result);
     return result;
   }
@@ -40,7 +46,9 @@ export class CultivosGateway {
   @RequirePermissions('cultivos.crear')
   @UsePipes(new ValidationPipe())
   async createCultivo(@MessageBody() createCultivoDto: CultivosCreateDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.cultivosController.createCultivo(createCultivoDto);
+    // Note: Gateway interactions typically don't set usuarioId unless extracted from socket token
+    // For now assuming service handles missing userId gracefully or we extract it if needed
+    const result = await this.cultivosService.createCultivo(createCultivoDto);
     client.emit('createCultivo.result', result);
     return result;
   }
@@ -49,7 +57,7 @@ export class CultivosGateway {
   @RequirePermissions('cultivos.editar')
   @UsePipes(new ValidationPipe())
   async updateCultivo(@MessageBody() payload: CultivosUpdateDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.cultivosController.updateCultivo(payload.id, payload.data);
+    const result = await this.cultivosService.updateCultivo(payload.id, payload.data);
     client.emit('updateCultivo.result', result);
     return result;
   }
@@ -58,7 +66,7 @@ export class CultivosGateway {
   @RequirePermissions('cultivos.eliminar')
   @UsePipes(new ValidationPipe())
   async removeCultivo(@MessageBody() data: CultivosRemoveDoDto, @ConnectedSocket() client: Socket) {
-    const result = await this.cultivosController.removeCultivo(data.id);
+    const result = await this.cultivosService.removeCultivo(data.id);
     client.emit('removeCultivo.result', result);
     return result;
   }

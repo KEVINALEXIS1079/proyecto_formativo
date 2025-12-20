@@ -5,9 +5,12 @@ import LandingAbout from "../ui/LandingAbout";
 import LandingCTA from "../ui/LandingCTA";
 import LandingFooter from "../ui/LandingFooter";
 
+import { SnowfallEffect } from "../ui/SnowfallEffect";
+
 export default function LandingPage() {
   return (
-    <main className="bg-white text-foreground">
+    <main className="bg-white text-foreground relative">
+      <SnowfallEffect  />
       <LandingHeader />
       <LandingHero />
       <LandingFeatures />

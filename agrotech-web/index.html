@@ -1,50 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/flower.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script>
-      (function() {
-        try {
-          // Limpieza robusta de datos corruptos en localStorage
-          for (let i = localStorage.length - 1; i >= 0; i--) {
-            const key = localStorage.key(i);
-            if (key) {
-              const value = localStorage.getItem(key);
-              if (value !== null) {
-                try {
-                  JSON.parse(value);
-                } catch {
-                  localStorage.removeItem(key);
-                }
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/logoIconoAgrotech.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' blob: data:; worker-src blob: data:; connect-src * 'unsafe-inline' ws: wss: data: blob:; img-src * data: blob:;">
+  <!-- React-PDF WASM Support: data: and blob: URIs enabled -->
+  <script>
+    (function () {
+      try {
+        // Limpieza robusta de datos corruptos en localStorage
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key) {
+            const value = localStorage.getItem(key);
+            if (value !== null) {
+              try {
+                JSON.parse(value);
+              } catch {
+                localStorage.removeItem(key);
               }
             }
           }
-          // Limpieza robusta de datos corruptos en sessionStorage
-          for (let i = sessionStorage.length - 1; i >= 0; i--) {
-            const key = sessionStorage.key(i);
-            if (key) {
-              const value = sessionStorage.getItem(key);
-              if (value !== null) {
-                try {
-                  JSON.parse(value);
-                } catch {
-                  sessionStorage.removeItem(key);
-                }
-              }
-            }
-          }
-          console.log('Storage limpiado selectivamente para eliminar solo datos corruptos JSON');
-        } catch (error) {
-          console.error('Error al limpiar storage:', error);
         }
-      })();
-    </script>
-    <title>Agrotech</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+        // Limpieza robusta de datos corruptos en sessionStorage
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key) {
+            const value = sessionStorage.getItem(key);
+            if (value !== null) {
+              try {
+                JSON.parse(value);
+              } catch {
+                sessionStorage.removeItem(key);
+              }
+            }
+          }
+        }
+        console.log('Storage limpiado selectivamente para eliminar solo datos corruptos JSON');
+      } catch (error) {
+        console.error('Error al limpiar storage:', error);
+      }
+    })();
+  </script>
+  <meta name="theme-color" content="#10B981" />
+  <title>AgroTech</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

@@ -64,6 +64,31 @@ Para ver el manual de usuario en video, visita el siguiente enlace:
 - **Admin Email**: `agrotechsena2025@gmail.com`
 - **Password**: `Agrotech2025`
 
+## 📚 Documentación del Proyecto
+
+El proyecto cuenta con múltiples fuentes de documentación organizadas por tipo:
+
+### Documentación Técnica (Código)
+- **Backend API**: [`./backend-agrotech/README.md`](./backend-agrotech/README.md) - Configuración, estructura y endpoints del backend
+- **Frontend Web**: [`./agrotech-web/README.md`](./agrotech-web/README.md) - Guía de desarrollo del panel web
+- **App Móvil**: [`./agrotech-movil/README.md`](./agrotech-movil/README.md) - Configuración de la aplicación móvil
+
+### Documentación de Usuario y API
+- **Documentación API**: [`./documentacion-agrotech/`](./documentacion-agrotech/) - Guías de usuario y referencia completa de API
+  - Ejecutar con `npm run dev` en la carpeta para ver en `http://localhost:4321`
+  - Incluye tutoriales, guías de módulos y documentación de endpoints
+
+### Documentación Formal (PDFs de Diseño)
+- **PDFs de Especificación**: [`./documentacion/README.md`](./documentacion/README.md) - Documentos formales del proyecto
+  - Acta de Requerimientos
+  - Documento de Diseño UML
+  - Especificación de Requisitos de Software (IEEE 830)
+  - Planteamiento del Problema
+
+### Configuración IoT y Automatización
+- **IoT (Sensores)**: [`./archivos-extras/configuracion-IoT/`](./archivos-extras/configuracion-IoT/) - Código C++ para ESP32
+- **Automatización n8n**: [`./archivos-extras/automatizacion/README.md`](./archivos-extras/automatizacion/README.md) - Workflows de automatización
+
 ## Licencia
 
 Propiedad del SENA / Proyecto Formativo 2025.

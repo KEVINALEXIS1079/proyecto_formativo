@@ -3,6 +3,7 @@ import { UserStatus } from '../models/types/user.types';
 import type { User, CreateUserDto } from '../models/types/user.types';
 import { useCreateUser, useUpdateUser, useChangeUserRole, useUploadAvatar } from '../hooks/useUsers';
 import { useRoles } from '../hooks/usePermissions';
+import { useProgramasFormacion } from '@/modules/programas-formacion/hooks/useProgramasFormacion';
 import { Input, Select, SelectItem, Avatar } from "@heroui/react";
 import { Camera } from 'lucide-react';
 
@@ -24,6 +25,7 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
   const changeRoleMutation = useChangeUserRole();
   const uploadAvatarMutation = useUploadAvatar();
   const { data: roles, isLoading: isLoadingRoles } = useRoles();
+  const { data: programas, isLoading: isLoadingProgramas } = useProgramasFormacion();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
     correo: '',
     telefono: '',
     idFicha: '',
+    programaFormacionId: undefined,
     password: '',
     estado: UserStatus.ACTIVO,
     rolId: 5, // Default to Invitado
@@ -54,6 +57,7 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
         correo: user.correo,
         telefono: user.telefono || '',
         idFicha: user.idFicha || '',
+        programaFormacionId: user.programaFormacionId,
         estado: user.estado,
         rolId: user.rolId,
       });
@@ -63,6 +67,17 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
       }
     }
   }, [user]);
+
+  // Auto-repair: If user has idFicha text but no program ID, try to find match in loaded programs
+  useEffect(() => {
+    if (user && !user.programaFormacionId && user.idFicha && programas && programas.length > 0) {
+      const found = programas.find(p => p.numeroFicha === user.idFicha);
+      if (found) {
+        console.log("Auto-linking user to program found by token:", found.numeroFicha);
+        setFormData(prev => ({ ...prev, programaFormacionId: found.id }));
+      }
+    }
+  }, [user, programas]); // Use 'programas' from hook result (line 28)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,6 +108,18 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
         const cleaned = { ...data };
         if (!cleaned.telefono) delete cleaned.telefono;
         if (!cleaned.idFicha) delete cleaned.idFicha;
+
+        // Handle programaFormacionId
+        if (cleaned.programaFormacionId === 'none' || cleaned.programaFormacionId === undefined) {
+          delete cleaned.programaFormacionId;
+          if (user) cleaned.programaFormacionId = null; // Explicitly null for updates
+        }
+
+        // Auto-append @gmail.com if missing
+        if (cleaned.correo && !cleaned.correo.includes('@')) {
+          cleaned.correo += '@gmail.com';
+        }
+
         if (!cleaned.password) delete cleaned.password;
         return cleaned;
       };
@@ -202,13 +229,18 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
 
         <div className="sm:col-span-3">
           <Input
-            type="email"
+            type={formData.correo.includes('@') ? "email" : "text"}
             label="Correo"
             name="correo"
             isRequired
             value={formData.correo}
             onValueChange={(value) => setFormData(prev => ({ ...prev, correo: value }))}
             isDisabled={readOnly}
+            endContent={
+              !formData.correo.includes('@') && (
+                <span className="text-default-400 text-small pointer-events-none">@gmail.com</span>
+              )
+            }
           />
         </div>
 
@@ -224,12 +256,39 @@ export const UserForm = forwardRef<UserFormRef, UserFormProps>(({ user, readOnly
 
         <div className="sm:col-span-3">
           <Input
-            label="ID Ficha"
+            label="ID Ficha (Legacy)"
             name="idFicha"
+            placeholder="Manual fallback"
             value={formData.idFicha}
             onValueChange={(value) => setFormData(prev => ({ ...prev, idFicha: value }))}
             isDisabled={readOnly}
           />
+        </div>
+
+        <div className="sm:col-span-3">
+          <Select
+            label="Programa de Formación"
+            placeholder="Seleccione un programa"
+            selectedKeys={formData.programaFormacionId ? [String(formData.programaFormacionId)] : []}
+            onSelectionChange={(keys) => {
+              const value = Array.from(keys)[0];
+              setFormData(prev => ({ ...prev, programaFormacionId: value === 'none' ? undefined : Number(value) }));
+            }}
+            isLoading={isLoadingProgramas}
+            isDisabled={isLoadingProgramas || readOnly}
+          >
+            {[
+              <SelectItem key="none" className="text-default-400 italic text-small">Ninguno / Sin programa</SelectItem>,
+              ...(programas || []).map((prog) => (
+                <SelectItem key={prog.id} textValue={`${prog.numeroFicha} - ${prog.nombre}`}>
+                  <div className="flex flex-col">
+                    <span className="text-small font-medium">{prog.numeroFicha}</span>
+                    <span className="text-tiny text-default-400">{prog.nombre}</span>
+                  </div>
+                </SelectItem>
+              ))
+            ]}
+          </Select>
         </div>
 
         {!user && !readOnly && (

@@ -154,8 +154,8 @@ export const createActivoFijo = (data: any, file?: File) => {
   return api.post('/insumos/activos-fijos', data);
 };
 
-export const getActivosFijos = async () => {
-  const { data } = await api.get('/insumos/activos-fijos');
+export const getActivosFijos = async (tipo?: string, q?: string) => {
+  const { data } = await api.get('/insumos/activos-fijos', { params: { tipo, q } });
   return normalizeListResp(data);
 };
 

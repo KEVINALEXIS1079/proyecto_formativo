@@ -38,110 +38,112 @@ export default function ProductionInventory() {
                 </div>
             </div>
 
-            <Table aria-label="Inventario Producción">
-                <TableHeader>
-                    <TableColumn>IMAGEN</TableColumn>
-                    <TableColumn>PRODUCTO</TableColumn>
-                    <TableColumn>CULTIVO ORIGEN</TableColumn>
-                    <TableColumn>STOCK DISPONIBLE</TableColumn>
-                    <TableColumn>PRECIO UNITARIO</TableColumn>
-                    <TableColumn>CALIDAD</TableColumn>
-                    <TableColumn>ESTADO</TableColumn>
-                    <TableColumn>ACCIONES</TableColumn>
-                </TableHeader>
-                <TableBody emptyContent="No hay lotes de producción">
-                    {lotes.map(lote => (
-                        <TableRow key={lote.id}>
-                            <TableCell>
-                                <div 
-                                    className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden cursor-pointer border border-gray-200"
-                                    onClick={() => lote.productoAgro && setImageProduct(lote.productoAgro)}
-                                >
-                                    {(lote.productoAgro as any)?.imagen ? (
-                                        <img 
-                                            src={getImageUrl((lote.productoAgro as any).imagen)} 
-                                            alt={lote.productoAgro?.nombre}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                            <ImageIcon size={20} />
-                                        </div>
-                                    )}
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <div className="font-semibold text-lg">{lote.productoAgro?.nombre}</div>
-                            </TableCell>
-                            <TableCell>
-                                <span className="text-gray-600">{(lote.cultivo as any)?.nombre || (lote.cultivo as any)?.nombreCultivo || lote.cultivoId || "N/A"}</span>
-                            </TableCell>
-                            <TableCell>
-                                <div className="font-bold text-lg">
-                                    {lote.stockDisponibleKg} <span className="text-xs font-normal text-gray-500">kg</span>
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <span className="font-mono text-green-700 font-semibold">
-                                    ${lote.precioSugeridoKg.toLocaleString()}
-                                </span>
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-medium text-blue-700">
-                                        {lote.calidad || "ESTANDAR"}
+            <div className="overflow-x-auto">
+                <Table aria-label="Inventario Producción" className="min-w-[900px]">
+                    <TableHeader>
+                        <TableColumn>IMAGEN</TableColumn>
+                        <TableColumn>PRODUCTO</TableColumn>
+                        <TableColumn>CULTIVO ORIGEN</TableColumn>
+                        <TableColumn>STOCK DISPONIBLE</TableColumn>
+                        <TableColumn>PRECIO UNITARIO</TableColumn>
+                        <TableColumn>CALIDAD</TableColumn>
+                        <TableColumn>ESTADO</TableColumn>
+                        <TableColumn>ACCIONES</TableColumn>
+                    </TableHeader>
+                    <TableBody emptyContent="No hay lotes de producción">
+                        {lotes.map(lote => (
+                            <TableRow key={lote.id}>
+                                <TableCell>
+                                    <div
+                                        className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden cursor-pointer border border-gray-200"
+                                        onClick={() => lote.productoAgro && setImageProduct(lote.productoAgro)}
+                                    >
+                                        {(lote.productoAgro as any)?.imagen ? (
+                                            <img
+                                                src={getImageUrl((lote.productoAgro as any).imagen)}
+                                                alt={lote.productoAgro?.nombre}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                <ImageIcon size={20} />
+                                            </div>
+                                        )}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="font-semibold text-lg">{lote.productoAgro?.nombre}</div>
+                                </TableCell>
+                                <TableCell>
+                                    <span className="text-gray-600">{(lote.cultivo as any)?.nombre || (lote.cultivo as any)?.nombreCultivo || lote.cultivoId || "N/A"}</span>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="font-bold text-lg">
+                                        {lote.stockDisponibleKg} <span className="text-xs font-normal text-gray-500">kg</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <span className="font-mono text-green-700 font-semibold">
+                                        ${lote.precioSugeridoKg.toLocaleString()}
                                     </span>
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                {lote.stockDisponibleKg > 0 ? (
-                                    <Chip color="success" variant="flat" size="sm">DISPONIBLE</Chip>
-                                ) : (
-                                    <Chip color="danger" variant="flat" size="sm">AGOTADO</Chip>
-                                )}
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex gap-2">
-                                    <Tooltip content="Gestionar Imagen">
-                                        <Button 
-                                            isIconOnly 
-                                            size="sm" 
-                                            variant="light" 
-                                            onPress={() => lote.productoAgro && setImageProduct(lote.productoAgro)}
-                                        >
-                                            <ImageIcon size={18} className="text-gray-500" />
-                                        </Button>
-                                    </Tooltip>
-                                    <Tooltip content="Ver Historial de Precios">
-                                        <Button 
-                                            isIconOnly 
-                                            size="sm" 
-                                            variant="light" 
-                                            onPress={() => setHistoryLoteId(lote.id)}
-                                        >
-                                            <History size={18} className="text-gray-500" />
-                                        </Button>
-                                    </Tooltip>
-                                    <Tooltip content="Editar Precio/Calidad">
-                                        <Button 
-                                            isIconOnly 
-                                            size="sm" 
-                                            variant="light" 
-                                            onPress={() => setEditingLote(lote)}
-                                        >
-                                            <Pencil size={18} className="text-gray-500" />
-                                        </Button>
-                                    </Tooltip>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-            
-            <EditLoteModal 
-                isOpen={!!editingLote} 
-                onClose={() => setEditingLote(null)} 
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-blue-700">
+                                            {lote.calidad || "ESTANDAR"}
+                                        </span>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    {lote.stockDisponibleKg > 0 ? (
+                                        <Chip color="success" variant="flat" size="sm">DISPONIBLE</Chip>
+                                    ) : (
+                                        <Chip color="danger" variant="flat" size="sm">AGOTADO</Chip>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex gap-2">
+                                        <Tooltip content="Gestionar Imagen">
+                                            <Button
+                                                isIconOnly
+                                                size="sm"
+                                                variant="light"
+                                                onPress={() => lote.productoAgro && setImageProduct(lote.productoAgro)}
+                                            >
+                                                <ImageIcon size={18} className="text-gray-500" />
+                                            </Button>
+                                        </Tooltip>
+                                        <Tooltip content="Ver Historial de Precios">
+                                            <Button
+                                                isIconOnly
+                                                size="sm"
+                                                variant="light"
+                                                onPress={() => setHistoryLoteId(lote.id)}
+                                            >
+                                                <History size={18} className="text-gray-500" />
+                                            </Button>
+                                        </Tooltip>
+                                        <Tooltip content="Editar Precio/Calidad">
+                                            <Button
+                                                isIconOnly
+                                                size="sm"
+                                                variant="light"
+                                                onPress={() => setEditingLote(lote)}
+                                            >
+                                                <Pencil size={18} className="text-gray-500" />
+                                            </Button>
+                                        </Tooltip>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            <EditLoteModal
+                isOpen={!!editingLote}
+                onClose={() => setEditingLote(null)}
                 lote={editingLote}
                 onSuccess={() => {
                     queryClient.invalidateQueries({ queryKey: [QK_PRODUCTION.LOTES] });

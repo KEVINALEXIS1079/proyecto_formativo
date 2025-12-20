@@ -24,13 +24,13 @@ export const RealTimeSensorsDashboard: React.FC<RealTimeSensorsDashboardProps> =
 
   const humidityAirSensors = sensorsToRender.filter(s =>
     (s.tipoSensor?.nombre?.toLowerCase().includes('humedad') &&
-     s.tipoSensor?.nombre?.toLowerCase().includes('aire')) ||
+      s.tipoSensor?.nombre?.toLowerCase().includes('aire')) ||
     s.nombre?.toLowerCase().includes('humedad aire')
   );
 
   const humiditySoilSensors = sensorsToRender.filter(s =>
     (s.tipoSensor?.nombre?.toLowerCase().includes('humedad') &&
-     s.tipoSensor?.nombre?.toLowerCase().includes('suelo')) ||
+      s.tipoSensor?.nombre?.toLowerCase().includes('suelo')) ||
     s.nombre?.toLowerCase().includes('humedad suelo')
   );
 
@@ -46,7 +46,7 @@ export const RealTimeSensorsDashboard: React.FC<RealTimeSensorsDashboardProps> =
   }) => {
     const realTimeData = getFormattedSensorData(sensor.id);
     const isPump = sensor.tipoSensor?.nombre?.toLowerCase().includes('bomba') ||
-                    sensor.nombre?.toLowerCase().includes('bomba');
+      sensor.nombre?.toLowerCase().includes('bomba');
     const connectionState = realTimeData?.estadoConexion || sensor.estadoConexion;
     const isConnected = connectionState === 'CONECTADO';
     const currentPumpState = realTimeData?.value ?? (sensor.ultimoValor !== undefined ? Number(sensor.ultimoValor) : null);
@@ -100,8 +100,8 @@ export const RealTimeSensorsDashboard: React.FC<RealTimeSensorsDashboardProps> =
                 <AlertCircle className="w-4 h-4 text-yellow-500" />
                 <p className="text-sm text-gray-500">
                   Estado: {sensor.estadoConexion === 'CONECTADO' ? 'Conectado' :
-                          sensor.estadoConexion === 'DESCONECTADO' ? 'Desconectado' :
-                          sensor.estadoConexion === 'ERROR' ? 'Error' : 'Sin datos'}
+                    sensor.estadoConexion === 'DESCONECTADO' ? 'Desconectado' :
+                      sensor.estadoConexion === 'ERROR' ? 'Error' : 'Sin datos'}
                 </p>
               </div>
             )}
@@ -119,14 +119,14 @@ export const RealTimeSensorsDashboard: React.FC<RealTimeSensorsDashboardProps> =
         {connectionStatus === 'connected' ? (
           <Wifi className="w-4 h-4 text-green-500" />
         ) : connectionStatus === 'connecting' ? (
-          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
         ) : (
           <WifiOff className="w-4 h-4 text-red-500" />
         )}
         <span className="text-sm text-gray-700 capitalize">
           {connectionStatus === 'connecting' ? 'Conectando...' :
-           connectionStatus === 'connected' ? 'Conectado' :
-           connectionStatus === 'disconnected' ? 'Desconectado' : 'Error de conexion'}
+            connectionStatus === 'connected' ? 'Conectado' :
+              connectionStatus === 'disconnected' ? 'Desconectado' : 'Error de conexion'}
         </span>
       </div>
 

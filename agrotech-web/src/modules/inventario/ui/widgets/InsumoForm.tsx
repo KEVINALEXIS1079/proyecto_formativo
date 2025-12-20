@@ -244,7 +244,7 @@ export default function InsumoForm({
       <div className="grid grid-cols-1 gap-4">
         <ImagePreview
           value={initialValues?.imagenUrl}
-          onFileChange={onFileChange || (() => {})}
+          onFileChange={onFileChange || (() => { })}
         />
       </div>
 
@@ -295,11 +295,11 @@ export default function InsumoForm({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
-          name="stockPresentaciones"
+          name="stockPresentacion"
           label="Stock en presentaciones"
           type="number"
           placeholder="0"
-          defaultValue={initialValues?.stockPresentaciones?.toString()}
+          defaultValue={initialValues?.stockPresentacion?.toString()}
           required
           className="rounded-lg"
         />

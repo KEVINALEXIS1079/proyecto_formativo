@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { Usuario } from '../../users/entities/usuario.entity';
 import { EmailCode } from '../entities/email-code.entity';
+import { ProgramaFormacion } from '../../programas-formacion/entities/programa-formacion.entity';
 import { EmailService } from '../../../common/services/email.service';
 import { RedisService } from '../../../common/services/redis.service';
 import { VerificationService } from '../../../common/services/verification.service';
@@ -13,16 +14,19 @@ import { RegisterDto } from '../dtos/register.dto';
 import { VerifyEmailDto } from '../dtos/verify-email.dto';
 import { RequestResetDto, ResetPasswordDto } from '../dtos/reset-password.dto';
 import { ROLES } from '../../../common/constants/roles.constants';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(Usuario) private usuarioRepo: Repository<Usuario>,
     @InjectRepository(EmailCode) private emailCodeRepo: Repository<EmailCode>,
+    @InjectRepository(ProgramaFormacion) private programaRepo: Repository<ProgramaFormacion>,
     private jwtService: JwtService,
     private emailService: EmailService,
     private redisService: RedisService,
     private verificationService: VerificationService,
+    private eventEmitter: EventEmitter2,
   ) { }
 
   // RF01: Iniciar registro (Pre-registro en Redis)
@@ -80,12 +84,30 @@ export class AuthService {
       return { success: false, message: 'Código inválido' };
     }
 
+    // Validar ficha si fue proporcionada
+    let programaFormacionId: number | undefined = undefined;
+    if (user.idFicha) {
+      const programa = await this.programaRepo.findOne({
+        where: { numeroFicha: user.idFicha }
+      });
+
+      if (!programa) {
+        return {
+          success: false,
+          message: `La ficha ${user.idFicha} no existe en el sistema. Por favor verifica el número o contacta al administrador: agrotechsena2025@gmail.com`
+        };
+      }
+
+      programaFormacionId = programa.id;
+    }
+
     // Crear usuario
     const newUser = this.usuarioRepo.create({
       nombre: user.nombre,
       apellido: user.apellido,
       identificacion: user.identificacion,
       idFicha: user.idFicha,
+      programaFormacionId,
       telefono: user.telefono,
       correo: user.correo,
       passwordHash: user.passwordHash,
@@ -156,6 +178,9 @@ export class AuthService {
         correo: usuario.correo,
       });
     }
+
+    // Emitir evento para notificaciones internas (persistentes)
+    this.eventEmitter.emit('user.verified', { user: usuario, admins });
 
     // Invalidar códigos anteriores no usados
     await this.emailCodeRepo.update(

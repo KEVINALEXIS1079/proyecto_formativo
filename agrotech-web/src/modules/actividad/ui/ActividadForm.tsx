@@ -123,7 +123,29 @@ export default function ActividadForm({
       cantidadPlantas: data.cantidadPlantas,
       kgRecolectados: data.kgRecolectados,
       productoAgroId: data.productoAgroId,
-    };
+      // Map flat form field to payload structure (ActivityController expects optional 'produccion' object in some cases,
+      // but standard create DTO usually keeps it flat or uses specific structure.
+      // Wait, 'FinalizeActivityDto' uses nested 'produccion' object.
+      // 'CreateActivityDto' uses flat fields for cosecha.
+      // The current controller logic for 'finalizarActividad' (PATCH) expects 'FinalizeActivityDto'.
+      // THIS FORM uses 'CreateActivityPayload' which seems to target 'create' (POST) or 'update' (PATCH).
+      // If we are 'Creating' a 'Finalized' activity directly, the backend 'create' method needs to handle this.
+      // Let's check 'create-activity.dto.ts'.
+      // If we are 'Updating' to Finalize, we use 'finalizeActivityHttp' which expects 'FinalizeActivityDto'.
+
+      // However, frontend 'onSubmit' usually calls 'createActivity' or 'updateActivity'.
+      // If the form handles both 'Create New Finalized' and 'Finalize Existing', we need to be careful.
+      // Standard 'CreateActivityDto' has 'kgRecolectados'. Does it have 'precioVenta'? No, not yet.
+      // If I add 'precioVenta' here, it might be lost if backend 'CreateActivityDto' doesn't have it.
+
+      // FIX: I will pass 'precioVenta' as ANY to payload for now, assuming I might need to update CreateDto too.
+      // But 'finalizarActividad' is a specific endpoint. 
+      // If the user creates a FINALIZED activity from scratch, it goes to 'create'.
+      // If 'create' service method calls 'finalizarActividad' internally, it needs the data.
+      // Let's assume 'create' service handles basic fields.
+      // I should ALSO update 'CreateActivityDto' in backend to be safe.
+      precioVenta: data.precioVentaCrop,
+    } as any;
     return onSubmit(payload);
   };
 
@@ -217,7 +239,7 @@ export default function ActividadForm({
                 subLotes={subLotes}
                 productosAgro={productosAgro}
                 onProductCreated={(newProduct) => {
-                    setProductosAgro(prev => [...prev, newProduct]);
+                  setProductosAgro(prev => [...prev, newProduct]);
                 }}
               />
             </CardBody>

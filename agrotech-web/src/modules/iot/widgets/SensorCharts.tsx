@@ -44,6 +44,7 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, load
   const [chartType, setChartType] = useState<ChartType>('line');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
   const hasSeries = timeSeriesData.length > 0;
   const activeIndex = hasSeries ? currentIndex % timeSeriesData.length : 0;
   const activeSeriesList = hasSeries ? [timeSeriesData[activeIndex]] : [];
@@ -55,6 +56,13 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, load
     if (chartType === 'bar') return timeSeriesData; // treated separately but keeps length info
     return timeSeriesData;
   }, [isLive, timeSeriesData, chartType]);
+
+  // Prevent Recharts from rendering before container has dimensions
+  useEffect(() => {
+    // Delay to ensure container has calculated dimensions
+    const timer = setTimeout(() => setIsMounted(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     setCurrentIndex(0);
@@ -523,8 +531,8 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, load
                             />
                             <p className="text-sm text-gray-600 mt-3 font-semibold text-center">{series.name}</p>
                           </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
+                        ) : isMounted ? (
+                          <ResponsiveContainer width="100%" height={240}>
                             {chartType === 'line' ? (
                               <LineChart data={series.data.slice(-150)} margin={{ top: 10, right: 16, left: 0, bottom: 24 }}>
                                 <defs>
@@ -640,6 +648,10 @@ export const SensorCharts: React.FC<SensorChartsProps> = ({ timeSeriesData, load
                               </AreaChart>
                             )}
                           </ResponsiveContainer>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            Cargando gráfico...
+                          </div>
                         )}
                       </div>
                     </CardBody>

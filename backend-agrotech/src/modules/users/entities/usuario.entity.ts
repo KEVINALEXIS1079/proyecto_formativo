@@ -3,6 +3,7 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import { Rol } from './rol.entity';
 import { UsuarioPermiso } from './usuario-permiso.entity';
 import { EmailCode } from '../../auth/entities/email-code.entity';
+import { ProgramaFormacion } from '../../programas-formacion/entities/programa-formacion.entity';
 
 @Entity('usuarios')
 export class Usuario extends BaseEntity {
@@ -17,6 +18,9 @@ export class Usuario extends BaseEntity {
 
   @Column({ nullable: true })
   idFicha: string;
+
+  @Column({ nullable: true })
+  programaFormacionId: number;
 
   @Column({ nullable: true })
   telefono: string;
@@ -45,6 +49,10 @@ export class Usuario extends BaseEntity {
   @ManyToOne(() => Rol, (rol) => rol.usuarios)
   @JoinColumn({ name: 'rolId' })
   rol: Rol;
+
+  @ManyToOne(() => ProgramaFormacion, (programa) => programa.usuarios)
+  @JoinColumn({ name: 'programaFormacionId' })
+  programaFormacion: ProgramaFormacion;
 
   @OneToMany(() => UsuarioPermiso, (usuarioPermiso) => usuarioPermiso.usuario)
   usuarioPermisos: UsuarioPermiso[];

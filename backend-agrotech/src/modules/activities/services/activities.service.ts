@@ -64,7 +64,7 @@ export class ActivitiesService {
     private readonly productionService: ProductionService,
     private dataSource: DataSource,
     private eventEmitter: EventEmitter2,
-  ) {}
+  ) { }
 
   async create(data: CreateActivityDto, usuarioId: number) {
     return this.dataSource.transaction(async (manager) => {
@@ -244,11 +244,11 @@ export class ActivitiesService {
             'El cultivo es requerido para actividades de SIEMBRA',
           );
         }
-          await this.cultivosService.updateCultivoFechaSiembra(
-            data.cultivoId,
-            new Date(data.fecha),
-            usuarioId, // Pass usuarioId
-            manager, // Pass manager if supported, or manually handle? CultivoService likely supports it or uses simple saves.
+        await this.cultivosService.updateCultivoFechaSiembra(
+          data.cultivoId,
+          new Date(data.fecha),
+          usuarioId, // Pass usuarioId
+          manager, // Pass manager if supported, or manually handle? CultivoService likely supports it or uses simple saves.
           // Assuming existing service methods might NOT simple support manager?
           // If NOT supported, transaction propagation breaks!
           // BUT, I can't rewire ALL services now.
@@ -265,11 +265,11 @@ export class ActivitiesService {
             'El cultivo es requerido para actividades de FINALIZACION',
           );
         }
-          await this.cultivosService.updateCultivoFechaFinalizacion(
-            data.cultivoId,
-            new Date(data.fecha),
-            usuarioId, // Pass usuarioId
-            manager, // Same assumption
+        await this.cultivosService.updateCultivoFechaFinalizacion(
+          data.cultivoId,
+          new Date(data.fecha),
+          usuarioId, // Pass usuarioId
+          manager, // Same assumption
         );
       }
 
@@ -329,6 +329,42 @@ export class ActivitiesService {
             type: 'info',
           });
         });
+      }
+
+      // --- CORE INTEGRATION: PRODUCTION (HARVEST) ON DIRECT CREATION ---
+      const isCosecha = saved.tipo === 'COSECHA' || saved.subtipo === 'COSECHA';
+      if (saved.estado === 'FINALIZADA' && isCosecha && (data.kgRecolectados || 0) > 0) {
+        console.log(`[create] Triggering Direct Harvest Logic. Yield: ${data.kgRecolectados}`);
+
+        // 1. Add Labor/Service Cost to Cultivo (Insumos are handled by consumers)
+        let totalActividadCosto = saved.costoManoObra || 0;
+        // Note: servicios relation might not be loaded in 'saved' if we excluded it from return, 
+        // but we have 'data.servicios'.
+        if (data.servicios) {
+          totalActividadCosto += data.servicios.reduce((sum, s) => sum + ((s.horas * s.precioHora) || 0), 0);
+        }
+
+        if (saved.cultivoId) {
+          await this.cultivosService.addCost(saved.cultivoId, totalActividadCosto, manager);
+        }
+
+        // 2. Create Lote From Cosecha
+        if (saved.cultivoId) {
+          // Fetch updated cultivation to get total cost
+          const cultivo = await manager.findOne(Cultivo, { where: { id: saved.cultivoId } });
+          if (cultivo) {
+            await this.productionService.createLoteProduccionFromCosecha({
+              cultivoId: cultivo.id,
+              actividadCosechaId: saved.id,
+              cantidadKg: data.kgRecolectados || 0,
+              fecha: saved.fecha,
+              costoCultivo: cultivo.costoTotal,
+              usuarioId,
+              productoAgroId: data.productoAgroId,
+              precioVenta: data.precioVenta // Pass sales price from DTO
+            }, manager);
+          }
+        }
       }
 
       this.eventEmitter.emit('activity.created', finalResult);
@@ -432,7 +468,7 @@ export class ActivitiesService {
     );
     // Filtrar solo las activas para evitar confusiones en el frontend
     const realReservas = allReservas ? allReservas.filter((r: Reserva) => r.estado === 'ACTIVA') : [];
-    
+
     if (realReservas && realReservas.length > 0) {
       actividad.insumosReserva = realReservas.map((r: Reserva) => ({
         id: r.id,
@@ -624,10 +660,10 @@ export class ActivitiesService {
       // Actually Object.assign below might overwrite our hard work if 'data' still has them.
       // So we should exclude them from Object.assign or ensure 'actividad' properties take precedence.
       // Safer: explicitly assign simple props or delete relation props from 'data' copy.
-      
+
       const { responsables, servicios, herramientas, evidencias, ...basicData } = data;
       Object.assign(actividad, basicData);
-      
+
       const saved = await manager.save(actividad);
 
       // --- Manejo de Insumos (Reservas) en Edición ---
@@ -755,6 +791,26 @@ export class ActivitiesService {
       );
 
       this.eventEmitter.emit('activity.updated', saved);
+
+      // Notify responsibles about update
+      if (saved.responsables && saved.responsables.length > 0) {
+        const msg = saved.estado === 'FINALIZADA'
+          ? `La actividad ${saved.nombre} ha sido FINALIZADA.`
+          : `La actividad ${saved.nombre} ha sido actualizada.`;
+
+        saved.responsables.forEach((resp: any) => {
+          // Avoid notifying the person making the change if possible? (usuarioId)
+          // But usually safe to notify all.
+          this.eventEmitter.emit('activity.notification', {
+            targetUserId: resp.usuarioId,
+            title: saved.estado === 'FINALIZADA' ? 'Actividad Finalizada' : 'Actividad Actualizada',
+            body: msg,
+            activityId: saved.id,
+            type: saved.estado === 'FINALIZADA' ? 'success' : 'info'
+          });
+        });
+      }
+
       return saved;
     });
   }
@@ -791,7 +847,7 @@ export class ActivitiesService {
 
   async addServicio(
     actividadId: number,
-    data: { nombreServicio: string; horas: number; precioHora: number },
+    data: { nombreServicio: string; horas: number; precioHora: number; maquinariaId?: number },
     manager?: any,
   ) {
     const repo = manager
@@ -801,6 +857,7 @@ export class ActivitiesService {
       actividadId,
       ...data,
       costo: data.horas * data.precioHora,
+      maquinariaId: data.maquinariaId, // Link machinery
     });
 
     // Cast to any to avoid TS errors with dynamic repo
@@ -1169,6 +1226,7 @@ export class ActivitiesService {
               fecha: data.fechaReal ? new Date(data.fechaReal) : new Date(),
               costoCultivo: cultivo.costoTotal, // Passes the total accumulated cost
               usuarioId, // Passed from context
+              precioVenta: (data.produccion as any).precioVenta // Pass the price
             },
             manager,
           );

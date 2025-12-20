@@ -29,21 +29,33 @@ export default function ProtectedHeader({
   notifications = [],
   notificationsLoading = false,
   onLogout,
+  onMarkAsRead,
+  onNotificationClick,
+  onOpenMenu,
 }: {
   user?: UserInfo | null;
   loading?: boolean;
   notifications?: Notification[];
   notificationsLoading?: boolean;
   onLogout: () => void;
+  onMarkAsRead?: (id: string) => void;
+  onNotificationClick?: (n: Notification) => void;
+  onOpenMenu?: () => void;
 }) {
   const navigate = useNavigate();
 
   return (
     <header className="h-16 px-4 md:px-6 flex items-center gap-3 bg-white sticky top-0 z-50 shadow-sm">
-      <img src="/LogoTic.png" alt="TIC" className="h-10 md:h-12 w-auto object-contain" />
+      <button
+        className="md:hidden mr-2 p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full"
+        onClick={onOpenMenu}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
+      </button>
+      <img src="/logoAgrotech.png" alt="TIC" className="h-10 w-auto object-contain md:h-14" />
 
       <div className="ml-auto flex items-center gap-3">
-        <HeaderNotifications items={notifications} loading={notificationsLoading} />
+        <HeaderNotifications items={notifications} loading={notificationsLoading} onMarkAsRead={onMarkAsRead} onNotificationClick={onNotificationClick} />
 
         <Dropdown placement="bottom-end">
           <DropdownTrigger>

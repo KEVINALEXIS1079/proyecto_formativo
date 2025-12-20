@@ -44,6 +44,7 @@ export default function AuthRecoverForm({
         placeholder="usuario@gmail.com"
         isInvalid={!!error}
         errorMessage={error}
+        autoComplete="username"
       />
 
       <Button

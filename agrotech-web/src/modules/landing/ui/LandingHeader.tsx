@@ -1,16 +1,22 @@
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 const fadeDown = {
-    initial: { opacity: 0, y: -12 },
-    animate: { opacity: 1, y: 0, transition: ({ duration: 0.45, ease: "easeOut" } as any) },
+    initial: { opacity: 0, y: -20 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" as const } },
 };
 
 export default function LandingHeader() {
     const [open, setOpen] = useState(false);
+    const [isDecember, setIsDecember] = useState(false);
+
+    useEffect(() => {
+        const month = new Date().getMonth();
+        setIsDecember(month === 11); // 11 = December
+    }, []);
 
     return (
         <motion.header
@@ -21,14 +27,36 @@ export default function LandingHeader() {
         >
             <div className="mx-auto max-w-7xl h-16 px-5 flex items-center gap-4">
                 <a href="/" className="flex items-center gap-2">
-                    <img
-                        src="/LogoTic.png"
-                        alt="TIC"
-                        className="h-10 md:h-12 w-auto object-contain"
-                    />
-                    <span className="hidden sm:inline text-base font-semibold tracking-tight">
-                        AgroTech
-                    </span>
+                    <div className="relative">
+                        <img
+                            src="/logoAgrotech.png"
+                            alt="AgroTech"
+                            className="h-10 md:h-12 w-auto object-contain"
+                        />
+                        {/* Gorro de Navidad animado (Solo en Diciembre) */}
+                        {/* Gorro de Navidad animado (Solo en Diciembre) */}
+                        {isDecember && (
+                            <svg
+                                viewBox="0 0 120 100"
+                                className="absolute -top-4 -left-3 w-12 h-12 md:w-14 md:h-14 rotate-[-10deg] drop-shadow-md pointer-events-none z-10"
+                            >
+                                {/* Pompom (White) - Hanging lower left */}
+                                <circle cx="15" cy="55" r="10" fill="white" />
+
+                                {/* Red Body - Draped over the curve */}
+                                <path
+                                    d="M20 50 Q 50 10 90 35 L 110 55 Q 60 40 20 60"
+                                    fill="#D32F2F"
+                                />
+
+                                {/* Brim (Band) - Curved to fit the leaf head */}
+                                <path
+                                    d="M25 55 Q 60 30 115 55 L 115 68 Q 60 45 25 68 Z"
+                                    fill="white"
+                                />
+                            </svg>
+                        )}
+                    </div>
                 </a>
 
                 {/* Desktop Nav */}

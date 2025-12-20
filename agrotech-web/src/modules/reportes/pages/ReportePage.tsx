@@ -23,14 +23,17 @@ import {
     Package,
     TrendingUp,
     BarChart as BarChartIcon,
+    Printer,
+    FileText,
 } from 'lucide-react';
 import { IoTApi } from '../../iot/api/iot.api';
 import { useCultivosList } from '../../cultivos/hooks/useCultivos';
 import { useReporteCompleto } from '../hooks/useReportes';
 import { exportToXLSX } from '@/shared/utils/exportUtils';
-import { FormatPreview } from '../ui/components/FormatPreview';
-import { convertChartToImageFallback } from '../utils/chartToImage';
 import { ReporteChart } from '../ui/widgets/ReporteChart';
+import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
+import { ReportePDF } from '../ui/pdfs/ReportePDF';
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 
 export default function ReportePage() {
     const [cultivoId, setCultivoId] = useState<number | undefined>();
@@ -117,706 +120,9 @@ export default function ReportePage() {
 
     const handleConfirmExport = async () => {
         if (!reporteCompleto || !exportFormat) return;
-
         const cultivoNombre = cultivos.find((c) => c.id === cultivoId)?.nombre || 'General';
 
-        if (exportFormat === 'pdf') {
-            // Generate PDF using jsPDF
-            const { default: jsPDF } = await import('jspdf');
-            const { default: autoTable } = await import('jspdf-autotable');
-
-            const doc = new jsPDF();
-            const pageWidth = doc.internal.pageSize.getWidth();
-            let yPosition = 20;
-
-            // Helper function for currency formatting
-            const formatCurrency = (val: number) =>
-                new Intl.NumberFormat('es-CO', {
-                    style: 'currency',
-                    currency: 'COP',
-                    minimumFractionDigits: 0
-                }).format(val);
-
-            // Add Logo
-            const logoImg = new Image();
-            logoImg.src = '/LogoTic.png';
-            try {
-                const logoWidth = 40;
-                const logoHeight = 16;
-                doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, yPosition, logoWidth, logoHeight);
-                yPosition += logoHeight + 8;
-            } catch (e) {
-                console.log('Logo not loaded, continuing without it');
-            }
-
-            // Title
-            doc.setFontSize(20);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(34, 197, 94); // Green color
-            doc.text('REPORTE DE CULTIVO', pageWidth / 2, yPosition, { align: 'center' });
-            yPosition += 8;
-
-            // Subtitle
-            doc.setFontSize(14);
-            doc.setTextColor(100, 100, 100);
-            doc.text(cultivoNombre, pageWidth / 2, yPosition, { align: 'center' });
-            yPosition += 10;
-
-            // Date and filters
-            doc.setFontSize(10);
-            doc.setTextColor(0, 0, 0);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-CO', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            })}`, 14, yPosition);
-            yPosition += 5;
-            if (fechaDesde && fechaHasta) {
-                doc.text(`Período: ${new Date(fechaDesde).toLocaleDateString('es-CO')} - ${new Date(fechaHasta).toLocaleDateString('es-CO')}`, 14, yPosition);
-                yPosition += 8;
-            } else {
-                yPosition += 3;
-            }
-
-            // Horizontal line
-            doc.setDrawColor(200, 200, 200);
-            doc.line(14, yPosition, pageWidth - 14, yPosition);
-            yPosition += 8;
-
-            // RESUMEN EJECUTIVO
-            if (selectedSections.includes('resumen')) {
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(34, 197, 94);
-                doc.text('Resumen Ejecutivo', 14, yPosition);
-                yPosition += 2;
-                doc.setDrawColor(34, 197, 94);
-                doc.setLineWidth(0.3);
-                doc.line(14, yPosition, 70, yPosition);
-                yPosition += 10;
-
-                // Colored summary cards (matching preview)
-                const cardWidth = 58;
-                const cardHeight = 25;
-                const cardSpacing = 5;
-                const startX = 14;
-
-                // Card 1: Costos Totales (Red background)
-                doc.setFillColor(254, 226, 226); // Light red background
-                doc.roundedRect(startX, yPosition, cardWidth, cardHeight, 2, 2, 'F');
-                doc.setDrawColor(254, 202, 202);
-                doc.roundedRect(startX, yPosition, cardWidth, cardHeight, 2, 2, 'S');
-
-                doc.setFontSize(9);
-                doc.setTextColor(100, 100, 100);
-                doc.text('Costos Totales', startX + cardWidth / 2, yPosition + 8, { align: 'center' });
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(220, 38, 38); // Red text
-                doc.text(formatCurrency(reporteCompleto.resumen.costoTotal), startX + cardWidth / 2, yPosition + 18, { align: 'center' });
-
-                // Card 2: Ingresos Totales (Green background)
-                const card2X = startX + cardWidth + cardSpacing;
-                doc.setFillColor(220, 252, 231); // Light green background
-                doc.roundedRect(card2X, yPosition, cardWidth, cardHeight, 2, 2, 'F');
-                doc.setDrawColor(187, 247, 208);
-                doc.roundedRect(card2X, yPosition, cardWidth, cardHeight, 2, 2, 'S');
-
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(100, 100, 100);
-                doc.text('Ingresos Totales', card2X + cardWidth / 2, yPosition + 8, { align: 'center' });
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(22, 163, 74); // Green text
-                doc.text(formatCurrency(reporteCompleto.resumen.ingresoTotal), card2X + cardWidth / 2, yPosition + 18, { align: 'center' });
-
-                // Card 3: Utilidad Neta (Blue/Red background depending on value)
-                const card3X = card2X + cardWidth + cardSpacing;
-                const isPositive = reporteCompleto.resumen.utilidadNeta >= 0;
-                doc.setFillColor(isPositive ? 220 : 254, isPositive ? 252 : 226, isPositive ? 231 : 226); // Green or red
-                doc.roundedRect(card3X, yPosition, cardWidth, cardHeight, 2, 2, 'F');
-                doc.setDrawColor(isPositive ? 187 : 254, isPositive ? 247 : 202, isPositive ? 208 : 202);
-                doc.roundedRect(card3X, yPosition, cardWidth, cardHeight, 2, 2, 'S');
-
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(100, 100, 100);
-                doc.text('Utilidad Neta', card3X + cardWidth / 2, yPosition + 8, { align: 'center' });
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(isPositive ? 22 : 220, isPositive ? 163 : 38, isPositive ? 74 : 38);
-                doc.text(formatCurrency(reporteCompleto.resumen.utilidadNeta), card3X + cardWidth / 2, yPosition + 18, { align: 'center' });
-
-                yPosition += cardHeight + 10;
-
-                // Additional indicators table
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(0, 0, 0);
-
-                autoTable(doc, {
-                    startY: yPosition,
-                    head: [['Indicador', 'Valor', 'Estado']],
-                    body: [
-                        ['Margen Neto', `${reporteCompleto.resumen.margenNeto.toFixed(2)}%`,
-                            reporteCompleto.resumen.margenNeto >= 20 ? 'Bueno' : 'Regular'],
-                        ['ROI', `${reporteCompleto.resumen.roi.toFixed(2)}%`,
-                            reporteCompleto.resumen.roi >= 0 ? 'Rentable' : 'No rentable'],
-                        ['Relacion B/C', reporteCompleto.resumen.relacionBC.toFixed(2),
-                            reporteCompleto.resumen.relacionBC > 1 ? 'Viable' : 'No viable'],
-                    ],
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: [34, 197, 94],
-                        fontSize: 10,
-                        fontStyle: 'bold'
-                    },
-                    columnStyles: {
-                        0: { fontStyle: 'bold', cellWidth: 60 },
-                        1: { halign: 'right', cellWidth: 60 },
-                        2: { halign: 'center', cellWidth: 'auto' }
-                    },
-                    styles: { fontSize: 9 }
-                });
-
-                yPosition = (doc as any).lastAutoTable.finalY + 10;
-            }
-
-            // DESGLOSE DE COSTOS
-            if (selectedSections.includes('costos') && reporteCompleto.costos) {
-                if (yPosition > 230) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(239, 68, 68); // Red color
-                doc.text('DESGLOSE DE COSTOS', 14, yPosition);
-                yPosition += 8;
-
-                const costosData = [
-                    ['Insumos', formatCurrency(reporteCompleto.costos.insumos || 0),
-                        `${((reporteCompleto.costos.insumos || 0) / reporteCompleto.resumen.costoTotal * 100).toFixed(1)}%`],
-                    ['Mano de Obra', formatCurrency(reporteCompleto.costos.manoObra || 0),
-                        `${((reporteCompleto.costos.manoObra || 0) / reporteCompleto.resumen.costoTotal * 100).toFixed(1)}%`],
-                    ['Maquinaria', formatCurrency(reporteCompleto.costos.maquinaria || 0),
-                        `${((reporteCompleto.costos.maquinaria || 0) / reporteCompleto.resumen.costoTotal * 100).toFixed(1)}%`],
-                    ['Otros', formatCurrency(reporteCompleto.costos.otros || 0),
-                        `${((reporteCompleto.costos.otros || 0) / reporteCompleto.resumen.costoTotal * 100).toFixed(1)}%`],
-                ];
-
-                autoTable(doc, {
-                    startY: yPosition,
-                    head: [['Categoría', 'Monto', '% del Total']],
-                    body: costosData,
-                    foot: [['TOTAL', formatCurrency(reporteCompleto.resumen.costoTotal), '100%']],
-                    theme: 'striped',
-                    headStyles: { fillColor: [239, 68, 68], fontSize: 11, fontStyle: 'bold' },
-                    footStyles: { fillColor: [220, 220, 220], fontStyle: 'bold' },
-                    columnStyles: {
-                        0: { fontStyle: 'bold' },
-                        1: { halign: 'right' },
-                        2: { halign: 'center' }
-                    }
-                });
-
-                yPosition = (doc as any).lastAutoTable.finalY + 10;
-            }
-
-            // INDICADORES DE RENTABILIDAD
-            if (selectedSections.includes('rentabilidad')) {
-                if (yPosition > 230) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(59, 130, 246); // Blue color
-                doc.text('INDICADORES DE RENTABILIDAD', 14, yPosition);
-                yPosition += 8;
-
-                autoTable(doc, {
-                    startY: yPosition,
-                    head: [['Indicador', 'Valor', 'Interpretación']],
-                    body: [
-                        ['Relación Beneficio/Costo', reporteCompleto.resumen.relacionBC.toFixed(2),
-                            reporteCompleto.resumen.relacionBC > 1
-                                ? 'Por cada peso invertido se obtienen ' + reporteCompleto.resumen.relacionBC.toFixed(2) + ' pesos'
-                                : 'Proyecto no rentable'],
-                        ['ROI (Retorno sobre Inversión)', `${reporteCompleto.resumen.roi.toFixed(2)}%`,
-                            reporteCompleto.resumen.roi >= 0
-                                ? 'Retorno positivo del ' + reporteCompleto.resumen.roi.toFixed(2) + '%'
-                                : 'Pérdida del ' + Math.abs(reporteCompleto.resumen.roi).toFixed(2) + '%'],
-                        ['Margen de Utilidad Neta', `${reporteCompleto.resumen.margenNeto.toFixed(2)}%`,
-                            reporteCompleto.resumen.margenNeto >= 20
-                                ? 'Excelente margen de ganancia'
-                                : reporteCompleto.resumen.margenNeto >= 10
-                                    ? 'Margen aceptable'
-                                    : 'Margen bajo, requiere optimización'],
-                    ],
-                    theme: 'grid',
-                    headStyles: { fillColor: [59, 130, 246], fontSize: 11, fontStyle: 'bold' },
-                    columnStyles: {
-                        0: { fontStyle: 'bold', cellWidth: 60 },
-                        1: { halign: 'center', cellWidth: 40 },
-                        2: { cellWidth: 'auto' }
-                    }
-                });
-
-                yPosition = (doc as any).lastAutoTable.finalY + 10;
-            }
-
-            // ACTIVIDADES REALIZADAS
-            if (selectedSections.includes('actividades') && reporteCompleto.actividades?.length > 0) {
-                if (yPosition > 200) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(168, 85, 247); // Purple color
-                doc.text('ACTIVIDADES REALIZADAS', 14, yPosition);
-                yPosition += 8;
-
-                const actividadesData = reporteCompleto.actividades.slice(0, 15).map((act: any) => [
-                    new Date(act.fecha).toLocaleDateString('es-CO'),
-                    act.tipo || 'N/A',
-                    act.descripcion?.substring(0, 50) || 'N/A',
-                ]);
-
-                autoTable(doc, {
-                    startY: yPosition,
-                    head: [['Fecha', 'Tipo', 'Descripción']],
-                    body: actividadesData,
-                    theme: 'grid',
-                    headStyles: { fillColor: [168, 85, 247], fontSize: 10, fontStyle: 'bold' },
-                    styles: { fontSize: 9 },
-                    columnStyles: {
-                        0: { cellWidth: 30 },
-                        1: { cellWidth: 40 },
-                        2: { cellWidth: 'auto' }
-                    }
-                });
-
-                yPosition = (doc as any).lastAutoTable.finalY + 10;
-            }
-
-            // INSUMOS UTILIZADOS
-            if (selectedSections.includes('insumos') && reporteCompleto.insumos?.length > 0) {
-                if (yPosition > 200) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(234, 179, 8); // Yellow color
-                doc.text('INSUMOS UTILIZADOS', 14, yPosition);
-                yPosition += 8;
-
-                const insumosData = reporteCompleto.insumos.slice(0, 15).map((ins: any) => [
-                    ins.nombre || 'N/A',
-                    ins.cantidad?.toString() || '0',
-                    ins.unidad || 'Unidad',
-                    formatCurrency(ins.costoTotal || 0),
-                ]);
-
-                autoTable(doc, {
-                    startY: yPosition,
-                    head: [['Insumo', 'Cantidad', 'Unidad', 'Costo Total']],
-                    body: insumosData,
-                    theme: 'striped',
-                    headStyles: { fillColor: [234, 179, 8], fontSize: 10, fontStyle: 'bold' },
-                    styles: { fontSize: 9 },
-                    columnStyles: {
-                        3: { halign: 'right' }
-                    }
-                });
-
-                yPosition = (doc as any).lastAutoTable.finalY + 10;
-            }
-
-            // VENTAS Y PRODUCCIÓN
-            if (selectedSections.includes('ventas') && reporteCompleto.ventas?.length > 0) {
-                if (yPosition > 200) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(34, 197, 94); // Green color
-                doc.text('VENTAS Y PRODUCCION', 14, yPosition);
-                yPosition += 8;
-
-                const ventasData = reporteCompleto.ventas.slice(0, 15).map((v: any) => [
-                    new Date(v.fecha).toLocaleDateString('es-CO'),
-                    v.producto || 'N/A',
-                    v.cantidad?.toString() || '0',
-                    formatCurrency(v.precioUnitario || 0),
-                    formatCurrency(v.total || 0),
-                ]);
-
-                autoTable(doc, {
-                    startY: yPosition,
-                    head: [['Fecha', 'Producto', 'Cantidad', 'Precio Unit.', 'Total']],
-                    body: ventasData,
-                    foot: [['', '', '', 'TOTAL VENTAS:', formatCurrency(reporteCompleto.ventas.reduce((sum: number, v: any) => sum + (v.total || 0), 0))]],
-                    theme: 'grid',
-                    headStyles: { fillColor: [34, 197, 94], fontSize: 10, fontStyle: 'bold' },
-                    footStyles: { fillColor: [220, 220, 220], fontStyle: 'bold' },
-                    styles: { fontSize: 9 },
-                    columnStyles: {
-                        3: { halign: 'right' },
-                        4: { halign: 'right' }
-                    }
-                });
-
-                yPosition = (doc as any).lastAutoTable.finalY + 10;
-            }
-
-            // COSECHAS / LOTES DE PRODUCCIÓN
-            if (selectedSections.includes('cosechas') && reporteCompleto.cosechas?.length > 0) {
-                if (yPosition > 200) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(22, 163, 74); // Dark green
-                doc.text('LOTES DE PRODUCCION (COSECHAS)', 14, yPosition);
-                yPosition += 8;
-
-                const cosechasData = reporteCompleto.cosechas.map((c: any) => [
-                    c.lote || 'N/A',
-                    new Date(c.fechaCosecha).toLocaleDateString('es-CO'),
-                    `${c.cantidadCosechada || 0} ${c.unidad || 'kg'}`,
-                    c.calidad || 'N/A',
-                ]);
-
-                autoTable(doc, {
-                    startY: yPosition,
-                    head: [['Lote', 'Fecha Cosecha', 'Cantidad', 'Calidad']],
-                    body: cosechasData,
-                    theme: 'grid',
-                    headStyles: { fillColor: [22, 163, 74], fontSize: 10, fontStyle: 'bold' },
-                    styles: { fontSize: 9 }
-                });
-
-                yPosition = (doc as any).lastAutoTable.finalY + 10;
-            }
-
-            // MONITOREO IOT - ENHANCED VERSION
-            if (selectedSections.includes('monitoreo') && previewIotData) {
-                if (yPosition > 200) {
-                    doc.addPage();
-                    yPosition = 20;
-                }
-
-                // Title
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(34, 197, 94);
-                doc.text('Monitoreo IoT', 14, yPosition);
-                yPosition += 2;
-                doc.setDrawColor(34, 197, 94);
-                doc.setLineWidth(0.3);
-                doc.line(14, yPosition, 55, yPosition);
-                yPosition += 10;
-
-                // Lot Name (if available)
-                const selectedCultivo = cultivos.find((c) => c.id === cultivoId);
-                const loteNombre = (selectedCultivo as any)?.lote?.nombre ||
-                    (selectedCultivo as any)?.sublote?.lote?.nombre ||
-                    'N/A';
-
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(0, 0, 0);
-                doc.text(`Lote: ${loteNombre}`, 14, yPosition);
-                yPosition += 8;
-
-                // SUMMARY CARDS
-                const cardWidth = 58;
-                const cardHeight = 20;
-                const cardSpacing = 5;
-                const startX = 14;
-
-                // Card 1: Total Sensores
-                doc.setFillColor(249, 250, 251);
-                doc.roundedRect(startX, yPosition, cardWidth, cardHeight, 2, 2, 'F');
-                doc.setDrawColor(229, 231, 235);
-                doc.roundedRect(startX, yPosition, cardWidth, cardHeight, 2, 2, 'S');
-                doc.setFontSize(8);
-                doc.setTextColor(100, 100, 100);
-                doc.text('Total Sensores', startX + cardWidth / 2, yPosition + 7, { align: 'center' });
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(0, 0, 0);
-                doc.text((previewIotData.totalSensors?.toString() || '0'), startX + cardWidth / 2, yPosition + 15, { align: 'center' });
-
-                // Card 2: Conectados
-                const card2X = startX + cardWidth + cardSpacing;
-                doc.setFillColor(220, 252, 231);
-                doc.roundedRect(card2X, yPosition, cardWidth, cardHeight, 2, 2, 'F');
-                doc.setDrawColor(187, 247, 208);
-                doc.roundedRect(card2X, yPosition, cardWidth, cardHeight, 2, 2, 'S');
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(21, 128, 61);
-                doc.text('Conectados', card2X + cardWidth / 2, yPosition + 7, { align: 'center' });
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text((previewIotData.estados?.conectados?.toString() || '0'), card2X + cardWidth / 2, yPosition + 15, { align: 'center' });
-
-                // Card 3: Alertas Activas
-                const card3X = card2X + cardWidth + cardSpacing;
-                doc.setFillColor(254, 226, 226);
-                doc.roundedRect(card3X, yPosition, cardWidth, cardHeight, 2, 2, 'F');
-                doc.setDrawColor(254, 202, 202);
-                doc.roundedRect(card3X, yPosition, cardWidth, cardHeight, 2, 2, 'S');
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(185, 28, 28);
-                doc.text('Alertas Activas', card3X + cardWidth / 2, yPosition + 7, { align: 'center' });
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text((previewIotData.alertasActivas?.toString() || '0'), card3X + cardWidth / 2, yPosition + 15, { align: 'center' });
-
-                yPosition += cardHeight + 10;
-
-                // 1. PROTOCOLOS UTILIZADOS
-                if (previewIotData.protocolos) {
-                    if (yPosition > 240) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('Protocolos de Comunicación', 14, yPosition);
-                    yPosition += 6;
-
-                    autoTable(doc, {
-                        startY: yPosition,
-                        head: [['Protocolo', 'Cantidad', 'Estado']],
-                        body: [
-                            ['MQTT', previewIotData.protocolos.mqtt.toString(), 'Activo'],
-                            ['HTTP', previewIotData.protocolos.http.toString(), 'Activo'],
-                            ['Otros', previewIotData.protocolos.otros.toString(), 'Activo'],
-                        ],
-                        theme: 'grid',
-                        headStyles: { fillColor: [99, 102, 241], fontSize: 10 },
-                        styles: { fontSize: 9 },
-                    });
-                    yPosition = (doc as any).lastAutoTable.finalY + 10;
-                }
-
-                // 2. CONFIGURACIÓN MQTT
-                if (previewIotData.configuracionMqtt) {
-                    if (yPosition > 240) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('Configuración MQTT', 14, yPosition);
-                    yPosition += 6;
-
-                    autoTable(doc, {
-                        startY: yPosition,
-                        body: [
-                            ['Broker', previewIotData.configuracionMqtt.broker],
-                            ['Topic Prefix', previewIotData.configuracionMqtt.topicPrefix],
-                            ['Sensores Conectados', previewIotData.configuracionMqtt.sensoresConectados.toString()],
-                        ],
-                        theme: 'plain',
-                        styles: { fontSize: 9 },
-                        columnStyles: {
-                            0: { fontStyle: 'bold', cellWidth: 60 },
-                            1: { cellWidth: 'auto' },
-                        },
-                    });
-                    yPosition = (doc as any).lastAutoTable.finalY + 10;
-                }
-
-                // 3. ESTADÍSTICAS DETALLADAS POR SENSOR
-                if (previewIotData.sensoresDetalle && previewIotData.sensoresDetalle.length > 0) {
-                    if (yPosition > 220) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('Estadísticas Detalladas por Sensor', 14, yPosition);
-                    yPosition += 6;
-
-                    const sensoresData = previewIotData.sensoresDetalle.map((s: any) => [
-                        s.nombre,
-                        s.protocolo,
-                        `${s.estadisticas.promedio.toFixed(2)} ${s.unidad}`,
-                        s.estadisticas.minimo.fecha ?
-                            `${s.estadisticas.minimo.valor.toFixed(2)} (${new Date(s.estadisticas.minimo.fecha).toLocaleDateString('es-CO')})` :
-                            'N/A',
-                        s.estadisticas.maximo.fecha ?
-                            `${s.estadisticas.maximo.valor.toFixed(2)} (${new Date(s.estadisticas.maximo.fecha).toLocaleDateString('es-CO')})` :
-                            'N/A',
-                        s.estadisticas.ultimaLectura.fecha ?
-                            `${s.estadisticas.ultimaLectura.valor.toFixed(2)} ${s.unidad}` :
-                            'N/A',
-                    ]);
-
-                    autoTable(doc, {
-                        startY: yPosition,
-                        head: [['Sensor', 'Protocolo', 'Promedio', 'Mínimo (Fecha)', 'Máximo (Fecha)', 'Última Lectura']],
-                        body: sensoresData,
-                        theme: 'striped',
-                        headStyles: { fillColor: [99, 102, 241], fontSize: 8 },
-                        styles: { fontSize: 7 },
-                        columnStyles: {
-                            0: { cellWidth: 30 },
-                            1: { cellWidth: 20 },
-                            2: { cellWidth: 25 },
-                            3: { cellWidth: 35 },
-                            4: { cellWidth: 35 },
-                            5: { cellWidth: 30 },
-                        },
-                    });
-                    yPosition = (doc as any).lastAutoTable.finalY + 10;
-                }
-
-                // 4. GRÁFICAS DE TENDENCIAS POR SENSOR
-                if (previewIotData.sensoresDetalle && previewIotData.sensoresDetalle.length > 0) {
-                    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-                    for (let i = 0; i < previewIotData.sensoresDetalle.length; i++) {
-                        const sensor = previewIotData.sensoresDetalle[i];
-                        if (sensor.tendencia && sensor.tendencia.length > 0) {
-                            if (yPosition > 170) {
-                                doc.addPage();
-                                yPosition = 20;
-                            }
-
-                            doc.setFontSize(11);
-                            doc.setFont('helvetica', 'bold');
-                            doc.setTextColor(0, 0, 0);
-                            doc.text(`Tendencia: ${sensor.nombre}`, 14, yPosition);
-                            yPosition += 6;
-
-                            try {
-                                const chartImage = await convertChartToImageFallback(sensor.tendencia, {
-                                    title: sensor.nombre,
-                                    unit: sensor.unidad,
-                                    color: colors[i % colors.length],
-                                    width: 800,
-                                    height: 400,
-                                });
-
-                                if (chartImage) {
-                                    doc.addImage(chartImage, 'PNG', 14, yPosition, 180, 90);
-                                    yPosition += 95;
-                                } else {
-                                    doc.setFontSize(9);
-                                    doc.setTextColor(150, 150, 150);
-                                    doc.text('(Grafica no disponible - error en generacion)', 14, yPosition);
-                                    yPosition += 10;
-                                }
-                            } catch (error) {
-                                console.error(`ERROR al generar gráfica para ${sensor.nombre}:`, error);
-                                doc.setFontSize(9);
-                                doc.setTextColor(150, 150, 150);
-                                doc.text('(Error al generar grafica)', 14, yPosition);
-                                yPosition += 10;
-                            }
-                        } else {
-                            // No trend data
-                        }
-                    }
-                }
-
-                // 5. ALERTAS DETALLADAS
-                if (previewIotData.alertasDetalle && previewIotData.alertasDetalle.length > 0) {
-                    if (yPosition > 200) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('Historial de Alertas', 14, yPosition);
-                    yPosition += 6;
-
-                    const alertasData = previewIotData.alertasDetalle.map((alerta: any) => [
-                        alerta.sensorNombre,
-                        alerta.tipoAlerta,
-                        `${alerta.valor} / ${alerta.umbral}`,
-                        new Date(alerta.fechaDeteccion).toLocaleString('es-CO'),
-                        alerta.resuelta ? 'Resuelta' : 'Activa',
-                    ]);
-
-                    autoTable(doc, {
-                        startY: yPosition,
-                        head: [['Sensor', 'Tipo Alerta', 'Valor/Umbral', 'Fecha Deteccion', 'Estado']],
-                        body: alertasData,
-                        theme: 'striped',
-                        headStyles: { fillColor: [239, 68, 68], fontSize: 9 },
-                        styles: { fontSize: 8 },
-                        columnStyles: {
-                            0: { cellWidth: 35 },
-                            1: { cellWidth: 30 },
-                            2: { cellWidth: 30 },
-                            3: { cellWidth: 50 },
-                            4: { cellWidth: 30 },
-                        },
-                    });
-                    yPosition = (doc as any).lastAutoTable.finalY + 10;
-                } else if (previewIotData.totalSensors > 0) {
-                    if (yPosition > 240) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('Historial de Alertas', 14, yPosition);
-                    yPosition += 6;
-
-                    doc.setFontSize(9);
-                    doc.setTextColor(21, 128, 61);
-                    doc.text('No hay alertas registradas. Todos los sensores operan normalmente.', 14, yPosition);
-                    yPosition += 10;
-                }
-            }
-
-            // Footer on last page
-            const pageCount = (doc as any).internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.setTextColor(150, 150, 150);
-                doc.text(
-                    `Página ${i} de ${pageCount} | Generado por AgroTech SENA | ${new Date().toLocaleDateString('es-CO')}`,
-                    pageWidth / 2,
-                    doc.internal.pageSize.getHeight() - 10,
-                    { align: 'center' }
-                );
-            }
-
-            // Save PDF
-            doc.save(`reporte-completo-${cultivoNombre}-${new Date().toISOString().split('T')[0]}.pdf`);
-            setIsPreviewOpen(false);
-
-        } else if (exportFormat === 'excel' || exportFormat === 'csv') {
+        if (exportFormat === 'excel' || exportFormat === 'csv') {
             // Excel/CSV export logic here
             const excelRows: any[] = [];
 
@@ -831,7 +137,6 @@ export default function ReportePage() {
 
             exportToXLSX(excelRows, `reporte-${cultivoNombre}`);
         }
-
         setIsPreviewOpen(false);
     };
 
@@ -862,6 +167,7 @@ export default function ReportePage() {
                                 const selected = Array.from(keys)[0];
                                 setCultivoId(selected ? Number(selected) : undefined);
                             }}
+                            aria-label="Seleccionar cultivo para el reporte"
                         >
                             {cultivos.map((cultivo) => (
                                 <SelectItem key={cultivo.id.toString()}>
@@ -896,6 +202,7 @@ export default function ReportePage() {
                             onPress={() => handleExportPreview('pdf')}
                             isDisabled={!hasData}
                             className="font-semibold text-white"
+                            aria-label="Exportar reporte como PDF"
                         >
                             Exportar PDF
                         </Button>
@@ -905,6 +212,7 @@ export default function ReportePage() {
                             onPress={() => handleExportPreview('excel')}
                             isDisabled={!hasData}
                             className="font-semibold text-white"
+                            aria-label="Exportar reporte como Excel"
                         >
                             Exportar Excel
                         </Button>
@@ -914,6 +222,7 @@ export default function ReportePage() {
                             onPress={() => handleExportPreview('csv')}
                             isDisabled={!hasData}
                             className="font-semibold"
+                            aria-label="Exportar reporte como CSV"
                         >
                             Exportar CSV
                         </Button>
@@ -1055,73 +364,152 @@ export default function ReportePage() {
             )}
 
             {/* Preview Modal */}
-            <Modal isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} size="5xl" scrollBehavior="inside">
+            <Modal isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} size="4xl" scrollBehavior="inside">
                 <ModalContent>
-                    <ModalHeader className="bg-gradient-to-r from-success-600 to-primary-600 text-white">
-                        <div className="flex items-center justify-between w-full">
-                            <span className="text-lg font-bold">Configuración y Vista Previa - {exportFormat?.toUpperCase()}</span>
-                            <Chip color="default" variant="flat" className="text-white">
-                                {selectedSections.length} secciones
-                            </Chip>
-                        </div>
-                    </ModalHeader>
-                    <ModalBody className="p-0">
-                        <div className="grid grid-cols-12 gap-0 min-h-[70vh]">
+                    {/* Header removed from here to maximize preview space */}
+                    <ModalBody className="p-0 bg-gray-50/30 overflow-hidden">
+                        <div className="grid grid-cols-12 gap-0 h-[75vh]">
                             {/* Left Panel - Configuration */}
-                            <div className="col-span-4 border-r border-gray-200 p-6 bg-gray-50">
-                                <h3 className="text-lg font-bold mb-4">Configurar Secciones</h3>
-                                <CheckboxGroup value={selectedSections} onValueChange={setSelectedSections}>
-                                    <div className="space-y-3">
-                                        {sections.map((section) => (
-                                            <Checkbox key={section.key} value={section.key} color="success" size="lg">
-                                                <span className="font-medium">{section.label}</span>
-                                            </Checkbox>
-                                        ))}
+                            <div className="col-span-12 md:col-span-4 border-r border-dashed border-gray-200 bg-white p-6 flex flex-col h-full overflow-hidden">
+                                {/* Header integrated into sidebar - Inline Logo & Title */}
+                                <div className="flex items-center gap-3 mb-6 border-b border-dashed border-gray-200 pb-4">
+                                    <img src="/logoAgrotech.png" alt="Agrotech" className="h-8 w-auto object-contain" />
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-gray-900 font-bold font-mono tracking-widest uppercase">Agrotech</span>
+                                        <span className="text-[10px] text-gray-500 font-mono tracking-wider uppercase">Generar Reporte</span>
                                     </div>
-                                </CheckboxGroup>
-
-                                <Divider className="my-6" />
-
-                                <div className="bg-blue-50 p-4 rounded-lg">
-                                    <p className="text-sm font-semibold text-blue-800 mb-2">
-                                        Formato: {exportFormat?.toUpperCase()}
-                                    </p>
-                                    <p className="text-xs text-blue-700">
-                                        {exportFormat === 'excel' && 'Archivo Excel con datos tabulados'}
-                                        {exportFormat === 'csv' && 'Archivo CSV compatible con Excel'}
-                                        {exportFormat === 'pdf' && 'Documento PDF listo para imprimir'}
-                                    </p>
                                 </div>
+
+                                <h3 className="font-bold text-gray-700 uppercase text-xs tracking-widest mb-4">Secciones a Incluir</h3>
+                                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                    <CheckboxGroup value={selectedSections} onValueChange={setSelectedSections} className="gap-3">
+                                        {sections.map((section) => (
+                                            <div key={section.key} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${selectedSections.includes(section.key) ? 'border-success-200 bg-success-50/50' : 'border-dashed border-gray-200 hover:border-gray-300'}`}>
+                                                <Checkbox value={section.key} color="success" classNames={{ label: "text-sm font-medium text-gray-700" }}>
+                                                    {section.label}
+                                                </Checkbox>
+                                            </div>
+                                        ))}
+                                    </CheckboxGroup>
+                                </div>
+
                             </div>
 
+
+
                             {/* Right Panel - Live Preview */}
-                            <div className="col-span-8 p-6 overflow-auto">
-                                <h3 className="text-lg font-bold mb-4">Vista Previa en Tiempo Real</h3>
-                                {reporteCompleto && (
-                                    <FormatPreview
-                                        data={reporteCompleto}
-                                        selectedSections={selectedSections}
-                                        cultivoNombre={cultivos.find((c) => c.id === cultivoId)?.nombre}
-                                        format={exportFormat || 'pdf'}
-                                        iotData={previewIotData}
-                                    />
-                                )}
+                            <div className="col-span-12 md:col-span-8 bg-gray-100/50 p-6 overflow-y-auto flex justify-center items-start">
+                                {reporteCompleto && exportFormat === 'pdf' ? (
+                                    <div className="w-full h-full bg-white shadow-lg rounded-lg border border-gray-200 overflow-hidden">
+                                        <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gray-50">
+                                            <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wider">Vista Previa del PDF</h3>
+                                            <span className="text-xs text-gray-500">Formato A4</span>
+                                        </div>
+                                        <div className="h-[calc(100%-48px)]">
+                                            <ErrorBoundary
+                                                fallback={
+                                                    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                                                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                                            <FileText className="w-8 h-8 text-red-600" />
+                                                        </div>
+                                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                                            Error al generar vista previa
+                                                        </h3>
+                                                        <p className="text-sm text-gray-600 mb-4">
+                                                            No se pudo renderizar la vista previa del PDF.
+                                                        </p>
+                                                        <p className="text-xs text-gray-500">
+                                                            Puedes intentar descargar el PDF directamente.
+                                                        </p>
+                                                    </div>
+                                                }
+                                            >
+                                                <PDFViewer
+                                                    key={`preview-${cultivoId}-${selectedSections.join('-')}`}
+                                                    width="100%"
+                                                    height="100%"
+                                                    showToolbar={false}
+                                                    className="border-0"
+                                                >
+                                                    <ReportePDF
+                                                        data={reporteCompleto}
+                                                        cultivoNombre={cultivos.find((c) => c.id === cultivoId)?.nombre || 'General'}
+                                                        selectedSections={selectedSections}
+                                                        iotData={previewIotData}
+                                                    />
+                                                </PDFViewer>
+                                            </ErrorBoundary>
+                                        </div>
+                                    </div>
+                                ) : reporteCompleto && exportFormat !== 'pdf' ? (
+                                    <div className="w-full max-w-sm bg-white shadow-sm rounded-lg border border-gray-100 p-8 text-center">
+                                        <p className="text-gray-500">Vista previa no disponible para {exportFormat?.toUpperCase()}</p>
+                                        <p className="text-sm text-gray-400 mt-2">Haz clic en Descargar para obtener el archivo</p>
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
                     </ModalBody>
-                    <ModalFooter className="bg-gray-50 border-t">
-                        <Button variant="light" onPress={() => setIsPreviewOpen(false)} size="lg">
+                    <ModalFooter className="bg-white border-t border-dashed border-gray-200 justify-between items-center py-4">
+                        <Button variant="light" onPress={() => setIsPreviewOpen(false)} className="text-gray-500 hover:text-gray-700">
                             Cancelar
                         </Button>
-                        <Button
-                            color="success"
-                            startContent={<Download className="h-4 w-4" />}
-                            onPress={handleConfirmExport}
-                            size="lg"
-                            className="font-semibold"
-                        >
-                            Exportar {exportFormat?.toUpperCase()}
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="flat"
+                                startContent={<Printer size={18} />}
+                                onPress={() => window.print()}
+                                className="hidden md:flex text-gray-600"
+                                aria-label="Imprimir reporte"
+                            >
+                                Imprimir
+                            </Button>
+                            {exportFormat === 'pdf' ? (
+                                <ErrorBoundary
+                                    fallback={
+                                        <Button
+                                            color="danger"
+                                            variant="flat"
+                                            startContent={<Download className="h-4 w-4" />}
+                                            onPress={() => setIsPreviewOpen(false)}
+                                        >
+                                            Error al generar PDF
+                                        </Button>
+                                    }
+                                >
+                                    <PDFDownloadLink
+                                        key={`pdf-${cultivoId}-${selectedSections.join('-')}`}
+                                        document={
+                                            <ReportePDF
+                                                data={reporteCompleto}
+                                                cultivoNombre={cultivos.find((c) => c.id === cultivoId)?.nombre || 'General'}
+                                                selectedSections={selectedSections}
+                                                iotData={previewIotData}
+                                            />
+                                        }
+                                        fileName={`reporte-${cultivoId}.pdf`}
+                                    >
+                                        {({ loading }) => (
+                                            <Button
+                                                className="bg-gray-900 text-white shadow-sm font-medium"
+                                                startContent={<Download className="h-4 w-4" />}
+                                                isLoading={loading}
+                                            >
+                                                {loading ? 'Generando...' : 'Descargar PDF'}
+                                            </Button>
+                                        )}
+                                    </PDFDownloadLink>
+                                </ErrorBoundary>
+                            ) : (
+                                <Button
+                                    className="bg-gray-900 text-white shadow-sm font-medium"
+                                    startContent={<Download className="h-4 w-4" />}
+                                    onPress={handleConfirmExport}
+                                >
+                                    Descargar {exportFormat?.toUpperCase()}
+                                </Button>
+                            )}
+                        </div>
                     </ModalFooter>
                 </ModalContent>
             </Modal>
@@ -1131,7 +519,7 @@ export default function ReportePage() {
                 <Card>
                     <CardBody className="text-center py-12">
                         <div className="animate-pulse">
-                            <Package className="h-16 w-16 mx-auto text-primary-400 mb-4" />
+                            <Package className="h-16 w-16 mx-auto text-success-400 mb-4" />
                             <p className="text-lg font-semibold text-gray-600">Generando análisis financiero...</p>
                         </div>
                     </CardBody>

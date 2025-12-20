@@ -1,5 +1,5 @@
 
-import { useState, forwardRef, useImperativeHandle } from "react";
+import React, { useState, forwardRef, useImperativeHandle } from "react";
 import { Button, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Input, Textarea } from "@heroui/react";
 import { Edit, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";

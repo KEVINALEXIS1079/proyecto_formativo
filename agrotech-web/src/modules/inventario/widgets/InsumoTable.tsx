@@ -53,120 +53,122 @@ export const InsumoTable = ({
 
   return (
     <Surface>
-      <Table
-        aria-label="Tabla de insumos"
-        removeWrapper
-        className="[&_[data-slot=td]]:py-3"
-      >
-        <TableHeader>
-          <TableColumn>IMAGEN</TableColumn>
-          <TableColumn>NOMBRE</TableColumn>
-          <TableColumn>CATEGORÍA</TableColumn>
-          <TableColumn>PROVEEDOR</TableColumn>
-          <TableColumn>ALMACÉN</TableColumn>
-          <TableColumn align="end">STOCK</TableColumn>
-          <TableColumn align="end">PRECIO</TableColumn>
-          <TableColumn align="end">ACCIONES</TableColumn>
-        </TableHeader>
-        <TableBody items={insumos}>
-          {(insumo) => (
-            <TableRow
-              key={insumo.id || `insumo-${Math.random()}`}
-              className="hover:bg-gray-50/50 transition-colors"
-            >
-              <TableCell>
-                {insumo.imagenUrl ? (
-                  <Image
-                    src={
-                      /^(data:|blob:|https?:\/\/)/i.test(insumo.imagenUrl)
-                        ? insumo.imagenUrl
-                        : `${FILES_BASE.replace(
-                          /\/+$/,
-                          ""
-                        )}/${insumo.imagenUrl.replace(/^\/+/, "")}`
-                    }
-                    alt={insumo.nombre}
-                    width={40}
-                    height={40}
-                    className="object-cover rounded"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs">
-                    N/A
-                  </div>
-                )}
-              </TableCell>
-              <TableCell>
-                <div>
-                  <div className="font-medium text-gray-900">
-                    {insumo.nombre}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {insumo.descripcion}
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>{insumo.categoria?.nombre || "-"}</TableCell>
-              <TableCell>{insumo.proveedor?.nombre || "-"}</TableCell>
-              <TableCell>{insumo.almacen?.nombre || "-"}</TableCell>
-              <TableCell>
-                <div className="text-sm text-right">
+      <div className="overflow-x-auto">
+        <Table
+          aria-label="Tabla de insumos"
+          removeWrapper
+          className="[&_[data-slot=td]]:py-3 min-w-[900px]"
+        >
+          <TableHeader>
+            <TableColumn>IMAGEN</TableColumn>
+            <TableColumn>NOMBRE</TableColumn>
+            <TableColumn>CATEGORÍA</TableColumn>
+            <TableColumn>PROVEEDOR</TableColumn>
+            <TableColumn>ALMACÉN</TableColumn>
+            <TableColumn align="end">STOCK</TableColumn>
+            <TableColumn align="end">PRECIO</TableColumn>
+            <TableColumn align="end">ACCIONES</TableColumn>
+          </TableHeader>
+          <TableBody items={insumos}>
+            {(insumo) => (
+              <TableRow
+                key={insumo.id || `insumo-${Math.random()}`}
+                className="hover:bg-gray-50/50 transition-colors"
+              >
+                <TableCell>
+                  {insumo.imagenUrl ? (
+                    <Image
+                      src={
+                        /^(data:|blob:|https?:\/\/)/i.test(insumo.imagenUrl)
+                          ? insumo.imagenUrl
+                          : `${FILES_BASE.replace(
+                            /\/+$/,
+                            ""
+                          )}/${insumo.imagenUrl.replace(/^\/+/, "")}`
+                      }
+                      alt={insumo.nombre}
+                      width={40}
+                      height={40}
+                      className="object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs">
+                      N/A
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
                   <div>
-                    {insumo.stockPresentacion} {insumo.presentacionUnidad}
+                    <div className="font-medium text-gray-900">
+                      {insumo.nombre}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {insumo.descripcion}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {insumo.stockTotalPresentacion} total
+                </TableCell>
+                <TableCell>{insumo.categoria?.nombre || "-"}</TableCell>
+                <TableCell>{insumo.proveedor?.nombre || "-"}</TableCell>
+                <TableCell>{insumo.almacen?.nombre || "-"}</TableCell>
+                <TableCell>
+                  <div className="text-sm text-right">
+                    <div>
+                      {insumo.stockPresentacion} {insumo.presentacionUnidad}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {insumo.stockTotalPresentacion} total
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="text-sm text-right">
-                  <div>{formatCurrency(insumo.precioUnitarioUso || 0)}</div>
-                  <div className="text-xs text-gray-500">por unidad</div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex justify-end gap-2">
-                  {onView && (
-                    <Button
-                      size="sm"
-                      variant="light"
-                      isIconOnly
-                      className="text-gray-600"
-                      onPress={() => onView(insumo)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {onEdit && (
-                    <Button
-                      size="sm"
-                      variant="light"
-                      className="text-[#17C964]"
-                      onPress={() => onEdit(insumo)}
-                      startContent={<Edit className="h-4 w-4" />}
-                    >
-                      Editar
-                    </Button>
-                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm text-right">
+                    <div>{formatCurrency(insumo.precioUnitarioUso || 0)}</div>
+                    <div className="text-xs text-gray-500">por unidad</div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-2">
+                    {onView && (
+                      <Button
+                        size="sm"
+                        variant="light"
+                        isIconOnly
+                        className="text-gray-600"
+                        onPress={() => onView(insumo)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onEdit && (
+                      <Button
+                        size="sm"
+                        variant="light"
+                        className="text-[#17C964]"
+                        onPress={() => onEdit(insumo)}
+                        startContent={<Edit className="h-4 w-4" />}
+                      >
+                        Editar
+                      </Button>
+                    )}
 
-                  {onViewMovimientos && hasMovimientosMap.get(insumo.id) && (
-                    <Button
-                      size="sm"
-                      variant="light"
-                      isIconOnly
-                      className="text-blue-600"
-                      onPress={() => onViewMovimientos(insumo)}
-                    >
-                      <History className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+                    {onViewMovimientos && hasMovimientosMap.get(insumo.id) && (
+                      <Button
+                        size="sm"
+                        variant="light"
+                        isIconOnly
+                        className="text-blue-600"
+                        onPress={() => onViewMovimientos(insumo)}
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </Surface>
   );
 };

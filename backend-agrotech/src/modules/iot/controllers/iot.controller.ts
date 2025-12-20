@@ -137,12 +137,20 @@ export class IotController {
     @Query('loteId') loteId?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
+    const p = page ? parseInt(page, 10) : 1;
+    const lim = limit ? parseInt(limit, 10) : 20;
+    const skip = (p - 1) * lim;
+
     return this.iotService.findAlerts({
       sensorId: sensorId ? parseInt(sensorId, 10) : undefined,
       loteId: loteId ? parseInt(loteId, 10) : undefined,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
+      skip,
+      take: lim
     });
   }
 
@@ -169,6 +177,34 @@ export class IotController {
     @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number,
   ) {
     return this.iotService.getUltimasLecturas(id, limit);
+  }
+
+  @Post('readings/bulk')
+  @RequirePermissions('iot.ver')
+  async getBulkReadings(@Body() body: { sensorIds: number[]; from?: string; to?: string; interval?: 'hour' | 'day' | 'week' }) {
+    return this.iotService.getBulkReadings(
+      body.sensorIds,
+      body.from ? new Date(body.from) : new Date(Date.now() - 24 * 60 * 60 * 1000),
+      body.to ? new Date(body.to) : new Date(),
+      body.interval || 'day'
+    );
+  }
+
+  @Post('reports/summary/bulk')
+  @RequirePermissions('iot.ver')
+  async getBulkSummaries(@Body() body: { sensorIds: number[]; from?: string; to?: string }) {
+    // If service doesn't have a dedicated bulk summary method, we can map over IDs
+    // But ideally valid implementation in service. checking if service has it.
+    // For now, I'll assume we need to implement it or use existing one.
+    // Let's implement a simple wrapper here calling service.getAggregatedReadings for each or a new service method.
+    // Based on frontend usage (bulk stats), I'll make the service call.
+    return this.iotService.getBulkSummaries(
+      body.sensorIds,
+      {
+        from: body.from ? new Date(body.from) : undefined,
+        to: body.to ? new Date(body.to) : undefined
+      }
+    );
   }
 
   @Get('sensors/:id/aggregated')

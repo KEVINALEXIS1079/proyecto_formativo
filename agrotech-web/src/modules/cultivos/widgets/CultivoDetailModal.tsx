@@ -244,8 +244,8 @@ export function CultivoDetailModal({ cultivoId, onClose, onEdit }: CultivoDetail
                           <Card shadow="sm" className="bg-amber-50/50 border border-amber-100">
                             <CardBody className="gap-2">
                               <div className="flex justify-between items-center">
-                                <p className="text-sm font-medium text-gray-700">Costo Total</p>
-                                <p className="text-lg font-bold text-gray-900">{fmtMoney(cultivo.costoTotal)}</p>
+                                <p className="text-sm font-medium text-gray-700">Inversión Acumulada</p>
+                                <p className="text-lg font-bold text-gray-900">{fmtMoney(actividadStats.gastos > 0 ? actividadStats.gastos : cultivo.costoTotal)}</p>
                               </div>
                               <Divider className="my-1 bg-amber-200/50" />
                               <div className="flex justify-between items-center">

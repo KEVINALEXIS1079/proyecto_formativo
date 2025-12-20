@@ -338,18 +338,38 @@ export const IoTApi = {
     }
   },
 
-  getAlerts: async (params?: { loteId?: number; sensorId?: number; from?: string; to?: string }) => {
+  getAlerts: async (params?: { loteId?: number; sensorId?: number; from?: string; to?: string; page?: number; limit?: number }) => {
     try {
       const query: any = {};
       if (params?.loteId) query.loteId = params.loteId;
       if (params?.sensorId) query.sensorId = params.sensorId;
       if (params?.from) query.from = params.from;
       if (params?.to) query.to = params.to;
+      if (params?.page) query.page = params.page;
+      if (params?.limit) query.limit = params.limit;
+
       const response = await api.get('/iot/alerts', { params: query });
       return response.data;
     } catch (error: any) {
       console.error('Error fetching alerts:', error);
       throw new Error(`Failed to fetch alerts: ${error.message || 'Unknown error'}`);
+    }
+  },
+
+  getBulkSummaries: async (
+    sensorIds: number[],
+    params: { from?: string; to?: string }
+  ): Promise<Record<number, any>> => {
+    try {
+      const response = await api.post('/api/v1/iot/reports/summary/bulk', {
+        sensorIds,
+        ...params
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching bulk summaries:', error);
+      // Return empty object on error to avoid breaking UI
+      return {};
     }
   },
 

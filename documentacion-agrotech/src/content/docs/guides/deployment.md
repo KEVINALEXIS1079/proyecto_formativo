@@ -5,7 +5,7 @@ description: Cómo desplegar y configurar Agrotech en tu propio servidor.
 
 ## Requisitos Previos
 
--   Node.js v18+
+-   Node.js v22+
 -   PostgreSQL 14+
 -   Broker MQTT (ej. Mosquitto) para IoT.
 

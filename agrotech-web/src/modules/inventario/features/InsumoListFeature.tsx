@@ -131,13 +131,15 @@ export const InsumoListFeature = forwardRef<InsumoListRef>((_, ref) => {
     <div className="flex flex-col">
       <InsumoFilters filters={filters} onChange={setFilters} />
 
-      <InsumoTable
-        insumos={insumos}
-        isLoading={isLoading}
-        onView={handleView}
-        onViewMovimientos={handleViewMovimientos}
-        hasMovimientosMap={hasMovimientosMap}
-      />
+      <div className="overflow-x-auto">
+        <InsumoTable
+          insumos={insumos}
+          isLoading={isLoading}
+          onView={handleView}
+          onViewMovimientos={handleViewMovimientos}
+          hasMovimientosMap={hasMovimientosMap}
+        />
+      </div>
 
       {/* Create/Edit Modal */}
       <Modal

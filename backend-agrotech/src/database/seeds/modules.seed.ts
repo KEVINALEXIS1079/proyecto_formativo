@@ -203,11 +203,11 @@ export async function seedModules(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.091, 1.892],
-          [-76.087, 1.892],
-          [-76.087, 1.894],
-          [-76.091, 1.894],
-          [-76.091, 1.892]
+          [-76.051, 1.854],
+          [-76.047, 1.854],
+          [-76.047, 1.856],
+          [-76.051, 1.856],
+          [-76.051, 1.854]
         ]]
       } as any
     },
@@ -221,28 +221,11 @@ export async function seedModules(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.087, 1.892],
-          [-76.085, 1.892],
-          [-76.085, 1.895],
-          [-76.087, 1.895],
-          [-76.087, 1.892]
-        ]]
-      } as any
-    },
-    {
-      nombre: 'Lote San Isidro',
-      areaM2: 6000,
-      areaHa: 0.6,
-      descripcion: 'Lote experimental para prácticas de aprendices',
-      estado: 'activo',
-      geom: {
-        type: 'Polygon',
-        coordinates: [[
-          [-76.089, 1.890],
-          [-76.087, 1.890],
-          [-76.087, 1.892],
-          [-76.089, 1.892],
-          [-76.089, 1.890]
+          [-76.047, 1.854],
+          [-76.045, 1.854],
+          [-76.045, 1.857],
+          [-76.047, 1.857],
+          [-76.047, 1.854]
         ]]
       } as any
     },
@@ -284,11 +267,11 @@ export async function seedModules(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.091, 1.892],
-          [-76.089, 1.892],
-          [-76.089, 1.894],
-          [-76.091, 1.894],
-          [-76.091, 1.892]
+          [-76.051, 1.854],
+          [-76.049, 1.854],
+          [-76.049, 1.856],
+          [-76.051, 1.856],
+          [-76.051, 1.854]
         ]]
       } as any
     },
@@ -301,11 +284,11 @@ export async function seedModules(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.091, 1.893],
-          [-76.089, 1.893],
-          [-76.089, 1.894],
-          [-76.091, 1.894],
-          [-76.091, 1.893]
+          [-76.051, 1.855],
+          [-76.049, 1.855],
+          [-76.049, 1.856],
+          [-76.051, 1.856],
+          [-76.051, 1.855]
         ]]
       } as any
     },
@@ -318,11 +301,11 @@ export async function seedModules(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.089, 1.892],
-          [-76.088, 1.892],
-          [-76.088, 1.893],
-          [-76.089, 1.893],
-          [-76.089, 1.892]
+          [-76.049, 1.854],
+          [-76.048, 1.854],
+          [-76.048, 1.855],
+          [-76.049, 1.855],
+          [-76.049, 1.854]
         ]]
       } as any
     },
@@ -335,11 +318,11 @@ export async function seedModules(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.087, 1.894],
-          [-76.085, 1.894],
-          [-76.085, 1.895],
-          [-76.087, 1.895],
-          [-76.087, 1.894]
+          [-76.047, 1.856],
+          [-76.045, 1.856],
+          [-76.045, 1.857],
+          [-76.047, 1.857],
+          [-76.047, 1.856]
         ]]
       } as any
     },
@@ -352,11 +335,11 @@ export async function seedModules(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.087, 1.892],
-          [-76.085, 1.892],
-          [-76.085, 1.893],
-          [-76.087, 1.893],
-          [-76.087, 1.892]
+          [-76.047, 1.854],
+          [-76.045, 1.854],
+          [-76.045, 1.855],
+          [-76.047, 1.855],
+          [-76.047, 1.854]
         ]]
       } as any
     },
@@ -369,28 +352,11 @@ export async function seedModules(dataSource: DataSource) {
       geom: {
         type: 'Polygon',
         coordinates: [[
-          [-76.087, 1.893],
-          [-76.085, 1.893],
-          [-76.085, 1.894],
-          [-76.087, 1.894],
-          [-76.087, 1.893]
-        ]]
-      } as any
-    },
-    {
-      nombre: 'San Isidro Experimental',
-      loteId: loteIds[2],
-      areaM2: 6000,
-      areaHa: 0.6,
-      descripcion: 'Área completa para prácticas y experimentos',
-      geom: {
-        type: 'Polygon',
-        coordinates: [[
-          [-76.089, 1.890],
-          [-76.087, 1.890],
-          [-76.087, 1.892],
-          [-76.089, 1.892],
-          [-76.089, 1.890]
+          [-76.047, 1.855],
+          [-76.045, 1.855],
+          [-76.045, 1.856],
+          [-76.047, 1.856],
+          [-76.047, 1.855]
         ]]
       } as any
     },
@@ -503,22 +469,7 @@ export async function seedModules(dataSource: DataSource) {
       subLoteId: subloteIds[5],
       fechaSiembra: new Date('2024-01-10'),
       estado: 'activo',
-    },
-    {
-      nombreCultivo: 'Pimentón',
-      tipoCultivo: 'Hortaliza',
-      descripcion: 'Pimentón rojo y amarillo para exportación',
-      subLoteId: subloteIds[6],
-      fechaSiembra: new Date('2024-03-01'),
-      estado: 'activo',
-    },
-    {
-      nombreCultivo: 'Zanahoria',
-      tipoCultivo: 'Hortaliza',
-      descripcion: 'Zanahoria variedad Chantenay',
-      subLoteId: subloteIds[6],
-      fechaSiembra: new Date('2024-03-15'),
-      estado: 'activo',
+      fechaFin: new Date('2024-06-10'),
     },
   ];
 

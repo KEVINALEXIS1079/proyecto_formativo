@@ -22,7 +22,7 @@ export const exportToPDF = async ({ actividades }: ExportData) => {
   // Logo - Add image in top-left corner with proper aspect ratio
   try {
     const img = new Image();
-    img.src = "/LogoTic.png";
+    img.src = "/logoAgrotech.png";
 
     await new Promise((resolve, reject) => {
       img.onload = resolve;

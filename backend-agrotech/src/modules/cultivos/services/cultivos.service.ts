@@ -12,7 +12,7 @@ import { CreateCultivoDto } from '../dtos/create-cultivo.dto';
 import { UpdateCultivoDto } from '../dtos/update-cultivo.dto';
 import { GeoService } from '../../geo/services/geo.service';
 import { CultivoHistorial } from '../entities/cultivo-historial.entity';
-import { Usuario } from '../../users/entities/usuario.entity';
+import { CultivosGateway } from '../gateways/cultivos.gateway';
 
 @Injectable()
 export class CultivosService {
@@ -21,7 +21,8 @@ export class CultivosService {
     @InjectRepository(CultivoHistorial)
     private historialRepo: Repository<CultivoHistorial>,
     @Inject(forwardRef(() => GeoService)) private geoService: GeoService,
-  ) {}
+    @Inject(forwardRef(() => CultivosGateway)) private cultivosGateway: CultivosGateway,
+  ) { }
 
   async createCultivo(data: CreateCultivoDto, usuarioId?: number) {
     // RF12: Validar XOR - exactamente uno debe estar presente
@@ -93,6 +94,10 @@ export class CultivosService {
       }),
     );
 
+    if (this.cultivosGateway?.server) {
+      this.cultivosGateway.server.emit('cultivos:created', saved);
+    }
+
     return saved;
   }
 
@@ -123,6 +128,10 @@ export class CultivosService {
       .createQueryBuilder('cultivo')
       .leftJoinAndSelect('cultivo.lote', 'lote')
       .leftJoinAndSelect('cultivo.subLote', 'subLote')
+      // Bring relations to calculate real cost
+      .leftJoinAndSelect('cultivo.actividades', 'actividad')
+      .leftJoinAndSelect('actividad.insumosUso', 'insumoUso')
+      .leftJoinAndSelect('actividad.servicios', 'servicio')
       .where('cultivo.deletedAt IS NULL');
 
     // RF14: Filtros
@@ -157,7 +166,25 @@ export class CultivosService {
       );
     }
 
-    return queryBuilder.getMany();
+    const cultivos = await queryBuilder.getMany();
+
+    // Recalculate costs on the fly to fix 0 values
+    return cultivos.map((c) => {
+      const realCost = (c.actividades || []).reduce((acc, a) => {
+        const mo = Number(a.costoManoObra) || 0;
+        // @ts-ignore
+        const insumos = (a.insumosUso || []).reduce((s, i) => s + (Number(i.costoTotal) || 0), 0);
+        // @ts-ignore
+        const servicios = (a.servicios || []).reduce((s, x) => s + (Number(x.costo) || 0), 0);
+        return acc + mo + insumos + servicios;
+      }, 0);
+
+      // If calculated cost is found, override the static 0
+      if (realCost > 0) {
+        c.costoTotal = realCost;
+      }
+      return c;
+    });
   }
 
   async findCultivoById(id: number) {
@@ -296,6 +323,10 @@ export class CultivosService {
       }),
     );
 
+    if (this.cultivosGateway?.server) {
+      this.cultivosGateway.server.emit('cultivos:updated', updated);
+    }
+
     return updated;
   }
 
@@ -311,7 +342,6 @@ export class CultivosService {
     );
   }
 
-  // RF13: Actualizar fechas clave del cultivo (llamado desde ActivitiesService)
   // RF13: Actualizar fechas clave del cultivo (llamado desde ActivitiesService)
   async updateCultivoFechaSiembra(
     cultivoId: number,
@@ -346,6 +376,11 @@ export class CultivosService {
           },
         }),
       );
+
+      if (this.cultivosGateway?.server) {
+        // Re-fetch to be safe or just use 'cultivo'
+        this.cultivosGateway.server.emit('cultivos:updated', cultivo);
+      }
     }
   }
 
@@ -381,6 +416,10 @@ export class CultivosService {
         },
       }),
     );
+
+    if (this.cultivosGateway?.server) {
+      this.cultivosGateway.server.emit('cultivos:updated', cultivo);
+    }
   }
 
   // RF_INT: Acumular costos al cultivo (Transaccional)

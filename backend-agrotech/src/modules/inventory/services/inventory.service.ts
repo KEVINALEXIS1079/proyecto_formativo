@@ -2,9 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Insumo, InsumoEstado, TipoInsumo } from '../entities/insumo.entity';
 import { MovimientoInsumo, TipoMovimiento } from '../entities/movimiento-insumo.entity';
 import { Almacen } from '../entities/almacen.entity';
@@ -15,6 +18,8 @@ import { UpdateInsumoDto } from '../dtos/update-insumo.dto';
 import { MovimientoInsumoService } from './movimiento-insumo.service';
 import { UsoHerramienta } from '../entities/uso-herramienta.entity';
 import { DepreciationService } from './depreciation.service';
+
+import { InventoryGateway } from '../gateways/inventory.gateway';
 
 @Injectable()
 export class InventoryService {
@@ -28,6 +33,9 @@ export class InventoryService {
     @InjectRepository(UsoHerramienta) private usoHerramientaRepo: Repository<UsoHerramienta>,
     private movimientoInsumoService: MovimientoInsumoService,
     private depreciationService: DepreciationService,
+    private eventEmitter: EventEmitter2,
+    @Inject(forwardRef(() => InventoryGateway))
+    private inventoryGateway: InventoryGateway,
   ) { }
 
   // RF24: Crear insumo con cálculos automáticos
@@ -126,6 +134,10 @@ export class InventoryService {
       });
     }
 
+    // Emitir evento
+    if (this.inventoryGateway?.server) {
+      this.inventoryGateway.server.emit('insumos:created', saved);
+    }
     return saved;
   }
 
@@ -290,6 +302,10 @@ export class InventoryService {
       });
     }
 
+    if (this.inventoryGateway?.server) {
+      this.inventoryGateway.server.emit('insumos:updated', saved);
+    }
+
     return saved;
   }
 
@@ -311,7 +327,11 @@ export class InventoryService {
 
     // TODO: Agregar validaciones aquí si es necesario
 
-    return this.insumoRepo.softRemove(insumo);
+    const removed = await this.insumoRepo.softRemove(insumo);
+    if (this.inventoryGateway?.server) {
+      this.inventoryGateway.server.emit('insumos:deleted', { id });
+    }
+    return removed;
   }
 
   async registrarMantenimiento(id: number, data: { costo?: number; descripcion?: string }) {
@@ -471,7 +491,10 @@ export class InventoryService {
     insumo.valorInventario = insumo.stockUso * insumo.precioUnitarioUso;
 
     // Auto-update state based on stock levels
+    // Auto-update state based on stock levels
     if (insumo.tipoInsumo === TipoInsumo.CONSUMIBLE) {
+      const previousState = insumo.estado;
+
       if (insumo.stockUso <= 0) {
         insumo.estado = InsumoEstado.AGOTADO;
       } else if (insumo.stockUso <= insumo.stockMinimo) {
@@ -479,9 +502,25 @@ export class InventoryService {
       } else {
         insumo.estado = InsumoEstado.DISPONIBLE;
       }
+
+      if (previousState !== insumo.estado) {
+        if (insumo.estado === InsumoEstado.BAJO_STOCK || insumo.estado === InsumoEstado.AGOTADO) {
+          this.eventEmitter.emit('inventory.stock_alert', {
+            insumoId: insumo.id,
+            insumoNombre: insumo.nombre,
+            estado: insumo.estado,
+            stockActual: insumo.stockUso,
+            unidad: insumo.unidadUso
+          });
+        }
+      }
     }
 
     await repoInsumo.save(insumo);
+
+    if (this.inventoryGateway?.server) {
+      this.inventoryGateway.server.emit('insumos:updated', insumo);
+    }
 
     return movimiento;
   }

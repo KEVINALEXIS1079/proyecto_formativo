@@ -11,9 +11,9 @@ export function ReportHeader({ title, subtitle, period }: ReportHeaderProps) {
         <div className="text-center border-b-2 border-success-600 pb-6 mb-6">
             <div className="flex justify-center mb-4">
                 <img
-                    src="/LogoTic.png"
+                    src="/logoAgrotech.png"
                     alt="TIC Yamboro"
-                    className="h-16 w-auto object-contain"
+                    className="h-20 w-auto object-contain"
                 />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">

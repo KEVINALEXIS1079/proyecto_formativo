@@ -17,9 +17,10 @@ import { Plus, Upload, Box, DollarSign, FileText } from "lucide-react";
 interface CreateActivoFijoModalProps {
     isOpen: boolean;
     onClose: () => void;
+    defaultType?: 'HERRAMIENTA' | 'MAQUINARIA';
 }
 
-export default function CreateActivoFijoModal({ isOpen, onClose }: CreateActivoFijoModalProps) {
+export default function CreateActivoFijoModal({ isOpen, onClose, defaultType }: CreateActivoFijoModalProps) {
     const queryClient = useQueryClient();
     const { control, handleSubmit, reset, formState: { errors } } = useForm();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -67,7 +68,11 @@ export default function CreateActivoFijoModal({ isOpen, onClose }: CreateActivoF
             valorResidual: Number(data.valorResidual),
             vidaUtilHoras: Number(data.vidaUtilHoras),
             cantidad: Number(data.cantidad || 1),
+            tipoInsumo: defaultType
         };
+        // Clean up undefined if not set to let backend default apply? 
+        if (!payload.tipoInsumo) delete payload.tipoInsumo;
+
         mutation.mutate({ data: payload, file: selectedFile || undefined });
     };
 
@@ -139,263 +144,272 @@ export default function CreateActivoFijoModal({ isOpen, onClose }: CreateActivoF
                 backdrop="blur"
             >
                 <ModalContent>
-                    {(onCloseModal) => (
-                        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-[80vh] overflow-hidden">
-                            <ModalHeader className="px-6 py-4 border-b border-gray-100">
-                                <div className="flex flex-col gap-1">
-                                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                        <Box className="w-5 h-5 text-green-600" /> Crear Activo Fijo
-                                    </h2>
-                                    <p className="text-sm text-gray-500 font-normal">Registra maquinaria, herramientas o equipos</p>
-                                </div>
-                            </ModalHeader>
-                            <ModalBody className="p-6 bg-gray-50/50 flex-1 overflow-y-auto">
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {(onCloseModal) => {
+                        const isHerramienta = defaultType === 'HERRAMIENTA';
+                        const isMaquinaria = defaultType === 'MAQUINARIA';
 
-                                    <div className="lg:col-span-4 space-y-4">
-                                        <Card shadow="none" className="border border-gray-200 bg-white">
-                                            <CardBody className="p-4">
-                                                <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                                    <Upload className="w-4 h-4 text-gray-500" /> Imagen del Activo
-                                                </label>
-                                                <ImageUpload
-                                                    onFileChange={setSelectedFile}
-                                                    label="Subir foto"
-                                                />
-                                            </CardBody>
-                                        </Card>
+                        const modalTitle = isHerramienta ? "Crear Herramienta" : isMaquinaria ? "Crear Maquinaria" : "Crear Activo Fijo";
+                        const selectLabel = isHerramienta ? "Herramientas" : isMaquinaria ? "Maquinaria" : "Categoría";
+                        const namePlaceholder = isHerramienta ? "Ej. Taladro Percutor" : isMaquinaria ? "Ej. Tractor John Deere" : "Ej. Tractor John Deere";
 
-                                        <Card shadow="none" className="border border-gray-200 bg-white">
-                                            <CardBody className="p-4 space-y-4">
-                                                <div className="text-xs text-gray-500">
-                                                    <p className="font-semibold mb-1">Nota:</p>
-                                                    <p>Asegúrate de registrar la vida útil correcta para el cálculo de depreciación.</p>
-                                                </div>
-                                            </CardBody>
-                                        </Card>
+                        return (
+                            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-[80vh] overflow-hidden">
+                                <ModalHeader className="px-6 py-4 border-b border-gray-100">
+                                    <div className="flex flex-col gap-1">
+                                        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                            <Box className="w-5 h-5 text-green-600" /> {modalTitle}
+                                        </h2>
+                                        <p className="text-sm text-gray-500 font-normal">Registra {isHerramienta ? "una nueva herramienta" : isMaquinaria ? "una nueva maquinaria" : "maquinaria, herramientas o equipos"}</p>
                                     </div>
+                                </ModalHeader>
+                                <ModalBody className="p-6 bg-gray-50/50 flex-1 overflow-y-auto">
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                                    <div className="lg:col-span-8 space-y-4">
-                                        {/* General Info */}
-                                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                                            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2 flex items-center gap-2">
-                                                <FileText className="w-4 h-4 text-green-600" /> Información General
-                                            </h3>
-
-                                            <Controller
-                                                name="nombre"
-                                                control={control}
-                                                rules={{ required: "Nombre es requerido" }}
-                                                render={({ field }) => (
-                                                    <Input
-                                                        {...field}
-                                                        label="Nombre del Activo"
-                                                        placeholder="Ej. Tractor John Deere"
-                                                        errorMessage={errors.nombre?.message as string}
-                                                        isInvalid={!!errors.nombre}
-                                                        variant="bordered"
-                                                        classNames={{ label: "font-medium" }}
+                                        <div className="lg:col-span-4 space-y-4">
+                                            <Card shadow="none" className="border border-gray-200 bg-white">
+                                                <CardBody className="p-4">
+                                                    <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                                        <Upload className="w-4 h-4 text-gray-500" /> Imagen del Activo
+                                                    </label>
+                                                    <ImageUpload
+                                                        onFileChange={setSelectedFile}
+                                                        label="Subir foto"
                                                     />
-                                                )}
-                                            />
+                                                </CardBody>
+                                            </Card>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="flex gap-2 items-end">
-                                                    <Controller
-                                                        name="categoriaId"
-                                                        control={control}
-                                                        rules={{ required: "Requerido" }}
-                                                        render={({ field }) => (
-                                                            <Select
-                                                                label="Categoría"
-                                                                variant="bordered"
-                                                                errorMessage={errors.categoriaId?.message as string}
-                                                                isInvalid={!!errors.categoriaId}
-                                                                selectedKeys={field.value ? [String(field.value)] : []}
-                                                                onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
-                                                                className="flex-1"
-                                                            >
-                                                                {(categorias || []).map((cat) => (
-                                                                    <SelectItem key={cat.id} textValue={cat.nombre}>{cat.nombre}</SelectItem>
-                                                                ))}
-                                                            </Select>
-                                                        )}
-                                                    />
-                                                    <Button isIconOnly variant="flat" color="success" onPress={() => setIsCreateCategoriaModalOpen(true)} className="mb-px">
-                                                        <Plus className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-
-                                                <div className="flex gap-2 items-end">
-                                                    <Controller
-                                                        name="almacenId"
-                                                        control={control}
-                                                        rules={{ required: "Requerido" }}
-                                                        render={({ field }) => (
-                                                            <Select
-                                                                label="Almacén"
-                                                                variant="bordered"
-                                                                errorMessage={errors.almacenId?.message as string}
-                                                                isInvalid={!!errors.almacenId}
-                                                                selectedKeys={field.value ? [String(field.value)] : []}
-                                                                onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
-                                                                className="flex-1"
-                                                            >
-                                                                {(almacenes || []).map((alm: any) => (
-                                                                    <SelectItem key={alm.id} textValue={alm.nombre}>{alm.nombre}</SelectItem>
-                                                                ))}
-                                                            </Select>
-                                                        )}
-                                                    />
-                                                    <Button isIconOnly variant="flat" color="success" onPress={() => setIsCreateAlmacenModalOpen(true)} className="mb-px">
-                                                        <Plus className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            <Controller
-                                                name="descripcion"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <Textarea
-                                                        {...field}
-                                                        label="Descripción"
-                                                        placeholder="Detalles adicionales..."
-                                                        minRows={2}
-                                                        variant="bordered"
-                                                    />
-                                                )}
-                                            />
+                                            <Card shadow="none" className="border border-gray-200 bg-white">
+                                                <CardBody className="p-4 space-y-4">
+                                                    <div className="text-xs text-gray-500">
+                                                        <p className="font-semibold mb-1">Nota:</p>
+                                                        <p>Asegúrate de registrar la vida útil correcta para el cálculo de depreciación.</p>
+                                                    </div>
+                                                </CardBody>
+                                            </Card>
                                         </div>
 
-                                        {/* Financial Details */}
-                                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                                            <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2 flex items-center gap-2">
-                                                <DollarSign className="w-4 h-4 text-green-600" /> Detalles Financieros
-                                            </h3>
+                                        <div className="lg:col-span-8 space-y-4">
+                                            {/* General Info */}
+                                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                                                <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2 flex items-center gap-2">
+                                                    <FileText className="w-4 h-4 text-green-600" /> Información General
+                                                </h3>
 
-                                            <div className="flex gap-2 items-end">
                                                 <Controller
-                                                    name="proveedorId"
+                                                    name="nombre"
                                                     control={control}
-                                                    render={({ field }) => (
-                                                        <Select
-                                                            {...field}
-                                                            label="Proveedor (Opcional)"
-                                                            variant="bordered"
-                                                            selectedKeys={field.value ? [String(field.value)] : []}
-                                                            onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
-                                                            className="flex-1"
-                                                        >
-                                                            {(proveedores || []).map((prov: any) => (
-                                                                <SelectItem key={prov.id} textValue={prov.nombre}>{prov.nombre}</SelectItem>
-                                                            ))}
-                                                        </Select>
-                                                    )}
-                                                />
-                                                <Button isIconOnly variant="flat" color="success" onPress={() => setIsCreateProveedorModalOpen(true)} className="mb-px">
-                                                    <Plus className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <Controller
-                                                    name="costoAdquisicion"
-                                                    control={control}
-                                                    rules={{ required: "Requerido", min: 0 }}
+                                                    rules={{ required: "Nombre es requerido" }}
                                                     render={({ field }) => (
                                                         <Input
                                                             {...field}
-                                                            type="number"
-                                                            label="Costo Adquisición"
-                                                            startContent={<span className="text-gray-400">$</span>}
+                                                            label="Nombre del Activo"
+                                                            placeholder={namePlaceholder}
+                                                            errorMessage={errors.nombre?.message as string}
+                                                            isInvalid={!!errors.nombre}
                                                             variant="bordered"
-                                                            errorMessage={errors.costoAdquisicion?.message as string}
-                                                            isInvalid={!!errors.costoAdquisicion}
+                                                            classNames={{ label: "font-medium" }}
                                                         />
                                                     )}
                                                 />
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="flex gap-2 items-end">
+                                                        <Controller
+                                                            name="categoriaId"
+                                                            control={control}
+                                                            rules={{ required: "Requerido" }}
+                                                            render={({ field }) => (
+                                                                <Select
+                                                                    label={selectLabel}
+                                                                    variant="bordered"
+                                                                    errorMessage={errors.categoriaId?.message as string}
+                                                                    isInvalid={!!errors.categoriaId}
+                                                                    selectedKeys={field.value ? [String(field.value)] : []}
+                                                                    onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
+                                                                    className="flex-1"
+                                                                >
+                                                                    {(categorias || []).map((cat) => (
+                                                                        <SelectItem key={cat.id} textValue={cat.nombre}>{cat.nombre}</SelectItem>
+                                                                    ))}
+                                                                </Select>
+                                                            )}
+                                                        />
+                                                        <Button isIconOnly variant="flat" color="success" onPress={() => setIsCreateCategoriaModalOpen(true)} className="mb-px">
+                                                            <Plus className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="flex gap-2 items-end">
+                                                        <Controller
+                                                            name="almacenId"
+                                                            control={control}
+                                                            rules={{ required: "Requerido" }}
+                                                            render={({ field }) => (
+                                                                <Select
+                                                                    label="Almacén"
+                                                                    variant="bordered"
+                                                                    errorMessage={errors.almacenId?.message as string}
+                                                                    isInvalid={!!errors.almacenId}
+                                                                    selectedKeys={field.value ? [String(field.value)] : []}
+                                                                    onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
+                                                                    className="flex-1"
+                                                                >
+                                                                    {(almacenes || []).map((alm: any) => (
+                                                                        <SelectItem key={alm.id} textValue={alm.nombre}>{alm.nombre}</SelectItem>
+                                                                    ))}
+                                                                </Select>
+                                                            )}
+                                                        />
+                                                        <Button isIconOnly variant="flat" color="success" onPress={() => setIsCreateAlmacenModalOpen(true)} className="mb-px">
+                                                            <Plus className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
                                                 <Controller
-                                                    name="valorResidual"
+                                                    name="descripcion"
                                                     control={control}
-                                                    rules={{ required: "Requerido", min: 0 }}
                                                     render={({ field }) => (
-                                                        <Input
+                                                        <Textarea
                                                             {...field}
-                                                            type="number"
-                                                            label="Valor Residual"
-                                                            startContent={<span className="text-gray-400">$</span>}
+                                                            label="Descripción"
+                                                            placeholder="Detalles adicionales..."
+                                                            minRows={2}
                                                             variant="bordered"
-                                                            errorMessage={errors.valorResidual?.message as string}
-                                                            isInvalid={!!errors.valorResidual}
                                                         />
                                                     )}
                                                 />
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
+                                            {/* Financial Details */}
+                                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                                                <h3 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2 flex items-center gap-2">
+                                                    <DollarSign className="w-4 h-4 text-green-600" /> Detalles Financieros
+                                                </h3>
+
+                                                <div className="flex gap-2 items-end">
+                                                    <Controller
+                                                        name="proveedorId"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <Select
+                                                                {...field}
+                                                                label="Proveedor (Opcional)"
+                                                                variant="bordered"
+                                                                selectedKeys={field.value ? [String(field.value)] : []}
+                                                                onSelectionChange={(keys) => field.onChange(Array.from(keys)[0])}
+                                                                className="flex-1"
+                                                            >
+                                                                {(proveedores || []).map((prov: any) => (
+                                                                    <SelectItem key={prov.id} textValue={prov.nombre}>{prov.nombre}</SelectItem>
+                                                                ))}
+                                                            </Select>
+                                                        )}
+                                                    />
+                                                    <Button isIconOnly variant="flat" color="success" onPress={() => setIsCreateProveedorModalOpen(true)} className="mb-px">
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <Controller
+                                                        name="costoAdquisicion"
+                                                        control={control}
+                                                        rules={{ required: "Requerido", min: 0 }}
+                                                        render={({ field }) => (
+                                                            <Input
+                                                                {...field}
+                                                                type="number"
+                                                                label="Costo Adquisición"
+                                                                startContent={<span className="text-gray-400">$</span>}
+                                                                variant="bordered"
+                                                                errorMessage={errors.costoAdquisicion?.message as string}
+                                                                isInvalid={!!errors.costoAdquisicion}
+                                                            />
+                                                        )}
+                                                    />
+                                                    <Controller
+                                                        name="valorResidual"
+                                                        control={control}
+                                                        rules={{ required: "Requerido", min: 0 }}
+                                                        render={({ field }) => (
+                                                            <Input
+                                                                {...field}
+                                                                type="number"
+                                                                label="Valor Residual"
+                                                                startContent={<span className="text-gray-400">$</span>}
+                                                                variant="bordered"
+                                                                errorMessage={errors.valorResidual?.message as string}
+                                                                isInvalid={!!errors.valorResidual}
+                                                            />
+                                                        )}
+                                                    />
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <Controller
+                                                        name="vidaUtilHoras"
+                                                        control={control}
+                                                        rules={{ required: "Requerido", min: 1 }}
+                                                        render={({ field }) => (
+                                                            <Input
+                                                                {...field}
+                                                                type="number"
+                                                                label="Vida Útil (Horas)"
+                                                                variant="bordered"
+                                                                errorMessage={errors.vidaUtilHoras?.message as string}
+                                                                isInvalid={!!errors.vidaUtilHoras}
+                                                            />
+                                                        )}
+                                                    />
+                                                    <Controller
+                                                        name="fechaAdquisicion"
+                                                        control={control}
+                                                        rules={{ required: "Requerido" }}
+                                                        render={({ field }) => (
+                                                            <Input
+                                                                {...field}
+                                                                type="date"
+                                                                label="Fecha Adquisición"
+                                                                variant="bordered"
+                                                                errorMessage={errors.fechaAdquisicion?.message as string}
+                                                                isInvalid={!!errors.fechaAdquisicion}
+                                                            />
+                                                        )}
+                                                    />
+                                                </div>
+
                                                 <Controller
-                                                    name="vidaUtilHoras"
+                                                    name="cantidad"
                                                     control={control}
+                                                    defaultValue={1}
                                                     rules={{ required: "Requerido", min: 1 }}
                                                     render={({ field }) => (
                                                         <Input
                                                             {...field}
                                                             type="number"
-                                                            label="Vida Útil (Horas)"
+                                                            label="Cantidad"
                                                             variant="bordered"
-                                                            errorMessage={errors.vidaUtilHoras?.message as string}
-                                                            isInvalid={!!errors.vidaUtilHoras}
-                                                        />
-                                                    )}
-                                                />
-                                                <Controller
-                                                    name="fechaAdquisicion"
-                                                    control={control}
-                                                    rules={{ required: "Requerido" }}
-                                                    render={({ field }) => (
-                                                        <Input
-                                                            {...field}
-                                                            type="date"
-                                                            label="Fecha Adquisición"
-                                                            variant="bordered"
-                                                            errorMessage={errors.fechaAdquisicion?.message as string}
-                                                            isInvalid={!!errors.fechaAdquisicion}
+                                                            errorMessage={errors.cantidad?.message as string}
+                                                            isInvalid={!!errors.cantidad}
                                                         />
                                                     )}
                                                 />
                                             </div>
-
-                                            <Controller
-                                                name="cantidad"
-                                                control={control}
-                                                defaultValue={1}
-                                                rules={{ required: "Requerido", min: 1 }}
-                                                render={({ field }) => (
-                                                    <Input
-                                                        {...field}
-                                                        type="number"
-                                                        label="Cantidad"
-                                                        variant="bordered"
-                                                        errorMessage={errors.cantidad?.message as string}
-                                                        isInvalid={!!errors.cantidad}
-                                                    />
-                                                )}
-                                            />
                                         </div>
                                     </div>
-                                </div>
-                            </ModalBody>
-                            <ModalFooter className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4">
-                                <Button color="danger" variant="light" onPress={onCloseModal}>
-                                    Cancelar
-                                </Button>
-                                <Button color="success" type="submit" isLoading={mutation.isPending} className="text-black font-semibold shadow-md">
-                                    Guardar Activo
-                                </Button>
-                            </ModalFooter>
-                        </form>
-                    )}
+                                </ModalBody>
+                                <ModalFooter className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50/50 px-6 py-4">
+                                    <Button color="danger" variant="light" onPress={onCloseModal}>
+                                        Cancelar
+                                    </Button>
+                                    <Button color="success" type="submit" isLoading={mutation.isPending} className="text-black font-semibold shadow-md">
+                                        Guardar Activo
+                                    </Button>
+                                </ModalFooter>
+                            </form>
+                        )
+                    }}
                 </ModalContent>
             </Modal>
 

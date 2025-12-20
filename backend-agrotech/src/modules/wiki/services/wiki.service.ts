@@ -2,10 +2,13 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
+import { WikiGateway } from '../gateways/wiki.gateway';
 import { EPA } from '../entities/epa.entity';
 import { TipoCultivoWiki } from '../entities/tipo-cultivo-wiki.entity';
 import { TipoEpa } from '../entities/tipo-epa.entity';
@@ -21,7 +24,9 @@ export class WikiService {
     private tipoCultivoWikiRepo: Repository<TipoCultivoWiki>,
     @InjectRepository(TipoEpa)
     private tipoEpaRepo: Repository<TipoEpa>,
-  ) {}
+    @Inject(forwardRef(() => WikiGateway))
+    private wikiGateway: WikiGateway,
+  ) { }
 
   // ==================== EPA ====================
 
@@ -169,6 +174,9 @@ export class WikiService {
       }
     }
 
+    if (this.wikiGateway?.server) {
+      this.wikiGateway.server.emit('epas:created', savedEpa);
+    }
     return savedEpa;
   }
 
@@ -192,8 +200,8 @@ export class WikiService {
         }
         updateData.tipoEpa = data.tipoEpa.toLowerCase();
       }
-  
-        // Mapear manejo a manejoYControl si existe
+
+      // Mapear manejo a manejoYControl si existe
       if ((data as any).manejo !== undefined) {
         updateData.manejoYControl = (data as any).manejo;
         delete updateData.manejo;
@@ -208,6 +216,10 @@ export class WikiService {
       const savedEpa = await this.epaRepo.save(epa);
       console.log('EPA saved successfully');
 
+      if (this.wikiGateway?.server) {
+        this.wikiGateway.server.emit('epas:updated', savedEpa);
+      }
+
       return savedEpa;
     } catch (error) {
       console.error('=== UPDATE ERROR ===');
@@ -220,7 +232,11 @@ export class WikiService {
 
   async remove(id: number) {
     const epa = await this.findOne(id);
-    return this.epaRepo.softRemove(epa);
+    const result = await this.epaRepo.softRemove(epa);
+    if (this.wikiGateway?.server) {
+      this.wikiGateway.server.emit('epas:deleted', { id });
+    }
+    return result;
   }
 
   // ==================== TIPO CULTIVO WIKI ====================
@@ -232,20 +248,32 @@ export class WikiService {
 
   async createTipoCultivo(data: { nombre: string; descripcion?: string }) {
     const tipo = this.tipoCultivoWikiRepo.create(data);
-    return this.tipoCultivoWikiRepo.save(tipo);
+    const result = await this.tipoCultivoWikiRepo.save(tipo);
+    if (this.wikiGateway?.server) {
+      this.wikiGateway.server.emit('tipos-cultivo:created', result);
+    }
+    return result;
   }
 
   async updateTipoCultivo(id: number, data: { nombre?: string; descripcion?: string }) {
     const tipo = await this.tipoCultivoWikiRepo.findOne({ where: { id } });
     if (!tipo) throw new NotFoundException(`TipoCultivoWiki ${id} not found`);
     Object.assign(tipo, data);
-    return this.tipoCultivoWikiRepo.save(tipo);
+    const result = await this.tipoCultivoWikiRepo.save(tipo);
+    if (this.wikiGateway?.server) {
+      this.wikiGateway.server.emit('tipos-cultivo:updated', result);
+    }
+    return result;
   }
 
   async removeTipoCultivo(id: number) {
     const tipo = await this.tipoCultivoWikiRepo.findOne({ where: { id } });
     if (!tipo) throw new NotFoundException(`TipoCultivoWiki ${id} not found`);
-    return this.tipoCultivoWikiRepo.remove(tipo);
+    const result = await this.tipoCultivoWikiRepo.remove(tipo);
+    if (this.wikiGateway?.server) {
+      this.wikiGateway.server.emit('tipos-cultivo:deleted', { id });
+    }
+    return result;
   }
 
   // ==================== TIPO EPA ====================
